@@ -4,8 +4,8 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa,
 
 ## Status
 
-- **Fasa 1 (rangka platform) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md) dan [nota kod](docs/NOTA_KOD.md).
-- Enjin agihan tugas (guru, jawatan, lantikan, auto-agihan, kelulusan, surat, API) belum dipindahkan — kod lama satu sekolah (SQLite) disimpan di [`legacy/`](legacy/) sebagai rujukan sehingga Fasa 3 siap.
+- **Fasa 1 (rangka platform) & Fasa 2 (skema enjin dengan `school_id`) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md) dan [nota kod](docs/NOTA_KOD.md).
+- Logik & halaman enjin agihan tugas (guru, jawatan, lantikan, auto-agihan, kelulusan, surat, API) belum dipindahkan — kod lama satu sekolah (SQLite) disimpan di [`legacy/`](legacy/) sebagai rujukan sehingga Fasa 3 siap.
 
 ## Keperluan
 
@@ -25,10 +25,11 @@ Peranan sekolah: Pentadbir, Penolong Kanan, Guru Besar (SK) / Pengetua (SMK), Gu
 php -S 127.0.0.1:8091 -t public_html public_html/router.php
 TEST_URL=http://127.0.0.1:8091 DB_PORT=… DB_NAME=… DB_USER=… DB_PASS=… python3 tests/smoke_platform.py
 python3 tests/tenant_sql_audit.py
+php tests/schema_engine.php        # pada pemasangan sedia ada (.env): FK & kekangan enjin
 ```
 
 `smoke_platform.py` memerlukan DB kosong dan tiada `.env`. Pemasang menamakan semula `public_html/install.php` selepas siap — pulihkan sebelum commit: `mv public_html/install.php.locked-* public_html/install.php`.
 
 ## Keluaran
 
-Setiap fail baharu mesti ditambah ke `release/zip-files.txt` (`sh release/build-zip.sh` → `urustugas-v<versi>-<tarikh>.zip`). Naikkan `APP_SCHEMA` (app/install.php) setiap kali skema berubah.
+Setiap fail baharu mesti ditambah ke `release/zip-files.txt` (`sh release/build-zip.sh` → `urustugas-v<versi>-<tarikh>.zip`). Naikkan `APP_SCHEMA` (app/install.php) setiap kali skema berubah, tambah langkah idempoten dalam `run_upgrade()`, dan selaraskan `SCHOOL_TABLES` (app/tenant.php) serta `TABLES` dalam `tests/tenant_sql_audit.py`.

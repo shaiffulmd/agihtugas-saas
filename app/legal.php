@@ -10,7 +10,7 @@ function legal_default(string $which): string {
     if($which==='terma') return "## Perkhidmatan\n$n menyediakan sistem agihan tugas guru dalam talian untuk sekolah. Setiap sekolah mempunyai ruang data tersendiri yang diasingkan daripada sekolah lain.\n"
         ."## Akaun & tanggungjawab\n- Pegawai yang mendaftar mengesahkan beliau diberi kuasa oleh pihak sekolah.\n- Pentadbir sekolah bertanggungjawab ke atas akaun pengguna sekolah dan ketepatan data yang dimasukkan.\n- Kata laluan dan 2FA tidak boleh dikongsi.\n"
         ."## Langganan\n- Sekolah baharu mendapat pakej Pro percuma selama $trial hari selepas diluluskan.\n"
-        .($freeOn?"- Selepas Pro tamat, sekolah beralih ke pakej Free dengan had ".(int)pset('free_guru')." guru aktif, ".(int)pset('free_jawatan')." jawatan dan ".(int)pset('free_pengguna')." pengguna aktif.\n":"- Selepas langganan tamat, laman sekolah ditutup sehingga langganan diperbaharui.\n")
+        .($freeOn?"- Selepas Pro tamat, sekolah beralih ke pakej Free dengan had ".(int)pset('free_guru')." guru, ".(int)pset('free_jawatan')." jawatan dan ".(int)pset('free_pengguna')." pengguna aktif.\n":"- Selepas langganan tamat, laman sekolah ditutup sehingga langganan diperbaharui.\n")
         ."- Bayaran langganan tidak dikembalikan selepas tempoh bermula, kecuali dipersetujui secara bertulis.\n"
         ."## Penggunaan yang dilarang\n- Memuat naik kandungan yang menyalahi undang-undang atau data yang tidak berkaitan dengan pengurusan tugas guru.\n- Cubaan mengakses data sekolah lain atau mengganggu sistem.\n"
         ."## Penamatan\nPlatform boleh menggantung akaun yang melanggar terma ini. Sekolah boleh memohon pemadaman data pada bila-bila masa.\n";

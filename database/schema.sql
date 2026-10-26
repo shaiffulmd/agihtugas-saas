@@ -1,4 +1,4 @@
--- UrusTugas — skema berbilang sekolah (satu pangkalan data dikongsi). Rangka platform daripada koku-multi (5fb9ba9).
+-- UrusTugas — skema berbilang sekolah (satu pangkalan data dikongsi). Rangka platform daripada koku-multi (5fb9ba9), enjin agihan tugas (0.1-m2).
 -- Setiap jadual data sekolah ada `school_id`. Rujukan antara jadual menggunakan kunci asing KOMPOSIT
 -- (school_id, x_id) → induk(school_id, id) supaya baris sekolah A tidak boleh merujuk rekod sekolah B.
 -- Rujukan pilihan (ON DELETE SET NULL) kekal satu lajur, pengesahan aplikasi + tapisan school_id meliputinya.
@@ -35,14 +35,94 @@ CREATE TABLE IF NOT EXISTS health_log (
 ) ENGINE=InnoDB;
 
 -- ---------- Data sekolah ----------
+-- Guru (profil tugas, bukan akaun log masuk). external_id = ID sistem luar yang menyegerak melalui API (cth. "koku-multi:12:34"), unik dalam sekolah.
+CREATE TABLE teachers (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL, email VARCHAR(190) NOT NULL DEFAULT '',
+ specialty VARCHAR(160) NOT NULL DEFAULT '', capacity TINYINT UNSIGNED NOT NULL, external_id VARCHAR(160) NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_external (school_id,external_id), INDEX(school_id,name),
+ CONSTRAINT teacher_capacity CHECK (capacity BETWEEN 1 AND 100),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 CREATE TABLE users (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(120) NOT NULL, email VARCHAR(190) NOT NULL,
  password_hash VARCHAR(255) NOT NULL, role ENUM('admin','pk','head','teacher') NOT NULL DEFAULT 'teacher', active TINYINT NOT NULL DEFAULT 1, auth_version INT NOT NULL DEFAULT 1,
  totp_secret TEXT NULL, last_totp_step BIGINT NOT NULL DEFAULT -1, must_change TINYINT NOT NULL DEFAULT 0, last_login_at DATETIME NULL, allowed_ips VARCHAR(500) NULL,
  approval ENUM('approved','pending') NOT NULL DEFAULT 'approved', email_verified_at DATETIME NULL, self_registered TINYINT NOT NULL DEFAULT 0,
- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
- UNIQUE KEY school_email (school_id,email), UNIQUE KEY school_row (school_id,id),
+ teacher_id BIGINT UNSIGNED NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY school_email (school_id,email), UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_teacher (school_id,teacher_id),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
+ CONSTRAINT users_teacher_fk FOREIGN KEY(school_id,teacher_id) REFERENCES teachers(school_id,id)
+) ENGINE=InnoDB;
+-- Jawatan / tugas. Bidang tetap (CATEGORIES dalam kod). Pemberat beban 1–10.
+CREATE TABLE positions (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL,
+ category ENUM('Pentadbiran','Kurikulum','HEM','Kokurikulum') NOT NULL, weight TINYINT UNSIGNED NOT NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY school_row (school_id,id), INDEX(school_id,category,name),
+ CONSTRAINT position_weight CHECK (weight BETWEEN 1 AND 10),
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+-- Lantikan: satu jawatan = satu penyandang. Guru/jawatan yang dilantik tidak boleh dipadam (RESTRICT).
+CREATE TABLE assignments (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, teacher_id BIGINT UNSIGNED NOT NULL, position_id BIGINT UNSIGNED NOT NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_position (school_id,position_id), INDEX(school_id,teacher_id),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
+ FOREIGN KEY(school_id,teacher_id) REFERENCES teachers(school_id,id), FOREIGN KEY(school_id,position_id) REFERENCES positions(school_id,id)
+) ENGINE=InnoDB;
+-- Syarat auto-agihan setiap jawatan (JSON: allowed_teachers[], fixed_teacher_id, required_specialty). ID guru dalam JSON disahkan oleh aplikasi dalam sekolah yang sama.
+CREATE TABLE position_rules (
+ school_id BIGINT UNSIGNED NOT NULL, position_id BIGINT UNSIGNED NOT NULL, payload MEDIUMTEXT NOT NULL,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(school_id,position_id), CONSTRAINT position_rules_json CHECK (JSON_VALID(payload)),
+ FOREIGN KEY(school_id,position_id) REFERENCES positions(school_id,id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+-- Syarat umum auto-agihan (JSON) — satu baris setiap sekolah (dahulu jadual tunggal id=1).
+CREATE TABLE allocation_config (
+ school_id BIGINT UNSIGNED PRIMARY KEY, payload MEDIUMTEXT NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT allocation_config_json CHECK (JSON_VALID(payload)),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+-- Pratonton auto-agihan: snapshot = sha256 keadaan semasa — sah 30 minit, sekali guna, dibuang selepas 24 jam. Masa dikira oleh DB (NOW()).
+CREATE TABLE allocation_plans (
+ id CHAR(48) PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, snapshot CHAR(64) NOT NULL, payload MEDIUMTEXT NOT NULL,
+ created_by BIGINT UNSIGNED NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, applied_at DATETIME NULL,
+ INDEX(school_id,created_at), CONSTRAINT allocation_plans_json CHECK (JSON_VALID(payload)),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE, FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+-- Aliran kelulusan: setiap hantaran = satu revisi (snapshot JSON tetap + hash). Surat & "Tugas Saya" membaca revisi muktamad terkini.
+CREATE TABLE workflow_revisions (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL,
+ status ENUM('submitted','approved','finalized','returned') NOT NULL DEFAULT 'submitted', payload MEDIUMTEXT NOT NULL, source_hash CHAR(64) NOT NULL,
+ submitted_by BIGINT UNSIGNED NOT NULL, submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ approved_by BIGINT UNSIGNED NULL, approved_at DATETIME NULL, finalized_by BIGINT UNSIGNED NULL, finalized_at DATETIME NULL,
+ returned_by BIGINT UNSIGNED NULL, returned_at DATETIME NULL, return_reason VARCHAR(500) NULL,
+ UNIQUE KEY school_row (school_id,id), INDEX(school_id,status,id), CONSTRAINT workflow_payload_json CHECK (JSON_VALID(payload)),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
+ FOREIGN KEY(school_id,submitted_by) REFERENCES users(school_id,id), FOREIGN KEY(school_id,approved_by) REFERENCES users(school_id,id),
+ FOREIGN KEY(school_id,finalized_by) REFERENCES users(school_id,id), FOREIGN KEY(school_id,returned_by) REFERENCES users(school_id,id)
+) ENGINE=InnoDB;
+-- Keadaan aliran semasa — satu baris setiap sekolah — kunci optimistik melalui version.
+CREATE TABLE workflow_state (
+ school_id BIGINT UNSIGNED PRIMARY KEY, status ENUM('draft','submitted','approved','finalized') NOT NULL DEFAULT 'draft',
+ revision_id BIGINT UNSIGNED NULL, version INT UNSIGNED NOT NULL DEFAULT 1, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE, FOREIGN KEY(school_id,revision_id) REFERENCES workflow_revisions(school_id,id)
+) ENGINE=InnoDB;
+-- Logo sekolah & Jata Negara untuk surat: id = sha256 kandungan, unik DALAM sekolah (surat muktamad lama kekal merujuk logo lama).
+CREATE TABLE school_assets (
+ school_id BIGINT UNSIGNED NOT NULL, id CHAR(64) NOT NULL, mime VARCHAR(20) NOT NULL, width SMALLINT UNSIGNED NOT NULL, height SMALLINT UNSIGNED NOT NULL,
+ bytes MEDIUMBLOB NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(school_id,id), FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+-- Kunci API: token tidak disimpan — token_hash = HMAC-SHA256 dengan subkunci platform (unik global) supaya sekolah ditentukan oleh kunci,
+-- kemudian disemak sama dengan sekolah dalam URL. prefix = 12 aksara awal untuk paparan.
+CREATE TABLE api_keys (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(120) NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE,
+ prefix VARCHAR(16) NOT NULL, scope ENUM('read','write') NOT NULL, created_by BIGINT UNSIGNED NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used_at DATETIME NULL, revoked_at DATETIME NULL,
+ UNIQUE KEY school_row (school_id,id), INDEX(school_id,revoked_at),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE, FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 CREATE TABLE audit_logs (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, user_id BIGINT UNSIGNED NULL, via_platform BIGINT UNSIGNED NULL, action VARCHAR(60) NOT NULL,

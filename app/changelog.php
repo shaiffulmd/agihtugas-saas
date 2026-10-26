@@ -10,7 +10,7 @@ const APP_CHANGELOG=[
         'Rangka berbilang sekolah baharu (diambil daripada koku-multi): panel platform, sekolah dengan kod KPM (/KOD/ atau subdomain), langganan Free/Pro, bayaran, pendaftaran awam, keselamatan dan kemas kini automatik.',
         'Pangkalan data MariaDB/MySQL dengan school_id pada setiap jadual sekolah dan kunci asing komposit.',
         'Peranan sekolah UrusTugas: Pentadbir, Penolong Kanan, Guru Besar / Pengetua dan Guru. Log audit kini menyimpan butiran ringkas dalam rantai audit.',
-        'Enjin agihan tugas (guru, jawatan, lantikan, auto-agihan, aliran kelulusan, surat, API) akan dipindahkan dalam fasa seterusnya.',
+        'Skema enjin agihan tugas berbilang sekolah: guru, jawatan, lantikan, syarat & pratonton auto-agihan, aliran kelulusan, aset surat dan kunci API — setiap jadual dengan school_id dan kunci asing komposit. Halaman enjin akan dipindahkan dalam fasa seterusnya.',
     ]],
 ];
 

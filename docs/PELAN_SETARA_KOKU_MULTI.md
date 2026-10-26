@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1 siap (26 Okt 2026, cawangan `fasa1-rangka`); Fasa 2 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1 & 2 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema`); Fasa 3 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -50,6 +50,7 @@ Jadual baharu (semua `school_id NOT NULL`, PK `id`, indeks unik `school_row(scho
 - `api_keys` dengan `school_id`; hash berkunci subkunci sekolah.
 - `accounts` UrusTugas digabung ke `users` koku-multi (tambah nilai peranan `pk`, `gb`; `teacher_id` pilihan untuk peranan guru).
 - Naikkan `APP_SCHEMA`; kemas kini `SCHOOL_TABLES` + `school_wipe()` (susunan FK).
+- **Siap 26 Okt 2026 (skema `0.1-m2`).** Keputusan: `history` → `audit_logs.detail` (tiada jadual `history`); `setup_codes` dibuang; `allocation_plans` & `workflow_revisions` kekal dengan `school_id`, masa dalam `DATETIME` (dikira DB, bukan PHP); `api_keys.token_hash` = HMAC subkunci platform, unik global (sekolah ditentukan oleh kunci, kemudian disemak sama dengan sekolah dalam URL); `school_assets` PK `(school_id,id)` — hash sama tidak dikongsi antara sekolah; `users.teacher_id` FK komposit RESTRICT + unik dalam sekolah; CHECK kapasiti 1–100, pemberat 1–10, JSON_VALID pada payload; `workflow_state` dicipta oleh `school_engine_init()` (cipta sekolah, reset demo, naik taraf). Naik taraf `run_upgrade()` mengambil DDL daripada `schema.sql` (`schema_ddl()`), idempoten. Diuji: `tests/schema_engine.php` 53/53 (FK silang sekolah ditolak, RESTRICT/CASCADE, kekangan, kunci optimistik, `school_wipe` tidak menyentuh sekolah lain, `school_delete`), naik taraf 0.1-m1 → m2 pada pemasangan demo (2 kali, idempoten), pemasangan baharu + `smoke_platform.py` 65/65, `tenant_sql_audit.py` bersih.
 
 ### Fasa 3 — Port modul enjin
 Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut peraturan query koku-multi (handover §3):

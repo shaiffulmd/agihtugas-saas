@@ -67,6 +67,7 @@ function demo_seed(string $type='SMK'): void {
     save_settings(['school_name'=>$school,'school_type'=>$type==='SK'?'SK':'SMK','school_tagline'=>'Demo agihan tugas guru','reg_mode'=>'off','mail_method'=>'mail','site_url'=>'']);
     db()->beginTransaction();
     try {
+        school_engine_init();
         foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at) VALUES ('.sid().',?,?,?,?,NOW())',[$name,$email,hash_password($pass),$role]);
         db()->commit();
     } catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }

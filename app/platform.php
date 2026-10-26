@@ -36,6 +36,7 @@ function school_create(string $code,string $name,string $type,string $adminName,
         tenant_use($school,'path');
         create_admin($adminName,$adminEmail,$password,$opt['must_change']??true); // kata laluan sementara: wajib tukar pada log masuk pertama
         save_settings(['school_name'=>$name,'school_type'=>$type==='SK'?'SK':'SMK']);
+        school_engine_init();
         audit('school_created','settings');
     } catch(Throwable $ex) { tenant_use($school,'path'); school_wipe(); query('DELETE FROM schools WHERE id=?',[$school['id']]); tenant_use($prev,$prevMode); throw $ex; }
     tenant_use($prev,$prevMode);
@@ -51,7 +52,7 @@ function platform_schools(string $q=''): array {
     $w=''; $p=[];
     if($q!==''){ $w=' WHERE s.code LIKE ? OR s.name LIKE ?'; $like='%'.addcslashes($q,'%_\\').'%'; $p=[$like,$like]; }
     $rows=query('SELECT s.*,(SELECT COUNT(*) FROM users u WHERE u.school_id=s.id) users,(SELECT MAX(u.last_login_at) FROM users u WHERE u.school_id=s.id) last_login FROM schools s'.$w.' ORDER BY s.code',$p)->fetchAll();
-    foreach($rows as &$r) $r['teachers']=free_count('guru',(int)$r['id']); // jadual enjin (Fasa 2) — 0 jika belum wujud
+    foreach($rows as &$r) $r['teachers']=free_count('guru',(int)$r['id']);
     return $rows;
 }
 
@@ -417,7 +418,7 @@ function platform_page_settings(): void {
 <label class="field">Tempoh percubaan (hari)<input name="percubaan_hari" value="<?= $v('percubaan_hari') ?>" inputmode="numeric" required><small class="muted">Sekolah baharu mendapat Pro percuma selama tempoh ini.</small></label></div></section>
 <section class="panel padded spaced"><h3>Pakej Free</h3><p class="muted">Apabila Pro tamat, sekolah jatuh ke Free (data kekal) dengan had berikut. Jika dimatikan, laman sekolah ditutup selepas tamat dan data dipadam selepas tempoh di bawah.</p><div class="form-grid">
 <label class="check full"><input type="checkbox" name="free_aktif" value="1"<?= $chk('free_aktif','1') ?>> Tawarkan pakej Free</label>
-<label class="field">Had guru aktif<input name="free_guru" value="<?= $v('free_guru') ?>" inputmode="numeric" required></label>
+<label class="field">Had bilangan guru<input name="free_guru" value="<?= $v('free_guru') ?>" inputmode="numeric" required></label>
 <label class="field">Had jawatan<input name="free_jawatan" value="<?= $v('free_jawatan') ?>" inputmode="numeric" required></label>
 <label class="field">Had pengguna aktif (akaun log masuk)<input name="free_pengguna" value="<?= $v('free_pengguna') ?>" inputmode="numeric" required></label>
 <label class="field">Free: padam data jika tiada log masuk (bulan)<input name="free_tidak_aktif_bulan" value="<?= $v('free_tidak_aktif_bulan') ?>" inputmode="numeric" required></label>

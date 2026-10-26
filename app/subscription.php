@@ -21,14 +21,13 @@ function plan_badge(string $p): string { return '<span class="badge '.(['pro'=>'
 function school_days_left(array $s): ?int { if(empty($s['expires_on'])) return null; return (int)floor((strtotime($s['expires_on'].' 00:00:00')-strtotime(date('Y-m-d').' 00:00:00'))/86400); }
 
 /* ---------- Had pakej Free ---------- */
-/** Had pakej Free: kunci => [tetapan platform, label]. Guru & jawatan dikira daripada jadual enjin (Fasa 2). */
-const FREE_LIMITS=['guru'=>['free_guru','guru aktif'],'jawatan'=>['free_jawatan','jawatan'],'pengguna'=>['free_pengguna','pengguna aktif']];
+/** Had pakej Free: kunci => [tetapan platform, label]. */
+const FREE_LIMITS=['guru'=>['free_guru','guru'],'jawatan'=>['free_jawatan','jawatan'],'pengguna'=>['free_pengguna','pengguna aktif']];
 function free_limit(string $what): int { return max(1,(int)pset(FREE_LIMITS[$what][0]??'free_pengguna')); }
 function free_count(string $what,?int $school=null): int {
     $sid=$school??sid();
     if($what==='pengguna') return (int)query('SELECT COUNT(*) FROM users WHERE school_id=? AND active=1',[$sid])->fetchColumn();
-    static $has=[]; $t=$what==='guru'?'teachers':'positions'; if(!($has[$t]??=table_exists($t))) return 0; // jadual enjin belum dipasang (sebelum Fasa 2)
-    return (int)query('SELECT COUNT(*) FROM `'.$t.'` WHERE school_id=?',[$sid])->fetchColumn();
+    return (int)query('SELECT COUNT(*) FROM '.($what==='guru'?'teachers':'positions').' WHERE school_id=?',[$sid])->fetchColumn();
 }
 /** Halang penambahan guru/jawatan/pengguna aktif yang melebihi had pakej Free. $adding = bilangan yang akan ditambah. */
 function free_guard(string $what,int $adding=1): void {
@@ -36,7 +35,7 @@ function free_guard(string $what,int $adding=1): void {
     $limit=free_limit($what); $now=free_count($what);
     if($now+$adding>$limit) throw new DomainException('Had pakej Free: maksimum '.$limit.' '.(FREE_LIMITS[$what][1]??$what).' (kini '.$now.'). Naik taraf ke Pro di halaman Langganan.');
 }
-/** Ringkasan had Free, cth. "3/30 guru aktif · 5/60 jawatan · 2/3 pengguna aktif". */
+/** Ringkasan had Free, cth. "3/30 guru · 5/60 jawatan · 2/3 pengguna aktif". */
 function free_summary(): array {
     $parts=[]; $over=false;
     foreach(FREE_LIMITS as $k=>[,$label]){ $n=free_count($k); $l=free_limit($k); $over=$over || $n>$l; $parts[]=$n.'/'.$l.' '.$label; }

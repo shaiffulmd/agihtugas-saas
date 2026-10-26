@@ -121,8 +121,9 @@ function tenant_location(string $path): string {
 }
 
 /** Jadual data sekolah, anak dahulu (padam ikut susunan ini supaya kunci asing dipatuhi). */
-const SCHOOL_TABLES=['support_messages','support_tickets','staff_notice_reads','staff_notice_targets','staff_notices',
-    'user_avatars','auth_tokens','recovery_codes','audit_logs','audit_heads','ip_blocks','settings','users'];
+const SCHOOL_TABLES=['workflow_state','workflow_revisions','allocation_plans','allocation_config','position_rules','assignments','positions','api_keys','school_assets',
+    'support_messages','support_tickets','staff_notice_reads','staff_notice_targets','staff_notices',
+    'user_avatars','auth_tokens','recovery_codes','audit_logs','audit_heads','ip_blocks','settings','users','teachers'];
 /** Padam SEMUA data sekolah semasa sahaja (sekolah lain tidak disentuh). */
 function school_wipe(): void {
     if(sid()<=0) throw new LogicException('Tiada sekolah dipilih.');
@@ -131,7 +132,8 @@ function school_wipe(): void {
     catch(Throwable $ex) { if($own && db()->inTransaction()) db()->rollBack(); throw $ex; }
     if(function_exists('settings_all')) settings_all(true);
 }
-/** Log platform (juga dipanggil dari konteks sekolah, cth. sesi sokongan). Hash IP dengan subkunci platform supaya seragam. */
+/** Baris tunggal enjin bagi sekolah semasa (keadaan aliran = draf). Idempoten — dipanggil semasa sekolah dicipta & selepas reset demo. */
+function school_engine_init(): void { if(sid()<=0) throw new LogicException('Tiada sekolah dipilih.'); query('INSERT IGNORE INTO workflow_state(school_id) VALUES (?)',[sid()]); }
 /** Jalankan $fn dalam konteks sekolah lain, kemudian pulihkan konteks asal. */
 function with_school(array $school,callable $fn): mixed {
     $prev=school(); $prevMode=tenant_mode(); tenant_use($school,'path');
