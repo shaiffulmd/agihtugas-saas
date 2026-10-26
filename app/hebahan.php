@@ -16,6 +16,7 @@ const HEBAHAN_MAX=20000;
 function hebahan_ready(): bool { static $ok=null; return $ok??=table_exists('staff_notices'); }
 /** Penerima hebahan: semua peranan sekolah selain pentadbir (PK, GB/Pengetua, guru). */
 const HEBAHAN_ROLES=['pk','head','teacher'];
+const BULAN_MS=[1=>'Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
 function hebahan_recipients(): array { return query('SELECT id,name,email FROM users WHERE school_id='.sid().' AND active=1 AND role IN ("pk","head","teacher") AND (approval="approved" OR approval IS NULL) ORDER BY name')->fetchAll(); }
 function hebahan_gaya(string $g): string { return isset(HEBAHAN_GAYA[$g])?$g:'makluman'; }
 
@@ -89,7 +90,7 @@ function hebahan_card(array $n,bool $full=false,string $back='hebahan'): void {
     $g=hebahan_gaya((string)$n['style']); [$label,$ic]=HEBAHAN_GAYA[$g]; $unread=empty($n['read_at']);
     $d=new DateTimeImmutable((string)$n['created_at']);
     ?><article class="hb-card hb-<?= $g ?><?= $unread?' is-unread':'' ?>" id="h<?= (int)$n['id'] ?>">
-      <header class="hb-head"><span class="hb-ic"><?= icon($ic) ?></span><div class="hb-meta"><span class="hb-tag"><?= e($label) ?><?= $n['pinned']?' · Disematkan':'' ?></span><h4><?= e($n['title']) ?></h4><small><?= e(($n['author']??'Pentadbir').' · '.$d->format('j').' '.TAKWIM_BULAN[(int)$d->format('n')].' '.$d->format('Y, g:i a')) ?></small></div><?php if($unread): ?><span class="hb-new">Baharu</span><?php endif; ?></header>
+      <header class="hb-head"><span class="hb-ic"><?= icon($ic) ?></span><div class="hb-meta"><span class="hb-tag"><?= e($label) ?><?= $n['pinned']?' · Disematkan':'' ?></span><h4><?= e($n['title']) ?></h4><small><?= e(($n['author']??'Pentadbir').' · '.$d->format('j').' '.BULAN_MS[(int)$d->format('n')].' '.$d->format('Y, g:i a')) ?></small></div><?php if($unread): ?><span class="hb-new">Baharu</span><?php endif; ?></header>
       <div class="hb-body rich-body<?= $full?'':' is-clamp' ?>"><?= rich_html((string)$n['body']) ?></div>
       <footer class="hb-foot"><?php if(!$full): ?><a class="text-link" href="/?page=hebahan#h<?= (int)$n['id'] ?>">Baca penuh →</a><?php else: ?><span></span><?php endif; ?>
       <?php if($unread): ?><form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="hebahan_read"><input type="hidden" name="id" value="<?= (int)$n['id'] ?>"><input type="hidden" name="back" value="<?= e($back) ?>"><button class="btn sm outline"><?= icon('check') ?>Tandai dibaca</button></form><?php else: ?><span class="hb-done"><?= icon('check') ?>Dibaca</span><?php endif; ?></footer>
@@ -102,7 +103,7 @@ function hebahan_popup(): void {
     $g=hebahan_gaya((string)$n['style']); [$label,$ic]=HEBAHAN_GAYA[$g]; $d=new DateTimeImmutable((string)$n['created_at']);
     $back='/?'.http_build_query(array_intersect_key($_GET,array_flip(['page','id','edit','activity','jenis','tapis','q']))); if($back==='/?') $back='/?page=dashboard';
     ?><div class="hb-modal no-print" role="dialog" aria-modal="true" aria-labelledby="hb-modal-t"><div class="hb-modal-box hb-card hb-<?= $g ?> is-unread">
-      <header class="hb-head"><span class="hb-ic"><?= icon($ic) ?></span><div class="hb-meta"><span class="hb-tag"><?= e($label) ?> · Hebahan pentadbir<?= $total>1?' · 1 daripada '.$total:'' ?></span><h4 id="hb-modal-t"><?= e($n['title']) ?></h4><small><?= e(($n['author']??'Pentadbir').' · '.$d->format('j').' '.TAKWIM_BULAN[(int)$d->format('n')].' '.$d->format('Y, g:i a')) ?></small></div></header>
+      <header class="hb-head"><span class="hb-ic"><?= icon($ic) ?></span><div class="hb-meta"><span class="hb-tag"><?= e($label) ?> · Hebahan pentadbir<?= $total>1?' · 1 daripada '.$total:'' ?></span><h4 id="hb-modal-t"><?= e($n['title']) ?></h4><small><?= e(($n['author']??'Pentadbir').' · '.$d->format('j').' '.BULAN_MS[(int)$d->format('n')].' '.$d->format('Y, g:i a')) ?></small></div></header>
       <div class="hb-body rich-body hb-modal-body"><?= rich_html((string)$n['body']) ?></div>
       <footer class="hb-foot"><small class="muted">Boleh disemak semula di menu <strong>Hebahan</strong>.</small><form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="hebahan_read"><input type="hidden" name="id" value="<?= (int)$n['id'] ?>"><input type="hidden" name="back" value="<?= e($back) ?>"><button class="btn primary" autofocus><?= icon('check') ?>Saya telah membaca<?= $total>1?' · seterusnya':'' ?></button></form></footer>
     </div></div><?php

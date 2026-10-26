@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1–5 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa5-operasi`); Fasa 6 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–6 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa6-awam`); Fasa 7 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -84,6 +84,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 ### Fasa 6 — Halaman awam
 - `landing.php`, `appearance.php`, `directory.php`, `faq.php`, `links.php`: kandungan pemasaran agihan tugas guru, pakej Free/Pro, FAQ contoh.
 - Mod demo: `demo.php` dengan 12 guru, 24 jawatan, 20 lantikan rekaan (data seed AgihTugas sedia ada) bagi 2 sekolah demo; reset harian.
+- **Siap 26 Okt 2026 (versi 0.5).** Kandungan pemasaran UrusTugas sudah dimulakan sejak Fasa 1; fasa ini menambah bahagian *Cara ia berfungsi* & *Demo tanpa daftar* (`lp_demo_section()`, hanya `DEMO_MODE=1`), `FAQ_SAMPLE` 11 soalan UrusTugas, ikon ciri. Demo (`demo_seed()`): DEM0001 SMK / DEM0002 SK, 12 guru, 24 jawatan, 20 lantikan, 3 syarat jawatan (kepakaran Matematik/Sains, penyandang tetap), hebahan contoh, versi muktamad #1 kemudian dibuka sebagai draf pindaan; akaun kongsi admin/pk/ketua/guru; sekatan demo termasuk kunci API; reset harian sedia ada. `docs/PANDUAN-DEMO.md`. **Pepijat dibaiki:** `hebahan.php` merujuk `TAKWIM_BULAN` (modul takwim koku) → 500 apabila guru mempunyai hebahan; ditangkap oleh data demo baharu. Ujian statik baharu `tests/static_symbols.php` (fungsi & pemalar tidak ditakrif) — kini bersih. Diuji: `tests/public_demo.py` 25/25 (halaman awam tanpa teks koku, panel demo, 4 akaun, data demo, sekatan, rangkak 176 halaman 4 peranan × 2 sekolah tanpa 5xx, reset), semakan visual desktop & 390 px (tiada limpahan mendatar), regresi smoke 67/67, enjin 85/85, Free/Pro 33/33. Halaman `appearance.php`/`directory.php`/`links.php` tidak memerlukan perubahan (teks lalai sudah UrusTugas).
 
 ### Fasa 7 — Migrasi & integrasi
 - `bin/import-agihtugas.php --db=/laluan/agihtugas.sqlite --code=KOD`: bawa satu pemasangan AgihTugas/UrusTugas SQLite ke satu sekolah (petakan ID, `--dry-run`, semak bilangan baris).

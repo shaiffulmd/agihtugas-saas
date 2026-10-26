@@ -68,6 +68,7 @@ function demo_reset(): void {
 
 /** Jana data rekaan: tetapan sekolah, akaun kongsi, guru, jawatan & lantikan (draf). */
 function demo_seed(string $type='SMK'): void {
+    foreach(['subscription','enjin','tugas_auto','kelulusan','surat_lantikan'] as $f) require_once __DIR__.'/'.$f.'.php'; // CLI & pemasang tidak memuat modul enjin
     $school=(string)(school()['name']??'SMK Demo UrusTugas');
     save_settings(['school_name'=>$school,'school_type'=>$type==='SK'?'SK':'SMK','school_tagline'=>'Demo agihan tugas guru','reg_mode'=>'off','mail_method'=>'mail','site_url'=>'']);
     db()->beginTransaction();
@@ -78,9 +79,23 @@ function demo_seed(string $type='SMK'): void {
         $pid=[]; foreach(DEMO_POSITIONS as $i=>[$n,$cat,$w]){ query('INSERT INTO positions(school_id,name,category,weight) VALUES ('.sid().',?,?,?)',[$n,$cat,$w]); $pid[$i+1]=(int)db()->lastInsertId(); }
         foreach(DEMO_ASSIGN as $p=>$t) query('INSERT INTO assignments(school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$tid[$t],$pid[$p]]);
         foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at,teacher_id) VALUES ('.sid().',?,?,?,?,NOW(),?)',[$name,$email,hash_password($pass),$role,$role==='teacher'?$tid[1]:null]);
-        query('INSERT INTO settings(school_id,name,value) VALUES ('.sid().',"principal",?),('.sid().',"session_year",?)',['Hj. Ahmad Fauzi bin Ismail',date('Y')]);
+        engine_setting_set(['principal'=>$type==='SK'?'Hj. Ahmad Fauzi bin Ismail':'Dr. Rohani binti Yusof','session_year'=>date('Y'),'letter_reference'=>($type==='SK'?'SKD':'SMKD').'.100-1/5/1']);
+        // Syarat contoh di Pusat Syarat: kepakaran & penyandang tetap (lihat juga Agihan Automatik).
+        allocation_save_position_rule($pid[8],['required_specialty'=>'Matematik']);                      // Ketua Panitia Matematik
+        allocation_save_position_rule($pid[9],['required_specialty'=>'Sains']);                          // Ketua Panitia Sains
+        allocation_save_position_rule($pid[21],['fixed_teacher_id'=>$tid[4]]);                           // Penyelaras Unit Beruniform
+        $uid=array_column(query('SELECT id,role FROM users WHERE school_id='.sid())->fetchAll(),'id','role');
+        query('INSERT INTO staff_notices(school_id,title,body,style,audience,pinned,status,created_by) VALUES ('.sid().',?,?,?,"semua",1,"terbit",?)',
+            ['Semak senarai tugas sesi '.date('Y'),'<p>Senarai tugas yang telah dimuktamadkan boleh dilihat di <strong>Tugas Saya</strong>. Maklumkan kepada Penolong Kanan jika terdapat percanggahan sebelum mesyuarat guru.</p>','makluman',$uid['admin']]);
         db()->commit();
     } catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
+    // Versi #1 dimuktamadkan (surat & Tugas Saya terus boleh dilihat), kemudian dibuka sebagai draf pindaan supaya demo boleh disunting.
+    $who=fn(string $role)=>['id'=>(int)$uid[$role],'role'=>$role,'name'=>$role];
+    foreach([['submit','pk',''],['approve','head',''],['finalize','head',''],['return','admin','Pindaan sesi: semak beban guru yang melebihi kapasiti.']] as [$t,$role,$why]){
+        db()->beginTransaction();
+        try { workflow_transition($t,workflow_state()['version'],$who($role),$why); db()->commit(); }
+        catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
+    }
 }
 
 /** Panel akaun demo di halaman log masuk. */

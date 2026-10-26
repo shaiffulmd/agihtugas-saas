@@ -6,6 +6,11 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '0.5'=>['2026-10-26',[
+        'Halaman utama: bahagian "Cara ia berfungsi" (4 langkah) dan "Demo tanpa daftar" (mod demo); 11 contoh soalan lazim khusus agihan tugas guru.',
+        'Demo lebih lengkap: syarat jawatan contoh, hebahan, dan versi muktamad #1 (surat & Tugas Saya terus boleh dilihat) yang dibuka semula sebagai draf pindaan; panduan docs/PANDUAN-DEMO.md.',
+        'Dibaiki: pop-up hebahan guru gagal (500) kerana pemalar bulan daripada modul takwim lama.',
+    ]],
     '0.4'=>['2026-10-26',[
         'Keselamatan & operasi disahkan untuk UrusTugas: rantai audit, sekatan IP, CAPTCHA, wajib 2FA, mod kecemasan, integriti fail, semakan kesihatan, kemas kini automatik GitHub dan sandaran tersulit (termasuk data enjin & logo surat).',
         'API mematuhi mod kecemasan, sekatan IP, sekolah digantung dan had cubaan kunci salah (respons JSON).',

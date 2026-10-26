@@ -4,7 +4,7 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa,
 
 ## Status
 
-- **Fasa 1–5 siap** (rangka platform, skema enjin, modul enjin, langganan Free/Pro, keselamatan & operasi). Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
+- **Fasa 1–6 siap** (rangka platform, skema enjin, modul enjin, langganan Free/Pro, keselamatan & operasi, halaman awam & demo). Panduan demo: [docs/PANDUAN-DEMO.md](docs/PANDUAN-DEMO.md). Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
 - Enjin: guru, jawatan, lantikan, auto-agihan, Pusat Syarat, aliran kelulusan, surat lantikan (cetak/PDF), Tugas Saya dan API v1 per sekolah. Kod lama satu sekolah (SQLite) kekal di [`legacy/`](legacy/) sebagai rujukan sejarah.
 
 ## Keperluan
@@ -25,6 +25,8 @@ Peranan sekolah: Pentadbir, Penolong Kanan, Guru Besar (SK) / Pengetua (SMK), Gu
 php -S 127.0.0.1:8091 -t public_html public_html/router.php
 TEST_URL=http://127.0.0.1:8091 DB_PORT=… DB_NAME=… DB_USER=… DB_PASS=… python3 tests/smoke_platform.py
 python3 tests/tenant_sql_audit.py
+php tests/static_symbols.php       # fungsi & pemalar tidak ditakrif (tinggalan modul)
+TEST_URL=http://127.0.0.1:8091 python3 tests/public_demo.py   # pemasangan DEMO_MODE=1
 php tests/schema_engine.php        # pada pemasangan sedia ada (.env): FK & kekangan enjin
 php tests/allocation_engine.php    # algoritma auto-agihan & jawatan pukal
 php tests/setup_engine_test.php > ujian.json && SETUP_JSON=ujian.json python3 tests/engine_integration.py

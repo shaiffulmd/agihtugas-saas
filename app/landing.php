@@ -24,6 +24,14 @@ function lp_foot(): void {
 </div><div class="lp-fbawah"><div class="lp-wrap lp-fbawah-row"><span>© <?= date('Y') ?> <?= e(platform_name()) ?>. Hak cipta terpelihara.</span><span>Bukan produk rasmi KPM.</span></div></div></footer></body></html><?php
 }
 
+/** Panel "Cuba demo" (DEMO_MODE=1): pautan sekolah demo; akaun kongsi dipaparkan di halaman log masuk sekolah. */
+function lp_demo_section(): void {
+    $schools=array_values(array_filter(array_map(fn($d)=>school_find($d[0]),DEMO_SCHOOLS))); if(!$schools) return; ?>
+<section class="lp-seksyen" id="demo"><div class="lp-wrap"><div class="panel padded lp-demo"><span class="eyebrow teal">Cuba sekarang</span><h2>Demo tanpa daftar</h2>
+<p>Log masuk sebagai Pentadbir, Penolong Kanan, Guru Besar / Pengetua atau Guru — butang akaun demo tersedia di halaman log masuk. Data rekaan dijana semula setiap hari.</p>
+<div class="lp-demo-sekolah"><?php foreach($schools as $s): ?><a class="btn outline" href="<?= e(school_url($s['code'],'/?page=login')) ?>"><?= icon('school') ?> <?= e($s['name']) ?> <small><?= e($s['code']) ?></small></a><?php endforeach; ?></div></div></div></section><?php
+}
+
 /** / — halaman utama platform: cari sekolah (kod tepat → terus ke laman sekolah), ciri, pakej & keselamatan. */
 function platform_landing(): never {
     $q=mb_substr(trim(input('q','get')),0,80); $rows=[];
@@ -54,12 +62,18 @@ function platform_landing(): never {
 <div class="lp-kepala"><span class="eyebrow teal">Untuk sekolah</span><h2>Agihan tugas guru di satu tempat</h2><p>Pentadbir & PK merancang, Guru Besar / Pengetua meluluskan, setiap guru melihat tugas muktamadnya.</p></div>
 <div class="lp-ciri-grid">
 <article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('users') ?></span><h3>Guru &amp; jawatan</h3><p>Senarai guru dengan opsyen dan kapasiti, jawatan mengikut bidang (Pentadbiran, Kurikulum, HEM, Kokurikulum) dan pemberat beban.</p></article>
-<article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('clipboard') ?></span><h3>Auto-agihan adil</h3><p>Agih jawatan kosong atau imbang semula berdasarkan beban, kapasiti, had tugas berat dan syarat setiap jawatan — pratonton dahulu sebelum guna.</p></article>
+<article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('filter') ?></span><h3>Auto-agihan adil</h3><p>Agih jawatan kosong atau imbang semula berdasarkan beban, kapasiti, had tugas berat dan syarat setiap jawatan — pratonton dahulu sebelum guna.</p></article>
 <article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('check') ?></span><h3>Aliran kelulusan</h3><p>Draf → Semakan → Lulus → Muktamad. Data dikunci semasa semakan; GB / Pengetua meluluskan versi yang sama yang dihantar.</p></article>
 <article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('file') ?></span><h3>Surat lantikan</h3><p>Surat lantikan setiap guru daripada senarai muktamad, dengan logo sekolah dan Jata Negara — sedia dicetak.</p></article>
-<article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('calendar') ?></span><h3>API &amp; hebahan</h3><p>API untuk sistem lain (cth. Sekolah Koku) menyegerak guru dan membaca lantikan, serta hebahan kepada guru.</p></article>
+<article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('link') ?></span><h3>API &amp; hebahan</h3><p>API untuk sistem lain (cth. Sekolah Koku) menyegerak guru dan membaca lantikan, serta hebahan kepada guru.</p></article>
 <article class="panel padded lp-ciri"><span class="lp-ikon"><?= icon('globe') ?></span><h3>Pautan sekolah sendiri</h3><p>Setiap sekolah mendapat ruang tersendiri berdasarkan kod sekolah KPM: <code><?= e(school_url('KODSEKOLAH','/')) ?></code></p></article>
 </div></div></section>
+
+<section class="lp-seksyen lp-alt" id="cara"><div class="lp-wrap">
+<div class="lp-kepala"><span class="eyebrow teal">Cara ia berfungsi</span><h2>Empat langkah, satu senarai tugas muktamad</h2><p>Setiap perubahan direkod; setiap guru menerima surat daripada versi yang sama yang diluluskan.</p></div>
+<ol class="lp-langkah"><?php foreach([['users','Senarai guru & jawatan','Tambah guru dengan kapasiti mata dan jawatan mengikut bidang — satu demi satu atau tampal daripada Excel.'],['filter','Agih tugas','Lantik secara manual atau jana cadangan automatik mengikut beban, had dan syarat; semak pratonton sebelum simpan.'],['check','Semak & lulus','PK menghantar draf; data dikunci; Guru Besar / Pengetua meluluskan dan memuktamadkan.'],['file','Surat & Tugas Saya','Surat lantikan setiap guru sedia dicetak; guru melihat tugas muktamad sendiri.']] as $i=>[$ic,$t,$d]): ?><li class="panel padded"><span class="lp-no"><?= $i+1 ?></span><span class="lp-ikon"><?= icon($ic) ?></span><h3><?= e($t) ?></h3><p><?= e($d) ?></p></li><?php endforeach; ?></ol>
+</div></section>
+<?php if(demo_env()) lp_demo_section(); ?>
 
 <section class="lp-seksyen lp-alt" id="pakej"><div class="lp-wrap">
 <div class="lp-kepala"><span class="eyebrow teal">Pakej</span><h2><?= $free?'Free atau Pro':'Satu harga, semua ciri' ?></h2><p>Sekolah baharu mendapat Pro percuma <?= $trial ?> hari<?= $free?'. Selepas itu kekal di Free secara automatik — data tidak hilang, tiada caj tersembunyi.':'.' ?></p></div>
