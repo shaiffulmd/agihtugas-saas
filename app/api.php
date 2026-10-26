@@ -140,7 +140,7 @@ function api_route(string $method,string $path): never {
         api_respond(['teachers'=>$c['teachers'],'positions'=>$c['positions'],'assigned'=>$c['assigned'],'vacant'=>$c['vacant'],'total_load'=>array_sum(array_map(fn($r)=>(int)$r['load'],$t)),'over_capacity'=>count(array_filter($t,fn($r)=>$r['load']>$r['capacity'])),'by_category'=>$cat]);
     }
     if($res==='letters' && $id && !$child){
-        api_method($method,['GET']); $doc=workflow_letter($id);
+        api_method($method,['GET']); $pub=workflow_published(); if(!$pub) api_fail(409,'not_finalized','Surat hanya tersedia selepas agihan dimuktamadkan.'); $doc=workflow_letter($id,$pub);
         $doc['assignments']=array_map(fn($p)=>['position_id'=>$p['id'],'position_name'=>$p['name'],'category'=>$p['category'],'weight'=>$p['weight']],$doc['assignments']);
         $doc['teacher']['load']=array_sum(array_column($doc['assignments'],'weight')); $doc['teacher']['task_count']=count($doc['assignments']); $doc['teacher']['over_capacity']=$doc['teacher']['load']>$doc['teacher']['capacity'];
         api_respond($doc);

@@ -77,7 +77,7 @@ UI dilindungi log masuk dan peranan; API kekal menggunakan Bearer key berasingan
 
 Secara lalai tiada CORS untuk laman lain. Jika diperlukan untuk aplikasi pelayar yang dipercayai, tetapkan API_CORS_ORIGINS dalam .env dengan senarai origin tepat dipisah koma. Tiada wildcard atau Access-Control-Allow-Credentials. CORS bukan pengesahan. Kunci rahsia untuk sistem lain (cth. Sekolah Koku) hendaklah kekal di backend.
 
-Satu ruang kerja AgihTugas mewakili satu sekolah. API ini belum mempunyai tenant, webhook, auto-sync atau arkib sesi. /letters mengembalikan salinan versi muktamad terkini dalam JSON (409 jika belum dimuktamadkan); PDF masih melalui cetakan UI. Auto-agihan tersedia melalui aliran preview dan apply seperti di bawah.
+Satu ruang kerja AgihTugas mewakili satu sekolah. API ini belum mempunyai tenant, webhook, auto-sync atau arkib sesi. /letters mengembalikan salinan versi muktamad terkini dalam JSON (`409 not_finalized` jika belum ada versi muktamad; `404 not_found` jika guru tiada dalam versi muktamad terkini, cth. guru ditambah selepas pemuktamadan); PDF masih melalui cetakan UI. Auto-agihan tersedia melalui aliran preview dan apply seperti di bawah.
 
 ## Auto-agihan, syarat dan jawatan pukal
 

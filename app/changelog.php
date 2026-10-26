@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 const APP_CHANGELOG=[
     '1.1'=>['2026-10-26',[
+        'API: GET /letters/{id} memulangkan kod 409 not_finalized (seperti /workflow/published dan dokumentasi) apabila belum ada versi muktamad, bukan workflow_locked.',
         'Guru Besar / Pengetua boleh menanda guru yang bebannya perlu disemak semula semasa mengembalikan draf (guru melebihi kapasiti ditanda secara automatik).',
         'PK dan Pentadbir melihat notis "Dikembalikan untuk semakan semula" — siapa, bila, sebab dan senarai guru ditanda dengan beban semasa — di Agihan Tugas, Semakan & Kelulusan dan Dashboard; guru ditanda diserlahkan dan boleh ditapis di Agihan Tugas. Notis hilang apabila draf dihantar semula.',
         'Istilah "Ketua Sekolah" diganti dengan Guru Besar / Pengetua mengikut jenis sekolah.',

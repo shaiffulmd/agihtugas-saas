@@ -2445,7 +2445,7 @@
     },
     "/letters/{id}": {
       "get": {
-        "summary": "Read frozen finalized letter data; 409 before first publication",
+        "summary": "Read frozen finalized letter data; 409 not_finalized before first publication, 404 not_found if the teacher is not in the latest finalized version",
         "responses": {
           "200": {
             "description": "Success; teachers/sync returns 200 on update, 201 on create",
