@@ -6,6 +6,11 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.1'=>['2026-10-26',[
+        'Guru Besar / Pengetua boleh menanda guru yang bebannya perlu disemak semula semasa mengembalikan draf (guru melebihi kapasiti ditanda secara automatik).',
+        'PK dan Pentadbir melihat notis "Dikembalikan untuk semakan semula" — siapa, bila, sebab dan senarai guru ditanda dengan beban semasa — di Agihan Tugas, Semakan & Kelulusan dan Dashboard; guru ditanda diserlahkan dan boleh ditapis di Agihan Tugas. Notis hilang apabila draf dihantar semula.',
+        'Istilah "Ketua Sekolah" diganti dengan Guru Besar / Pengetua mengikut jenis sekolah.',
+    ]],
     '1.0'=>['2026-10-26',[
         'Keluaran 1.0: UrusTugas berbilang sekolah — agihan tugas guru, auto-agihan, aliran kelulusan, surat lantikan, API, langganan Free/Pro, keselamatan & operasi — diuji penuh merentas sekolah, peranan, mod laluan (/KOD/) dan subdomain.',
         'Nombor versi semakan & muktamad kini dikira bagi setiap sekolah (#1, #2, …) pada halaman Kelulusan, sejarah versi dan surat lantikan.',

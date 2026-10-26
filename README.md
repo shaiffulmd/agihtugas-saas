@@ -4,7 +4,7 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK): guru, jawatan & pemberat,
 
 **UrusTugas berdiri sendiri.** Tiada fail, pangkalan data, kuki atau kunci yang dikongsi dengan koku-multi; integrasi (pilihan) hanya melalui API HTTP — lihat [integrations/koku-multi/](integrations/koku-multi/README.md).
 
-Versi semasa: **1.0** (sejarah perubahan dalam aplikasi: `/?page=versi`, sumber `app/changelog.php`).
+Versi semasa: **1.1** (sejarah perubahan dalam aplikasi: `/?page=versi`, sumber `app/changelog.php`).
 
 ## Mula
 

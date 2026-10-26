@@ -84,6 +84,7 @@ check('<article class="letter">' in b and 'Nur Aisyah Abdullah' in b, 'guru demo
 pk, u = login('DEM0001', 'pk')
 s, b, _ = pk.req('/DEM0001/?page=kelulusan')
 check('Draf' in b and 'versi muktamad #1' in b and 'Muktamad' in b, 'demo bermula sebagai draf pindaan dengan versi muktamad #1')
+check('Draf pindaan dibuka</strong> oleh Hj. Ahmad Fauzi (Pengetua)' in b and 'guru ditanda untuk disemak semula' in b and '(Pengetua) (Pengetua)' not in b, 'PK demo melihat notis pindaan & guru ditanda oleh Pengetua')
 s, b, _ = pk.req('/DEM0001/?page=surat')
 check('Versi muktamad #1.' in b, 'halaman surat: nombor versi per sekolah (#1), bukan ID revisi global')
 s, b, _ = pk.req('/DEM0001/?page=syarat')

@@ -9,7 +9,7 @@ declare(strict_types=1);
 const DEMO_ACCOUNTS=[
     ['admin','Cikgu Aina (Pentadbir)','admin@demo.test','Demo-Admin-2026','Semua halaman, akaun pengguna & tetapan sekolah'],
     ['pk','En. Rahman (Penolong Kanan)','pk@demo.test','Demo-PK-2026','Merancang jawatan & lantikan, hantar untuk semakan'],
-    ['head','Hj. Ahmad Fauzi (Ketua Sekolah)','ketua@demo.test','Demo-Ketua-2026','Meluluskan & memuktamadkan senarai tugas'],
+    ['head','Hj. Ahmad Fauzi','ketua@demo.test','Demo-Ketua-2026','Meluluskan & memuktamadkan senarai tugas'],
     ['teacher','Nur Aisyah Abdullah (Guru)','guru@demo.test','Demo-Guru-2026','Melihat tugas sendiri & surat lantikan'],
 ];
 const DEMO_TEACHERS=[['Nur Aisyah Abdullah','Bahasa Melayu',25],['Muhammad Hafiz Ahmad','Matematik',25],['Siti Nurhaliza Hassan','Sains',20],['Ahmad Firdaus Ismail','Pendidikan Jasmani',25],['Nurul Huda Osman','Bahasa Inggeris',25],['Chong Wei Ling','Matematik',20],['Ravindran Kumar','Reka Bentuk & Teknologi',25],['Farah Nadia Zainal','Pendidikan Islam',20],['Mohd Faizal Yusof','Sejarah',25],['Siti Aminah Ali','Pendidikan Seni',25],['Lee Mei Yee','Bahasa Inggeris',20],['Nor Azlina Rahman','Pemulihan',20]];
@@ -78,7 +78,7 @@ function demo_seed(string $type='SMK'): void {
         $tid=[]; foreach(DEMO_TEACHERS as $i=>[$n,$spec,$cap]){ query('INSERT INTO teachers(school_id,name,email,specialty,capacity) VALUES ('.sid().',?,?,?,?)',[$n,'guru'.($i+1).'@sekolah.demo',$spec,$cap]); $tid[$i+1]=(int)db()->lastInsertId(); }
         $pid=[]; foreach(DEMO_POSITIONS as $i=>[$n,$cat,$w]){ query('INSERT INTO positions(school_id,name,category,weight) VALUES ('.sid().',?,?,?)',[$n,$cat,$w]); $pid[$i+1]=(int)db()->lastInsertId(); }
         foreach(DEMO_ASSIGN as $p=>$t) query('INSERT INTO assignments(school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$tid[$t],$pid[$p]]);
-        foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at,teacher_id) VALUES ('.sid().',?,?,?,?,NOW(),?)',[$name,$email,hash_password($pass),$role,$role==='teacher'?$tid[1]:null]);
+        foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at,teacher_id) VALUES ('.sid().',?,?,?,?,NOW(),?)',[$role==='head'?$name.' ('.($type==='SK'?'Guru Besar':'Pengetua').')':$name,$email,hash_password($pass),$role,$role==='teacher'?$tid[1]:null]);
         engine_setting_set(['principal'=>$type==='SK'?'Hj. Ahmad Fauzi bin Ismail':'Dr. Rohani binti Yusof','session_year'=>date('Y'),'letter_reference'=>($type==='SK'?'SKD':'SMKD').'.100-1/5/1']);
         // Syarat contoh di Pusat Syarat: kepakaran & penyandang tetap (lihat juga Agihan Automatik).
         allocation_save_position_rule($pid[8],['required_specialty'=>'Matematik']);                      // Ketua Panitia Matematik
@@ -89,11 +89,13 @@ function demo_seed(string $type='SMK'): void {
             ['Semak senarai tugas sesi '.date('Y'),'<p>Senarai tugas yang telah dimuktamadkan boleh dilihat di <strong>Tugas Saya</strong>. Maklumkan kepada Penolong Kanan jika terdapat percanggahan sebelum mesyuarat guru.</p>','makluman',$uid['admin']]);
         db()->commit();
     } catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
-    // Versi #1 dimuktamadkan (surat & Tugas Saya terus boleh dilihat), kemudian dibuka sebagai draf pindaan supaya demo boleh disunting.
-    $who=fn(string $role)=>['id'=>(int)$uid[$role],'role'=>$role,'name'=>$role];
-    foreach([['submit','pk',''],['approve','head',''],['finalize','head',''],['return','admin','Pindaan sesi: semak beban guru yang melebihi kapasiti.']] as [$t,$role,$why]){
+    // Versi #1 dimuktamadkan (surat & Tugas Saya terus boleh dilihat), kemudian dibuka oleh GB/Pengetua sebagai draf pindaan
+    // dengan guru melebihi kapasiti ditanda — demo boleh disunting dan menunjukkan notis "dikembalikan" kepada PK.
+    $who=fn(string $role)=>['id'=>(int)$uid[$role],'role'=>$role,'name'=>(string)query('SELECT name FROM users WHERE school_id='.sid().' AND id=?',[(int)$uid[$role]])->fetchColumn()];
+    $over=array_map(fn($t)=>(int)$t['id'],array_filter(teachers_with_load(),fn($t)=>$t['load']>$t['capacity']));
+    foreach([['submit','pk',''],['approve','head',''],['finalize','head',''],['return','head','Pindaan sesi: kurangkan beban guru yang ditanda dan isi jawatan Kokurikulum yang masih kosong.']] as [$t,$role,$why]){
         db()->beginTransaction();
-        try { workflow_transition($t,workflow_state()['version'],$who($role),$why); db()->commit(); }
+        try { workflow_transition($t,workflow_state()['version'],$who($role),$why,$t==='return'?$over:[]); db()->commit(); }
         catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
     }
 }

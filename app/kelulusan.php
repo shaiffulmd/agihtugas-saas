@@ -3,7 +3,8 @@ declare(strict_types=1);
 /* Aliran kelulusan agihan tugas: Draf → Semakan → Lulus → Muktamad (satu keadaan setiap sekolah, workflow_state).
  *  - Hantar: Pentadbir/PK, draf, ≥1 lantikan → revisi dengan snapshot JSON tetap + hash. Data perancangan dikunci.
  *  - Lulus / Muktamad: GB/Pengetua sahaja, bukan penghantar, hash snapshot mesti sama dengan data semasa.
- *  - Kembalikan: Pentadbir/GB/Pengetua dengan sebab; dari Muktamad → draf pindaan (revisi muktamad kekal diterbitkan).
+ *  - Kembalikan: Pentadbir/GB/Pengetua dengan sebab (+ guru ditanda untuk disemak semula); dari Muktamad → draf pindaan
+ *    (revisi muktamad kekal diterbitkan). Maklumat pemulangan (workflow_state.return_info) dipaparkan kepada PK sehingga dihantar semula.
  *  - Kunci optimistik: setiap peralihan memerlukan version semasa. Surat & "Tugas Saya" membaca revisi muktamad terkini. */
 
 const WORKFLOW_LABELS=['draft'=>'Draf','submitted'=>'Semakan','approved'=>'Lulus','finalized'=>'Muktamad'];
@@ -13,6 +14,15 @@ function workflow_state(): array {
     if(!$s){ school_engine_init(); $s=['status'=>'draft','revision_id'=>null,'version'=>1]; }
     return ['status'=>$s['status'],'revision_id'=>$s['revision_id']!==null?(int)$s['revision_id']:null,'version'=>(int)$s['version']];
 }
+/** Pemulangan terakhir yang masih aktif (draf belum dihantar semula): by_id, by_name, role, at, reason, flags[] — atau null. */
+function workflow_return_info(): ?array {
+    $raw=query('SELECT return_info FROM workflow_state WHERE school_id='.sid().' AND status="draft"')->fetchColumn();
+    $i=is_string($raw) && $raw!==''?json_decode($raw,true):null;
+    if(!is_array($i)) return null;
+    $i['flags']=array_values(array_map('intval',(array)($i['flags']??[]))); return $i;
+}
+/** Guru ditanda (id => true) bagi pemulangan aktif — untuk sorotan di halaman perancangan. */
+function workflow_flagged(): array { $i=workflow_return_info(); return $i?array_fill_keys($i['flags'],true):[]; }
 function workflow_require_draft(): void {
     if(workflow_state()['status']!=='draft') throw new WorkflowError('Agihan dikunci untuk semakan / kelulusan. Kembalikan kepada draf sebelum membuat pindaan.');
 }
@@ -26,11 +36,12 @@ function workflow_source(): array {
 }
 function workflow_hash(array $source): string { return hash('sha256',json_encode($source,JSON_THROW_ON_ERROR)); }
 /** Peralihan status. $actor = pengguna semasa (id, name, role). Pemanggil memiliki transaksi. */
-function workflow_transition(string $action,int $expectedVersion,array $actor,string $reason=''): array {
+/** $flags = ID guru ditanda untuk disemak semula (tindakan 'return' sahaja; ID bukan guru sekolah ini diabaikan). */
+function workflow_transition(string $action,int $expectedVersion,array $actor,string $reason='',array $flags=[]): array {
     query('SELECT school_id FROM workflow_state WHERE school_id='.sid().' FOR UPDATE');
     $state=workflow_state();
     if($state['version']!==$expectedVersion) throw new WorkflowError('Status telah berubah. Muat semula halaman sebelum meneruskan.');
-    $status=$state['status']; $rid=$state['revision_id']; $target=''; $reason=trim($reason); $uid=(int)$actor['id'];
+    $status=$state['status']; $rid=$state['revision_id']; $target=''; $reason=trim($reason); $uid=(int)$actor['id']; $info=null;
     if($action==='submit'){
         if(!in_array($actor['role'],['admin','pk'],true)) throw new WorkflowError('Hanya Pentadbir atau PK boleh menghantar draf.',403);
         if($status!=='draft') throw new WorkflowError('Hanya draf boleh dihantar untuk semakan.');
@@ -52,11 +63,15 @@ function workflow_transition(string $action,int $expectedVersion,array $actor,st
         if($status==='draft') throw new WorkflowError('Agihan sudah dalam draf.');
         if($reason==='' || mb_strlen($reason)>500) throw new WorkflowError('Nyatakan sebab pindaan (maksimum 500 aksara).',422);
         if($status!=='finalized') query('UPDATE workflow_revisions SET status="returned",returned_by=?,returned_at=NOW(),return_reason=? WHERE id=? AND school_id='.sid(),[$uid,$reason,$rid]);
+        $ids=array_values(array_unique(array_filter(array_map('intval',$flags),fn($x)=>$x>0)));
+        if(count($ids)>500) throw new WorkflowError('Terlalu banyak guru ditanda.',422);
+        $flags=$ids?array_map('intval',query('SELECT id FROM teachers WHERE school_id='.sid().' AND id IN ('.implode(',',$ids).') ORDER BY name')->fetchAll(PDO::FETCH_COLUMN)):[];
+        $info=json_encode(['by_id'=>$uid,'by_name'=>(string)($actor['name']??''),'role'=>(string)$actor['role'],'at'=>date('Y-m-d H:i:s'),'from'=>$status,'reason'=>$reason,'flags'=>$flags],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
         $target='draft';
     } else throw new WorkflowError('Tindakan tidak sah.',422);
-    $ok=query('UPDATE workflow_state SET status=?,revision_id=?,version=version+1 WHERE school_id='.sid().' AND version=?',[$target,$rid,$expectedVersion])->rowCount();
+    $ok=query('UPDATE workflow_state SET status=?,revision_id=?,return_info=?,version=version+1 WHERE school_id='.sid().' AND version=?',[$target,$rid,$info??null,$expectedVersion])->rowCount();
     if($ok!==1) throw new WorkflowError('Status telah berubah. Cuba semula.');
-    audit('workflow_'.$action,'workflow_revisions',$rid,WORKFLOW_LABELS[$status].' → '.WORKFLOW_LABELS[$target].($reason!==''?' · '.mb_substr($reason,0,180):''));
+    audit('workflow_'.$action,'workflow_revisions',$rid,WORKFLOW_LABELS[$status].' → '.WORKFLOW_LABELS[$target].($reason!==''?' · '.mb_substr($reason,0,180):'').($flags?' · '.count($flags).' guru ditanda':''));
     return workflow_state();
 }
 /** Revisi muktamad terkini (salinan tetap) atau null. */

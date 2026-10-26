@@ -104,9 +104,11 @@ CREATE TABLE workflow_revisions (
  FOREIGN KEY(school_id,finalized_by) REFERENCES users(school_id,id), FOREIGN KEY(school_id,returned_by) REFERENCES users(school_id,id)
 ) ENGINE=InnoDB;
 -- Keadaan aliran semasa — satu baris setiap sekolah — kunci optimistik melalui version.
+-- return_info: JSON pemulangan terakhir (pelaku, masa, sebab, guru ditanda) — dikosongkan apabila draf dihantar semula.
 CREATE TABLE workflow_state (
  school_id BIGINT UNSIGNED PRIMARY KEY, status ENUM('draft','submitted','approved','finalized') NOT NULL DEFAULT 'draft',
- revision_id BIGINT UNSIGNED NULL, version INT UNSIGNED NOT NULL DEFAULT 1, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ revision_id BIGINT UNSIGNED NULL, version INT UNSIGNED NOT NULL DEFAULT 1,
+ return_info TEXT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE, FOREIGN KEY(school_id,revision_id) REFERENCES workflow_revisions(school_id,id)
 ) ENGINE=InnoDB;
 -- Logo sekolah & Jata Negara untuk surat: id = sha256 kandungan, unik DALAM sekolah (surat muktamad lama kekal merujuk logo lama).

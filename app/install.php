@@ -6,10 +6,10 @@ declare(strict_types=1);
  * Pemasangan hanya dibenarkan sekali: selepas berjaya, storage/installed.lock ditulis dan
  * semua laluan pemasangan menolak untuk berjalan semula.
  */
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const APP_RELEASE = '2026-10-26'; // Tarikh keluaran (dipaparkan di footer). Sejarah perubahan: app/changelog.php
 // Naikkan setiap kali skema pangkalan data berubah (jadual/lajur baharu), walaupun APP_VERSION kekal.
-const APP_SCHEMA = '0.1-m2'; // m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
+const APP_SCHEMA = '0.1-m3'; // m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
 
 function install_lock_path(): string { return dirname(__DIR__).'/storage/installed.lock'; }
 function table_exists(string $t): bool { return (bool)query('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?',[$t])->fetchColumn(); }
@@ -42,7 +42,7 @@ function app_status(): string {
 function needs_upgrade(): bool {
     // Pemasangan bermula dengan skema penuh (database/schema.sql). Tambah semakan di sini apabila skema berubah.
     return !table_exists('platform_settings') || !column_exists('audit_logs','detail') || !table_exists('audit_heads')
-        || !column_exists('users','teacher_id') || array_filter(ENGINE_TABLES,fn($t)=>!table_exists($t))!==[];
+        || !column_exists('users','teacher_id') || !column_exists('workflow_state','return_info') || array_filter(ENGINE_TABLES,fn($t)=>!table_exists($t))!==[];
 }
 
 /** Semakan keperluan pelayan. Setiap item: [label, status ok|warn|fail, butiran]. */
@@ -118,6 +118,7 @@ function run_upgrade(): array {
         db()->exec('ALTER TABLE users ADD COLUMN teacher_id BIGINT UNSIGNED NULL AFTER self_registered, ADD UNIQUE KEY school_teacher (school_id,teacher_id), ADD CONSTRAINT users_teacher_fk FOREIGN KEY(school_id,teacher_id) REFERENCES teachers(school_id,id)');
         $made[]='users.teacher_id';
     }
+    if(!column_exists('workflow_state','return_info')){ db()->exec('ALTER TABLE workflow_state ADD COLUMN return_info TEXT NULL AFTER version'); $made[]='workflow_state.return_info'; }
     $n=db()->exec('INSERT IGNORE INTO workflow_state(school_id) SELECT id FROM schools');
     if($made) $done[]='Enjin agihan tugas: '.implode(', ',$made).' dicipta; keadaan aliran (draf) disediakan untuk '.(int)$n.' sekolah';
     write_install_lock('upgrade'); $done[]='Fail kunci pemasangan dikemas kini ke versi '.APP_VERSION;

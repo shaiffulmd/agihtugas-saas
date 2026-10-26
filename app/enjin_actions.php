@@ -70,10 +70,10 @@ function handle_engine_action(string $action): never {
                 $r=allocation_apply(input('plan_id')); unset($_SESSION['auto_plan']); audit('allocation_apply','allocation_plans',null,$r['changed'].' perubahan, '.$r['unfilled'].' kosong');
                 $msg='Agihan automatik disimpan: '.$r['changed'].' perubahan, '.$r['unfilled'].' jawatan belum diisi.'; break;
             case 'kelulusan':
-                workflow_transition(input('transition'),post_int('version',1,PHP_INT_MAX,'Versi'),$me,input('reason')); $msg='Status semakan dan kelulusan dikemas kini.'; break;
+                workflow_transition(input('transition'),post_int('version',1,PHP_INT_MAX,'Versi'),$me,input('reason'),array_map('intval',array_filter((array)($_POST['flag']??[]),'is_scalar'))); $msg='Status semakan dan kelulusan dikemas kini.'; break;
             case 'sekolah_profil':
                 $p=trim(input('principal')); $ref=trim(input('letter_reference'));
-                if($p==='' || mb_strlen($p)>160 || $ref==='' || mb_strlen($ref)>160) throw new EngineError('Nama ketua sekolah dan rujukan surat diperlukan (maksimum 160 aksara).');
+                if($p==='' || mb_strlen($p)>160 || $ref==='' || mb_strlen($ref)>160) throw new EngineError('Nama '.head_title().' dan rujukan surat diperlukan (maksimum 160 aksara).');
                 engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref]);
                 audit('school_profile','settings'); $msg='Profil sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo': engine_setting_set(['school_logo_id'=>branding_upload($_FILES['school_logo']??null)]); audit('letter_logo','settings'); $msg='Logo sekolah untuk surat disimpan.'; break;

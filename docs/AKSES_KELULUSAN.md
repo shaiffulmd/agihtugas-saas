@@ -23,9 +23,11 @@ Sesi dan kuki diasingkan mengikut sekolah: log masuk di `/KOD-A/` tidak memberi 
 
 1. Pentadbir/PK menyediakan agihan dalam **Draf**.
 2. Klik **Hantar untuk semakan**. Salinan data disimpan dan data kerja dikunci.
-3. Guru Besar/Pengetua menyemak semua jawatan dan beban. Klik **Luluskan agihan**, atau kembalikan ke draf dengan sebab.
+3. Guru Besar/Pengetua menyemak semua jawatan dan beban. Klik **Luluskan agihan**, atau kembalikan ke draf dengan sebab. Dalam jadual *Beban guru dalam versi ini*, tanda guru yang bebannya perlu disemak semula (guru melebihi kapasiti ditanda secara automatik).
 4. Dari **Lulus**, Guru Besar/Pengetua klik **Muktamadkan & terbitkan surat**.
 5. Surat dan paparan tugas guru menggunakan salinan versi muktamad.
+
+Selepas dikembalikan, PK dan Pentadbir melihat notis **Dikembalikan untuk semakan semula** (pelaku, masa, sebab dan guru ditanda bersama beban semasa) di Agihan Tugas, Semakan & Kelulusan dan Dashboard. Guru ditanda diserlahkan dalam Agihan Tugas dan Pengurusan Guru, dan butang **Guru ditanda** menapis lantikan mereka. Notis dan tanda dikosongkan apabila draf dihantar semula. Guru tidak melihat tanda ini.
 
 Penghantaran memerlukan sekurang-kurangnya satu lantikan; jawatan kosong dan beban berlebihan tidak menghalang keputusan tetapi perlu disemak oleh Guru Besar/Pengetua. Snapshot merangkumi guru, jawatan, penyandang, maklumat sekolah dan syarat. Jika data berubah di luar aplikasi selepas penghantaran, keputusan kelulusan ditolak dan draf perlu dihantar semula. Setiap keputusan merekodkan akaun pelaku dan masa; UI mengelakkan tindakan berdasarkan versi status lama.
 

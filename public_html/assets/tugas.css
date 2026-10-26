@@ -52,3 +52,13 @@ fieldset.pro-ciri{border:1px solid var(--line);border-radius:10px;padding:12px 1
 .lp-demo{text-align:center}.lp-demo h2{margin:6px 0}.lp-demo-sekolah{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:14px}.lp-demo-sekolah small{opacity:.7}
 @media (max-width:900px){.lp-langkah{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.lp-langkah{grid-template-columns:1fr}}
+/* Pemulangan draf: guru ditanda oleh Guru Besar / Pengetua untuk disemak semula oleh PK */
+.workflow-banner.returned{border-color:color-mix(in srgb,var(--danger) 35%,var(--surface));background:color-mix(in srgb,var(--danger) 7%,var(--surface))}
+.return-notice{display:block}.return-notice p{margin:.45rem 0 0}.return-reason{font-style:italic}
+.flag-list{margin:.4rem 0 0;padding-left:1.1rem;line-height:1.7}.flag-list .badge{margin-left:.2rem}
+tr.row-flagged>td{background:color-mix(in srgb,var(--danger) 6%,var(--surface))}
+tr.row-flagged>td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--danger) 70%,var(--surface))}
+.flag-badge{margin-left:.3rem;vertical-align:middle}
+.load-review td:first-child input{width:18px;height:18px;accent-color:var(--danger);cursor:pointer}.load-review label{cursor:pointer}
+tr.row-over>td{background:color-mix(in srgb,var(--danger) 4%,var(--surface))}
+.small-note{font-size:.82rem;margin:.2rem 0 .6rem}

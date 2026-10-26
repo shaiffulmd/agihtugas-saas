@@ -18,7 +18,7 @@ cPanel → SSL/TLS Status → *Run AutoSSL* untuk subdomain tersebut.
 Buka `https://demo.domainanda.my` (terus ke `/install.php`). Isi butiran pangkalan data, biarkan bahagian Pentadbir Platform kosong, kemudian klik **Pasang demo**. Pemasang mencipta:
 
 - Panel platform `/platform/`: `platform@demo.test` / `Demo-Platform-2026` (2FA dimatikan dalam demo).
-- **DEM0001** (SMK, ketua: Pengetua) dan **DEM0002** (SK, ketua: Guru Besar), setiap satu dengan 12 guru, 24 jawatan, 20 lantikan, 3 syarat jawatan, satu hebahan dan **versi muktamad #1** (surat lantikan & Tugas Saya terus boleh dilihat) yang telah dibuka semula sebagai **draf pindaan** supaya perancangan boleh disunting.
+- **DEM0001** (SMK, pelulus: Pengetua) dan **DEM0002** (SK, pelulus: Guru Besar), setiap satu dengan 12 guru, 24 jawatan, 20 lantikan, 3 syarat jawatan, satu hebahan dan **versi muktamad #1** (surat lantikan & Tugas Saya terus boleh dilihat) yang telah dibuka semula oleh Pengetua / Guru Besar sebagai **draf pindaan** dengan guru melebihi kapasiti ditanda — log masuk sebagai PK untuk melihat notis "Draf pindaan dibuka" dan sorotan di Agihan Tugas.
 - Halaman utama memaparkan bahagian **Demo tanpa daftar** dengan pautan ke kedua-dua sekolah.
 
 ## 6. Akaun penguji
