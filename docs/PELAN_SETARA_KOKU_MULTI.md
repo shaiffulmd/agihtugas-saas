@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1–7 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa7-import`); Fasa 8 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–8 siap — keluaran 1.0 (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa8-qa`).** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -95,6 +95,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 - Ujian penuh: `multi_tenant_integration.py`, `tenant_sql_audit.py`, `platform_integration.py`, `payment_integration.py`, `security_integration.py` (disesuaikan) + ujian enjin.
 - Rangkak semua halaman sebagai setiap peranan × 2 sekolah: tiada 5xx, tiada data sekolah lain.
 - Semakan visual desktop & 390 px; `README.md`, `handover.md`, `docs/PEMASANGAN.md` ditulis semula; `APP_VERSION` 1.0.
+- **Siap 26 Okt 2026 (1.0).** Suite koku-multi diport (platform, bayaran, akaun, domain, ralat, rupa, direktori) + `multi_tenant_integration.py` baharu (4 peranan × 2 sekolah, mod path & subdomain: rangkak semua halaman/API/aset/eksport — tiada 5xx, tiada penanda sekolah lain, ID sekolah lain ditolak). `tests/run_all.sh` mengumpul semua suite (statik / demo / tempatan / baharu). Dibaiki: nombor versi per sekolah (`workflow_no()`), catatan julat eksport audit, lajur Butiran CSV audit, `imagedestroy()` (usang PHP 8.5). Zip keluaran diuji dengan pemasang web pada DB kosong.
 
 ## 3. Risiko & langkah kawalan
 - **Kebocoran silang sekolah** — FK komposit, `NOT NULL school_id`, audit SQL statik, ujian rangkak; API menentukan sekolah daripada key sahaja.

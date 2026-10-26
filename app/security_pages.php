@@ -80,7 +80,7 @@ function handle_security_platform(string $action,array $me): never {
         $code=strtoupper(trim(input('kod'))); $sid=0; if($code!=='' && $code!=='PLATFORM'){ $s=school_find($code); if(!$s) throw new DomainException('Sekolah tidak dijumpai.'); $sid=(int)$s['id']; }
         $from=input('dari')?:'2000-01-01'; $to=input('hingga')?:date('Y-m-d');
         foreach([$from,$to] as $d) if(!($x=DateTimeImmutable::createFromFormat('!Y-m-d',$d)) || $x->format('Y-m-d')!==$d) throw new DomainException('Tarikh tidak sah.');
-        platform_log('audit_export',$sid?:null,($sid?$code:'platform')." $from–$to"); audit_csv($sid,$from,$to,$sid?$code:'platform');
+        platform_log('audit_export',$sid?:null,($sid?$code:'platform')." {$from}–{$to}"); audit_csv($sid,$from,$to,$sid?$code:'platform');
     }
     if($action==='p_sec_audit_rebuild'){
         platform_confirm_password(); $code=strtoupper(trim(input('kod')));
@@ -99,11 +99,11 @@ function handle_security_platform(string $action,array $me): never {
 
 /** Eksport CSV log (berantai) dengan lajur seq & chain untuk semakan luar. */
 function audit_csv(int $sid,string $from,string $to,string $name): never {
-    $rows=$sid>0?query('SELECT a.seq,a.created_at,u.email who,a.via_ref,a.action,a.entity,a.entity_id,a.ip_hash,a.chain FROM audit_logs a LEFT JOIN users u ON u.id=a.user_id WHERE a.school_id=? AND a.created_at>=? AND a.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY a.seq',[$sid,$from,$to])->fetchAll()
+    $rows=$sid>0?query('SELECT a.seq,a.created_at,u.email who,a.via_ref,a.action,a.entity,a.entity_id,a.detail,a.ip_hash,a.chain FROM audit_logs a LEFT JOIN users u ON u.id=a.user_id WHERE a.school_id=? AND a.created_at>=? AND a.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY a.seq',[$sid,$from,$to])->fetchAll()
                 :query('SELECT l.seq,l.created_at,COALESCE(p.email,CONCAT("#",l.admin_ref)) who,s.code school,l.action,l.detail,l.ip_hash,l.chain FROM platform_log l LEFT JOIN platform_admins p ON p.id=l.admin_ref LEFT JOIN schools s ON s.id=l.school_ref WHERE l.created_at>=? AND l.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY l.seq',[$from,$to])->fetchAll();
     while(ob_get_level()>0) @ob_end_clean();
     header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="audit-'.preg_replace('/[^A-Za-z0-9]/','',$name).'-'.$from.'-'.$to.'.csv"');
-    $f=fopen('php://output','w'); fwrite($f,"\xEF\xBB\xBF"); fputcsv($f,$sid>0?['Seq','Masa','Pengguna','Melalui platform (#)','Tindakan','Entiti','ID','Hash IP','Rantai']:['Seq','Masa','Pentadbir','Sekolah','Tindakan','Butiran','Hash IP','Rantai'],',','"','');
+    $f=fopen('php://output','w'); fwrite($f,"\xEF\xBB\xBF"); fputcsv($f,$sid>0?['Seq','Masa','Pengguna','Melalui platform (#)','Tindakan','Entiti','ID','Butiran','Hash IP','Rantai']:['Seq','Masa','Pentadbir','Sekolah','Tindakan','Butiran','Hash IP','Rantai'],',','"','');
     foreach($rows as $r) fputcsv($f,array_map(fn($v)=>preg_match('/^[=+\-@]/',(string)$v)?"'".$v:$v,array_values($r)),',','"','');
     fclose($f); exit;
 }

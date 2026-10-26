@@ -57,7 +57,7 @@ function plat_logo_process(array $f): string {
     [$w,$h]=[imagesx($src),imagesy($src)]; $s=min(1,512/max($w,$h)); $nw=max(1,(int)round($w*$s)); $nh=max(1,(int)round($h*$s));
     $dst=imagecreatetruecolor($nw,$nh); imagealphablending($dst,false); imagesavealpha($dst,true); imagefill($dst,0,0,imagecolorallocatealpha($dst,0,0,0,127));
     imagecopyresampled($dst,$src,0,0,0,0,$nw,$nh,$w,$h);
-    ob_start(); imagepng($dst,null,9); $out=(string)ob_get_clean(); imagedestroy($src); imagedestroy($dst);
+    ob_start(); imagepng($dst,null,9); $out=(string)ob_get_clean();
     if($out==='') throw new DomainException('Logo tidak dapat diproses.');
     return $out;
 }
@@ -115,7 +115,6 @@ function lp_hero_process(array $f): string {
     [$w,$h]=[imagesx($src),imagesy($src)]; $s=min(1,1920/$w); $nw=(int)round($w*$s); $nh=(int)round($h*$s);
     $dst=imagecreatetruecolor($nw,$nh); imagefill($dst,0,0,imagecolorallocate($dst,11,26,43)); imagecopyresampled($dst,$src,0,0,0,0,$nw,$nh,$w,$h);
     ob_start(); if(function_exists('imagewebp')) imagewebp($dst,null,80); else { imageinterlace($dst,true); imagejpeg($dst,null,80); } $out=(string)ob_get_clean();
-    imagedestroy($src); imagedestroy($dst);
     if($out==='') throw new DomainException('Imej tidak dapat diproses.');
     return $out;
 }

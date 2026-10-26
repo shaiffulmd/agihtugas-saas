@@ -1,4 +1,6 @@
-# Pelan UrusTugas SaaS
+# Pelan UrusTugas SaaS (sejarah)
+
+> Dokumen asal sebelum naik taraf. Pelaksanaan sebenar (Fasa 1–8, keluaran 1.0) direkodkan dalam [PELAN_SETARA_KOKU_MULTI.md](PELAN_SETARA_KOKU_MULTI.md).
 
 ## 1. Asas tenant dan pengasingan data
 

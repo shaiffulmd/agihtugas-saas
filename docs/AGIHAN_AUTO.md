@@ -1,5 +1,7 @@
 # Panduan agihan automatik & jawatan pukal
 
+Auto-agihan & Pusat Syarat ialah ciri Pro secara lalai (pentadbir platform memilih ciri Pro di Tetapan Platform → "Ciri Pro sahaja"). Jawatan pukal tersedia untuk semua pakej melainkan "pukal" dipilih sebagai ciri Pro; had Free (guru/jawatan) terpakai pada setiap tambahan.
+
 ## Pusat Syarat
 
 1. Semak profil/kepakaran dan kapasiti setiap guru di Pengurusan Guru.

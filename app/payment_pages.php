@@ -179,7 +179,7 @@ function handle_payments_platform(string $action,array $me): never {
             $f=$_FILES['qr']; if(($f['error']??1)!==UPLOAD_ERR_OK || $f['size']>2*1048576) throw new DomainException('Imej QR maks 2 MB.');
             if(!in_array((new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']),['image/png','image/jpeg','image/webp'],true)) throw new DomainException('Imej QR mesti PNG, JPG atau WEBP.');
             $im=@imagecreatefromstring((string)file_get_contents($f['tmp_name'])); if(!$im) throw new DomainException('Imej QR tidak sah.');
-            ob_start(); imagepng($im,null,9); $png=(string)ob_get_clean(); imagedestroy($im); // dikod semula: metadata dibuang
+            ob_start(); imagepng($im,null,9); $png=(string)ob_get_clean(); // dikod semula: metadata dibuang
             $kv+=['qr_data'=>base64_encode($png),'qr_ver'=>substr(hash('sha256',$png),0,16)];
         }
         if($kv['m_qr']==='1' && pset('qr_ver')==='' && empty($kv['qr_ver'])) throw new DomainException('Muat naik imej QR untuk mengaktifkan DuitNow QR.');

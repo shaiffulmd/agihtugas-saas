@@ -78,8 +78,8 @@ function letter_html(array $doc,callable $img): string {
     $t=$doc['teacher']; $s=$doc['school']; [$left,$right]=letter_emblems($s); $title=(string)($s['principal_title']??head_title());
     $h='<article class="letter"><header class="letter-head"><div class="letter-identities">';
     foreach([[$left,'Jata Negara'],[$right,'Logo sekolah']] as [$a,$alt]) if($a) $h.='<img src="'.e($img($a)).'" alt="'.$alt.'" class="letter-emblem">';
-    $h.='</div><h2>'.e($s['school']).'</h2><p>PEJABAT '.e(mb_strtoupper($title)).' · VERSI MUKTAMAD #'.(int)$doc['revision_id'].'</p></header>';
-    $h.='<div class="letter-meta">Ruj. Kami: '.e($s['reference']).' ('.(int)$t['id'].' / V'.(int)$doc['revision_id'].')<br>Tarikh: '.e(letter_date($doc['finalized_at'])).'</div>';
+    $h.='</div><h2>'.e($s['school']).'</h2><p>PEJABAT '.e(mb_strtoupper($title)).' · VERSI MUKTAMAD #'.(int)$doc['revision_no'].'</p></header>';
+    $h.='<div class="letter-meta">Ruj. Kami: '.e($s['reference']).' ('.(int)$t['id'].' / V'.(int)$doc['revision_no'].')<br>Tarikh: '.e(letter_date($doc['finalized_at'])).'</div>';
     $h.='<p><strong>'.e($t['name']).'</strong><br>'.e($s['school']).'</p><p>Tuan/Puan,</p><h3>PELANTIKAN TUGAS DAN TANGGUNGJAWAB BAGI SESI '.e($s['year']).'</h3>';
     $h.='<p>Dengan hormatnya perkara di atas dirujuk.</p><p>2. Sukacita dimaklumkan bahawa tuan/puan dilantik untuk menjalankan tugas berikut bagi sesi '.e($s['year']).':</p>';
     $h.='<table class="letter-table"><thead><tr><th>Bil.</th><th>Jawatan</th><th>Bidang</th></tr></thead><tbody>';

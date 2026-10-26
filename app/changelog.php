@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.0'=>['2026-10-26',[
+        'Keluaran 1.0: UrusTugas berbilang sekolah — agihan tugas guru, auto-agihan, aliran kelulusan, surat lantikan, API, langganan Free/Pro, keselamatan & operasi — diuji penuh merentas sekolah, peranan, mod laluan (/KOD/) dan subdomain.',
+        'Nombor versi semakan & muktamad kini dikira bagi setiap sekolah (#1, #2, …) pada halaman Kelulusan, sejarah versi dan surat lantikan.',
+        'Dibaiki: amaran PHP dan catatan julat tarikh semasa eksport log audit, serta lajur Butiran dalam CSV log audit sekolah.',
+        'Panduan pemasangan, akses & kelulusan, dan serahan pembangun (handover.md) ditulis semula untuk edisi berbilang sekolah.',
+    ]],
     '0.6'=>['2026-10-26',[
         'Import pemasangan AgihTugas / UrusTugas satu sekolah (SQLite) ke sekolah baharu: php bin/import-agihtugas.php --db=FAIL --code=KOD [--dry-run]. Guru, jawatan, lantikan, akaun (kata laluan lama), syarat, revisi & surat muktamad, logo dan sejarah dibawa dengan ID dipetakan semula.',
         'Klien integrasi baharu integrations/koku-multi/UrusTugasClient.php untuk API per sekolah (/KOD/api/v1 atau subdomain, kunci ut_).',

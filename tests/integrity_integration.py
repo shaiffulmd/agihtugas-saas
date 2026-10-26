@@ -94,5 +94,6 @@ finally:
     for r in saved_sys: sql('INSERT INTO platform_settings(name,value) VALUES (?,?)',[r['name'],r['value']],school=False)
     for i in [u['id'] for u in sql('SELECT id FROM users WHERE email LIKE ?',[prefix.lower()+'%'],True)]:
         sql('UPDATE audit_logs SET user_id=NULL WHERE user_id=?',[i]); sql('DELETE FROM users WHERE id=?',[i])
+    php("audit_rebuild(school_find(getenv('TEST_SCHOOL')?:'DEM0001')['id']);")  # pembersihan di atas mengubah baris audit; tandatangan semula rantai ujian
     sql('DELETE FROM platform_admins WHERE email=?',[pemail],school=False)
 print(f'All {passed} integrity/uptime checks passed.')

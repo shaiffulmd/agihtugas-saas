@@ -84,6 +84,8 @@ check('<article class="letter">' in b and 'Nur Aisyah Abdullah' in b, 'guru demo
 pk, u = login('DEM0001', 'pk')
 s, b, _ = pk.req('/DEM0001/?page=kelulusan')
 check('Draf' in b and 'versi muktamad #1' in b and 'Muktamad' in b, 'demo bermula sebagai draf pindaan dengan versi muktamad #1')
+s, b, _ = pk.req('/DEM0001/?page=surat')
+check('Versi muktamad #1.' in b, 'halaman surat: nombor versi per sekolah (#1), bukan ID revisi global')
 s, b, _ = pk.req('/DEM0001/?page=syarat')
 check('Ringkasan syarat khusus' in b and 'Matematik' in b, 'syarat jawatan contoh')
 s, b, _ = pk.post('/DEM0001/?page=auto', {'action': 'auto_preview', 'mode': 'vacant'})

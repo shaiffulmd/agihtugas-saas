@@ -62,14 +62,16 @@ function workflow_transition(string $action,int $expectedVersion,array $actor,st
 /** Revisi muktamad terkini (salinan tetap) atau null. */
 function workflow_published(): ?array {
     $r=query('SELECT * FROM workflow_revisions WHERE school_id='.sid().' AND status="finalized" ORDER BY id DESC LIMIT 1')->fetch();
-    return $r?[...$r,'id'=>(int)$r['id'],'data'=>json_decode((string)$r['payload'],true,64,JSON_THROW_ON_ERROR)]:null;
+    return $r?[...$r,'id'=>(int)$r['id'],'no'=>workflow_no((int)$r['id']),'data'=>json_decode((string)$r['payload'],true,64,JSON_THROW_ON_ERROR)]:null;
 }
+/** Nombor versi mengikut sekolah (1, 2, …) untuk paparan; ID revisi adalah global. */
+function workflow_no(int $rid): int { return $rid>0?(int)query('SELECT COUNT(*) FROM workflow_revisions WHERE school_id='.sid().' AND id<=?',[$rid])->fetchColumn():0; }
 /** Kandungan surat lantikan seorang guru daripada revisi muktamad. */
 function workflow_letter(int $tid,?array $published=null): array {
     $r=$published??workflow_published(); if(!$r) throw new WorkflowError('Surat hanya tersedia selepas agihan dimuktamadkan.');
     $teacher=null; foreach($r['data']['teachers'] as $t) if($t['id']===$tid) $teacher=$t;
     if(!$teacher) throw new WorkflowError('Guru tiada dalam agihan muktamad.',404);
     $tasks=array_values(array_filter($r['data']['positions'],fn($p)=>$p['teacher_id']===$tid));
-    return ['revision_id'=>$r['id'],'school'=>$r['data']['school'],'teacher'=>$teacher,'assignments'=>$tasks,'finalized_at'=>$r['finalized_at']];
+    return ['revision_id'=>$r['id'],'revision_no'=>$r['no']??workflow_no($r['id']),'school'=>$r['data']['school'],'teacher'=>$teacher,'assignments'=>$tasks,'finalized_at'=>$r['finalized_at']];
 }
 function workflow_time(?string $dt): string { return $dt?date('d/m/Y H:i',strtotime($dt)):'—'; }
