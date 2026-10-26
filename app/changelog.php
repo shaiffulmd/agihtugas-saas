@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '0.3'=>['2026-10-26',[
+        'Pakej Free/Pro: ciri Pro boleh dipilih oleh pentadbir platform (lalai: agihan automatik & Pusat Syarat, surat pukal & PDF, API, sejarah versi semakan; pilihan: import pukal). Sekolah Free melihat panel naik taraf; data kekal.',
+        'Had Free dikira daripada guru, jawatan dan pengguna aktif (lalai 30 / 60 / 10) di semua titik tambah termasuk import pukal dan API.',
+        'API sekolah Free menjawab 403 pro_required; kunci sedia ada sah semula selepas naik taraf.',
+        'Resit bayaran berawalan UT; halaman utama, terma dan halaman Langganan menyenaraikan ciri Pro semasa; kerja harian membuang pratonton auto-agihan lama.',
+    ]],
     '0.2'=>['2026-10-26',[
         'Enjin agihan tugas dipindahkan ke platform berbilang sekolah: Pengurusan Guru (termasuk tambah pukal CSV), Jawatan & Pemberat, Agihan Tugas, Pusat Syarat, Agihan Automatik (pratonton & simpan) dan Tambah Jawatan Pukal.',
         'Semakan & Kelulusan: Draf → Semakan → Lulus → Muktamad dengan kunci versi; data perancangan, nama & jenis sekolah dikunci semasa semakan.',

@@ -109,7 +109,7 @@ function pay_create_online(string $g,array $s,array $payor,?array $dk=null): arr
     $sen=$dk && $dk['ok']?(int)$dk['final']:pay_price();
     query('INSERT INTO payments(school_id,school_code,method,amount_sen,years,sandbox,status,payer_name,payer_email,payer_phone,by_name,discount_code,discount_sen) VALUES (?,?,?,?,1,?,"menunggu",?,?,?,?,?,?)',
         [$s['id'],$s['code'],$g,$sen,gw_sandbox($g)?1:0,mb_substr($payor['name'],0,120),mb_substr($payor['email'],0,190),mb_substr($payor['phone'],0,30),mb_substr($payor['by']??$payor['name'],0,120),$dk && $dk['ok']?$dk['code']:null,$dk && $dk['ok']?(int)$dk['cut']:0]);
-    $id=(int)db()->lastInsertId(); $ref='KK'.$s['code'].'-'.$id;
+    $id=(int)db()->lastInsertId(); $ref='UT'.$s['code'].'-'.$id;
     $back=pay_return_url($s,$id); $cb=pay_callback_url($g);
     $desc='Langganan Pro 1 tahun '.platform_name().' '.$s['code'];
     try {
@@ -179,7 +179,7 @@ function pay_extend(int $schoolId,int $years): array {
     query('UPDATE schools SET expires_on=?,notices=NULL WHERE id=?',[$new,$schoolId]); // notis amaran tamat bermula semula bagi tarikh baharu
     return [$cur?:null,$new];
 }
-function pay_receipt_no(int $id): string { return 'KK'.date('Y').'-'.str_pad((string)$id,6,'0',STR_PAD_LEFT); }
+function pay_receipt_no(int $id): string { return 'UT'.date('Y').'-'.str_pad((string)$id,6,'0',STR_PAD_LEFT); }
 
 /**
  * Tandakan bayaran berjaya & lanjutkan langganan — IDEMPOTEN (callback & halaman kembali boleh serentak).

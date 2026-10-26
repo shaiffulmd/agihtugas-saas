@@ -73,6 +73,7 @@ function api_main(): never {
         $key=query('SELECT * FROM api_keys WHERE token_hash=? AND revoked_at IS NULL',[api_key_hash($m[1])])->fetch();
         if(!$key || (int)$key['school_id']!==sid()){ header('WWW-Authenticate: Bearer realm="UrusTugas"'); rate_hit($rk); api_fail(401,'unauthorized','API key tidak sah atau telah dibatalkan.'); }
         $GLOBALS['API_KEY']=$key;
+        if(!feature_on('api')) api_fail(403,'pro_required','API tersedia untuk pakej Pro sahaja. Kunci kekal sah selepas naik taraf.');
         if(!in_array($method,['GET','HEAD'],true) && $key['scope']!=='write') api_fail(403,'insufficient_scope','API key ini hanya membenarkan bacaan.');
         query('UPDATE api_keys SET last_used_at=NOW() WHERE id=? AND school_id='.sid(),[$key['id']]);
         api_route($method,rtrim((string)parse_url((string)($_SERVER['REQUEST_URI']??''),PHP_URL_PATH),'/'));
@@ -97,6 +98,8 @@ function api_route(string $method,string $path): never {
     if($path==='/api/v1/workflow'){ api_method($method,['GET']); api_respond(workflow_state()); }
     if($path==='/api/v1/workflow/published'){ api_method($method,['GET']); $p=workflow_published(); if(!$p) api_fail(409,'not_finalized','Belum ada agihan muktamad.'); api_respond(['revision_id'=>$p['id'],'finalized_at'=>$p['finalized_at'],'snapshot'=>$p['data']]); }
     if($path==='/api/v1/school'){ api_method($method,['GET']); api_respond(school_profile()); }
+    if(($path==='/api/v1/allocation/rules' || str_starts_with($path,'/api/v1/allocation/') || preg_match('#^/api/v1/positions/[0-9]+/rules$#D',$path)) && !feature_on('auto')) api_fail(403,'pro_required','Agihan automatik & syarat tersedia untuk pakej Pro sahaja.');
+    if($path==='/api/v1/positions/bulk' && !feature_on('pukal')) api_fail(403,'pro_required','Import pukal tersedia untuk pakej Pro sahaja.');
     if($path==='/api/v1/allocation/rules'){
         api_method($method,['GET','PUT']);
         if($method==='GET') api_respond(['general'=>allocation_rules(),'positions'=>(object)allocation_position_rules()]);

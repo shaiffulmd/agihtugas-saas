@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1–3 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema` → `fasa3-enjin`); Fasa 4 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–4 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema` → `fasa3-enjin` → `fasa4-langganan`); Fasa 5 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -73,6 +73,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 - `registration.php`, `legal.php`: jenis sekolah SK/SMK, teks terma UrusTugas.
 - `support.php`, `impersonate.php`, `hebahan.php` (hebahan platform → sekolah), `addons.php` (rangka addon untuk ciri berbayar masa depan).
 - `bin/cron.php`: `subscription_daily()` + pembersihan.
+- **Siap 26 Okt 2026 (versi 0.3, tiada perubahan skema).** `PRO_FEATURES` + `pro_locked_features()` / `feature_on()` / `require_feature()` / `page_pro_feature()` dalam `app/subscription.php`; pilihan platform `cfg_pro_ciri` (Tetapan Platform → Pakej Free, kotak semak). Lalai dikunci: `auto` (auto-agihan, Pusat Syarat, endpoint API allocation & positions/{id}/rules), `surat_pukal` (semua surat & PDF — surat individu masih boleh dicetak), `api` (seluruh API → 403 `pro_required`, cipta kunci), `sejarah` (sejarah versi semakan); pilihan `pukal` (import guru/jawatan & /positions/bulk). Pro, percubaan & tajaan = semua ciri. Had Free lalai: 30 guru, 60 jawatan, **10 pengguna** (koku asal 3 — terlalu rendah kerana pentadbir/PK/ketua + akaun guru). Resit `UTyyyy-nnnnnn`, rujukan bil `UT<KOD>-id`. Kerja harian membuang `allocation_plans` > 24 jam. Halaman utama/terma/Langganan menyenaraikan ciri Pro semasa. `payments.php`, `registration.php`, `support.php`, `impersonate.php`, `hebahan.php`, `addons.php` disemak — tiada perubahan logik diperlukan (harga lalai RM120 kekal, boleh diubah di Tetapan Platform). Diuji: `tests/plan_integration.py` 33/33 (+ `tests/plan_helper.php`), simpan Tetapan Platform melalui HTTP, regresi enjin 85/85, algoritma 45/45, skema 53/53, audit SQL bersih.
 
 ### Fasa 5 — Keselamatan & operasi
 - Ambil `security.php`, `security_pages.php`, `audit_chain.php`, `integrity.php`, `backup.php`, `updater.php`, `domain.php`, `sihat.php`, `bin/security.php`, `bin/backup.php`, `bin/restore.php`.

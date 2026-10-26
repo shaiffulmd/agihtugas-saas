@@ -42,6 +42,33 @@ function free_summary(): array {
     return [implode(' · ',$parts),$over];
 }
 
+/* ---------- Ciri Pro ---------- */
+/** Ciri yang boleh dihadkan kepada Pro (Tetapan Platform → Pakej Free, cfg_pro_ciri). [label, keterangan, halaman yang dikunci] */
+const PRO_FEATURES=[
+    'auto'=>['Agihan automatik & Pusat Syarat','Cadangan agihan mengikut kapasiti, had & syarat jawatan',['auto','syarat']],
+    'surat_pukal'=>['Surat pukal & PDF','Semua surat serentak dan muat turun PDF (surat individu masih boleh dicetak)',[]],
+    'api'=>['API & integrasi','Kunci API dan sambungan sistem lain',['api']],
+    'sejarah'=>['Sejarah versi semakan','Senarai revisi terdahulu di Semakan & Kelulusan',[]],
+    'pukal'=>['Import pukal guru & jawatan','Tampal / CSV untuk banyak rekod serentak',['pukal']],
+];
+const PRO_FEATURES_DEFAULT='auto,surat_pukal,api,sejarah';
+/** Ciri yang dikunci bagi pakej Free (pilihan platform). */
+function pro_locked_features(): array { return array_values(array_intersect(array_filter(explode(',',pset('pro_ciri',PRO_FEATURES_DEFAULT))),array_keys(PRO_FEATURES))); }
+/** Ciri tersedia untuk sekolah? Pro, percubaan & tajaan: semua ciri. Free: kecuali ciri yang dikunci platform. */
+function feature_on(string $f,?array $s=null): bool { return school_plan($s)!=='free' || !in_array($f,pro_locked_features(),true); }
+/** Ciri yang mengunci halaman enjin ini (atau null). */
+function page_pro_feature(string $page): ?string { foreach(PRO_FEATURES as $k=>[,,$pages]) if(in_array($page,$pages,true) && !feature_on($k)) return $k; return null; }
+/** Tolak tindakan ciri Pro bagi sekolah Free (EngineError → notis borang / kod API pro_required). */
+function require_feature(string $f): void {
+    if(!feature_on($f)) throw new EngineError(PRO_FEATURES[$f][0].' tersedia untuk pakej Pro sahaja. Naik taraf di halaman Langganan.',403,'pro_required');
+}
+/** Panel naik taraf (halaman yang dikunci untuk pakej Free). */
+function pro_locked_panel(string $f): void {
+    $admin=(current_user()['role']??'')==='admin';
+    echo '<section class="panel padded empty pro-locked"><span class="badge warn">Pro</span><h3>'.e(PRO_FEATURES[$f][0]).'</h3><p>'.e(PRO_FEATURES[$f][1]).' tersedia untuk pakej Pro. Sekolah anda kini menggunakan pakej Free — data sedia ada kekal.</p>'
+        .($admin?'<a class="btn primary" href="/?page=langganan">Naik taraf ke Pro →</a>':'<p class="muted">Hubungi pentadbir sekolah untuk naik taraf.</p>').'</section>';
+}
+
 /* ---------- Gerbang akses (index.php) ---------- */
 /** Laman sekolah ditutup apabila langganan tamat tanpa pakej Free. Pentadbir masih boleh mengurus langganan. */
 function subscription_gate(?array $user,string $page): void {
@@ -70,6 +97,7 @@ function langganan_page(): void {
     <section class="stats-grid"><article class="stat-card"><div class="stat-top"><small>Pakej</small></div><strong><?= e(PLAN_LABELS[$p]??$p) ?></strong></article>
     <article class="stat-card<?= $p!=='pro'?' alert':'' ?>"><div class="stat-top"><small><?= $p==='pro'?'Pro sah hingga':'Pro tamat pada' ?></small></div><strong><?= $s['expires_on']?e(date('d/m/Y',strtotime($s['expires_on']))):'—' ?></strong><small><?= $d!==null?($d>=0?$d.' hari lagi':abs($d).' hari lalu'):'' ?></small></article>
     <?php foreach(FREE_LIMITS as $k=>[,$label]): ?><article class="stat-card"><div class="stat-top"><small><?= e(ucfirst($label)) ?></small></div><strong><?= free_count($k) ?></strong><?php if($p==='free'): ?><small>Had Free: <?= free_limit($k) ?></small><?php endif; ?></article><?php endforeach; ?></section>
+    <?php $locked=pro_locked_features(); if($locked): ?><section class="panel padded spaced"><h3>Ciri Pro</h3><ul class="pro-list"><?php foreach($locked as $k): ?><li><?= feature_on($k)?'<span class="badge green">Aktif</span>':'<span class="badge warn">Dikunci</span>' ?> <strong><?= e(PRO_FEATURES[$k][0]) ?></strong><small class="cell-sub"><?= e(PRO_FEATURES[$k][1]) ?></small></li><?php endforeach; ?></ul><?php if($p==='free'): ?><p class="muted">Ciri di atas dibuka semula serta-merta selepas naik taraf ke Pro.</p><?php endif; ?></section><?php endif; ?>
     <section class="panel padded spaced"><h3>Pakej</h3>
     <div class="dashboard-grid"><div><h4>Pro — RM<?= e(number_format((int)pset('harga_pro_sen')/100,2)) ?> setahun</h4><p class="muted">Semua ciri tanpa had guru, jawatan atau pengguna.</p></div>
     <?php if(pset('free_aktif')==='1'): ?><div><h4>Free — percuma</h4><p class="muted">Apabila Pro tamat: data kekal; had <?= e(implode(', ',array_map(fn($k)=>free_limit($k).' '.FREE_LIMITS[$k][1],array_keys(FREE_LIMITS)))) ?>. Data dipadam hanya jika tiada log masuk pentadbir selama <?= (int)pset('free_tidak_aktif_bulan') ?> bulan (dengan amaran e-mel).</p></div><?php else: ?><div><h4>Selepas tamat</h4><p class="muted">Laman sekolah ditutup.<?= (int)pset('padam_hari')>0?' Data dipadam '.(int)pset('padam_hari').' hari selepas tamat (amaran e-mel 30 &amp; 7 hari sebelum).':'' ?></p></div><?php endif; ?></div>
@@ -132,6 +160,8 @@ function subscription_daily(bool $force=false): array {
             school_notice_mark($s,$key,$del);
         }
     }
+    // Enjin: pratonton auto-agihan lama (semua sekolah; sah 30 minit, disimpan 24 jam untuk jejak).
+    $done['pratonton']=db()->exec('DELETE FROM allocation_plans WHERE created_at < NOW() - INTERVAL 1 DAY');
     $done+=payments_daily(); $done+=security_daily(); if(function_exists('support_daily')) $done+=support_daily();
     if(function_exists('registration_cleanup')) registration_cleanup();
     return $done;

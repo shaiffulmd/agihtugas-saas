@@ -79,7 +79,9 @@ class Client:
 
 def err(page):
     for m in re.finditer(r'class="notice error"[^>]*>(.*?)</div>', page, re.S):
-        return html.unescape(re.sub('<[^>]+>', '', m.group(1))).strip()
+        t = html.unescape(re.sub('<[^>]+>', '', m.group(1))).strip()
+        if not t.startswith('Pakej Free:'):  # jalur langganan (merah apabila melebihi had), bukan ralat borang
+            return t
     return ''
 
 

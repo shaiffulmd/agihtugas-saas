@@ -64,6 +64,7 @@ elseif(!in_array($page,['dashboard','security','users','enroll','recovery','sett
 if($user && isset(ENGINE_PAGES[$page]) && !in_array($page,engine_pages((string)$user['role']),true)) error_page(403,'Peranan anda tidak membenarkan halaman ini.');
 if($user && $page==='dashboard' && in_array($user['role'],['head','teacher'],true) && empty($user['must_change'])) redirect($user['role']==='head'?'/?page=kelulusan':'/?page=tugas_saya');
 if($user && $page==='aset') branding_serve(input('id','get')); // logo & Jata Negara surat (sekolah semasa sahaja)
+if($user && isset($_GET['pdf']) && in_array($page,['surat','tugas_saya'],true) && !feature_on('surat_pukal')) error_page(403,'Muat turun PDF surat tersedia untuk pakej Pro. Gunakan butang Cetak untuk surat individu.');
 if($user && isset($_GET['pdf']) && $page==='surat'){ $pub=workflow_published(); if(!$pub) error_page(404,'Belum ada agihan muktamad.'); $g=(int)input('guru','get'); $docs=letter_docs($pub,$g?:null); if(!$docs) error_page(404,'Tiada surat untuk dicetak.'); letters_pdf($docs,'surat-lantikan-v'.$pub['id'].($g?'-guru'.$g:'').'.pdf'); }
 if($user && isset($_GET['pdf']) && $page==='tugas_saya'){ $pub=workflow_published(); $tid=(int)query('SELECT teacher_id FROM users WHERE id=? AND school_id='.sid(),[$user['id']])->fetchColumn(); $docs=$pub && $tid?letter_docs($pub,$tid):[]; if(!$docs) error_page(404,'Belum ada lantikan muktamad untuk anda.'); letters_pdf($docs,'surat-lantikan-saya.pdf'); }
 if($user && isset($_GET['pdf'])) download_document_pdf($page);

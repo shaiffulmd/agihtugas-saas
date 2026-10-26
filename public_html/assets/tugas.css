@@ -41,3 +41,7 @@ select.multi-select{width:100%;min-height:140px}
 @media print{.workflow-banner,.sidebar,.topbar,.toolbar{display:none!important}.letter{border:0;border-radius:0;padding:0;margin:0;max-width:none;break-after:page}.letter:last-of-type{break-after:auto}.letter-emblem{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .toolbar .search input{min-height:40px;padding:.5rem .75rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}
 .warning-text{color:var(--danger)}
+/* Ciri Pro */
+.pro-locked{text-align:center}.pro-locked h3{margin:10px 0 6px}.pro-locked .btn{margin-top:10px}
+.pro-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:10px}.pro-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.pro-list .cell-sub{flex-basis:100%}
+fieldset.pro-ciri{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px}fieldset.pro-ciri legend{font-weight:600;padding:0 6px}

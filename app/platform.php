@@ -152,7 +152,7 @@ function platform_action(string $action): never {
         $dom=array_values(array_unique(array_filter(array_map(fn($d)=>strtolower(trim(ltrim(trim($d),'@'))),preg_split('/[\s,]+/',input('daftar_domain'))))));
         foreach($dom as $d) if(!preg_match('/^(?=.{3,190}$)([a-z0-9-]+\.)+[a-z]{2,}$/D',$d)) throw new DomainException('Domain e-mel tidak sah: '.$d);
         $kv=['nama_platform'=>$name,'emel_notis'=>$notis,'harga_pro_sen'=>(string)(int)round((float)$harga*100),'percubaan_hari'=>$int('percubaan_hari',0,365,'Tempoh percubaan'),
-            'free_aktif'=>input('free_aktif')==='1'?'1':'0','free_guru'=>$int('free_guru',1,100000,'Had guru Free'),'free_jawatan'=>$int('free_jawatan',1,100000,'Had jawatan Free'),'free_pengguna'=>$int('free_pengguna',1,1000,'Had pengguna Free'),
+            'free_aktif'=>input('free_aktif')==='1'?'1':'0','free_guru'=>$int('free_guru',1,100000,'Had guru Free'),'free_jawatan'=>$int('free_jawatan',1,100000,'Had jawatan Free'),'free_pengguna'=>$int('free_pengguna',1,1000,'Had pengguna Free'),'pro_ciri'=>implode(',',array_values(array_intersect(array_keys(PRO_FEATURES),array_filter((array)($_POST['pro_ciri']??[]),'is_string')))),
             'free_tidak_aktif_bulan'=>$int('free_tidak_aktif_bulan',1,60,'Tempoh tidak aktif Free'),'padam_hari'=>$int('padam_hari',0,3650,'Padam data selepas'),
             'terma_teks'=>mb_substr(str_replace("\r\n","\n",trim(input('terma_teks'))),0,20000),'polisi_teks'=>mb_substr(str_replace("\r\n","\n",trim(input('polisi_teks'))),0,20000),
             'daftar_buka'=>input('daftar_buka')==='1'?'1':'0','daftar_kelulusan'=>input('daftar_kelulusan')==='auto'?'auto':'manual','daftar_domain'=>implode(', ',$dom),'daftar_had_harian'=>$int('daftar_had_harian',1,1000,'Had pendaftaran sehari')];
@@ -263,7 +263,7 @@ if(!function_exists('notice')){ function notice(string $text,string $class='info
 if(!function_exists('badge')){ function badge(mixed $text): string { return '<span class="badge '.(in_array($text,['Aktif','Selesai'],true)?'green':'').'">'.e($text).'</span>'; } }
 function p_notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
 function p_head(string $title,string $extraHead=''): void {
-    ?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title><?= e($title) ?> · UrusTugas</title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="/?page=theme-css"><script src="<?= e(asset('app.js')) ?>" defer></script><?= function_exists('plat_logo_has') && plat_logo_has()?'<link rel="icon" type="image/png" href="'.e(plat_logo_url()).'">':'' ?><?= $extraHead ?></head><body><?php
+    ?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title><?= e($title) ?> · <?= e(platform_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(asset('tugas.css')) ?>"><link rel="stylesheet" href="/?page=theme-css"><script src="<?= e(asset('app.js')) ?>" defer></script><?= function_exists('plat_logo_has') && plat_logo_has()?'<link rel="icon" type="image/png" href="'.e(plat_logo_url()).'">':'' ?><?= $extraHead ?></head><body><?php
 }
 function p_auth(string $title,string $sub,callable $form,string $error): never {
     p_head($title); ?>
@@ -405,6 +405,7 @@ function platform_page_settings(): void {
     if($err!=='' && input('action')==='p_settings_save'){ // simpan gagal: kekalkan apa yang ditaip (kecuali kata laluan) supaya tidak perlu diisi semula
         foreach($_POST as $k=>$val) if(is_string($val) && isset($s[$k]) && $k!=='smtp_pass') $s[$k]=$val;
         foreach(['free_aktif','daftar_buka'] as $k) $s[$k]=input($k)==='1'?'1':'0';
+        $s['pro_ciri']=implode(',',array_filter((array)($_POST['pro_ciri']??[]),'is_string'));
         $h=str_replace(',','',trim(input('harga_pro'))); if(preg_match('/^\d{1,6}(\.\d{1,2})?$/',$h)) $s['harga_pro_sen']=(string)(int)round((float)$h*100);
     }
     $v=fn($k)=>e($s[$k]??''); $chk=fn($k,$val)=>($s[$k]??'')===$val?' checked':''; $sel=fn($k,$val)=>($s[$k]??'')===$val?' selected':'';
@@ -421,6 +422,7 @@ function platform_page_settings(): void {
 <label class="field">Had bilangan guru<input name="free_guru" value="<?= $v('free_guru') ?>" inputmode="numeric" required></label>
 <label class="field">Had jawatan<input name="free_jawatan" value="<?= $v('free_jawatan') ?>" inputmode="numeric" required></label>
 <label class="field">Had pengguna aktif (akaun log masuk)<input name="free_pengguna" value="<?= $v('free_pengguna') ?>" inputmode="numeric" required></label>
+<fieldset class="full pro-ciri"><legend>Ciri Pro sahaja (dikunci bagi sekolah Free)</legend><?php $pc=explode(',',(string)($s['pro_ciri']??'')); foreach(PRO_FEATURES as $k=>[$l,$d]): ?><label class="check"><input type="checkbox" name="pro_ciri[]" value="<?= e($k) ?>"<?= in_array($k,$pc,true)?' checked':'' ?>> <span><strong><?= e($l) ?></strong> <small class="muted"><?= e($d) ?></small></span></label><?php endforeach; ?><small class="muted">Sekolah Pro, percubaan dan tajaan sentiasa mendapat semua ciri. Data sedia ada tidak dipadam apabila ciri dikunci.</small></fieldset>
 <label class="field">Free: padam data jika tiada log masuk (bulan)<input name="free_tidak_aktif_bulan" value="<?= $v('free_tidak_aktif_bulan') ?>" inputmode="numeric" required></label>
 <label class="field">Padam data selepas tamat / tidak aktif (hari, 0 = tidak dipadam)<input name="padam_hari" value="<?= $v('padam_hari') ?>" inputmode="numeric" required><small class="muted">Amaran e-mel dihantar 30 &amp; 7 hari sebelum pemadaman.</small></label></div></section>
 <section class="panel padded spaced"><h3>Pendaftaran sekolah awam (/daftar)</h3><div class="form-grid">

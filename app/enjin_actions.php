@@ -17,6 +17,10 @@ function handle_engine_action(string $action): never {
     if($action==='kelulusan'){ if(!in_array($me['role'],['admin','pk','head'],true)) error_page(403); }
     elseif($adminOnly) require_admin();
     else require_planner();
+    // Ciri Pro (pakej Free): disemak sebelum transaksi.
+    $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','api_cipta'=>'api',
+        'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal'][$action]??null;
+    if($feature!==null) require_feature($feature);
     $back=['guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
         'agih'=>'agihan','agih_lepas'=>'agihan','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api'][$action]??'sekolah';
     db()->beginTransaction();

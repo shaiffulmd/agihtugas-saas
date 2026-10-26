@@ -18,6 +18,7 @@ REVIEWED=[
  ('public_html/install.php',"information_schema"),
 ('bin/user.php',"'.$table.'"),('app/support.php',"function support_unread_platform"),  # lencana platform: semua sekolah
     ('app/support.php',"DELETE FROM support_messages WHERE ticket_id=?',[$t['id']]"),  # platform padam satu tiket (tiket dicari dahulu tanpa tapisan sekolah: panel platform)
+    ('app/subscription.php',"DELETE FROM allocation_plans WHERE created_at < NOW() - INTERVAL 1 DAY"),  # kerja harian platform: pembersihan pratonton lama semua sekolah
     ('app/api.php',"FROM api_keys WHERE token_hash=? AND revoked_at IS NULL"),  # kunci menentukan sekolah (hash unik global), kemudian school_id kunci MESTI = sid() URL
     ('app/support.php',"SELECT t.id FROM support_tickets t WHERE COALESCE"),('app/support.php',"DELETE FROM support_messages WHERE ticket_id IN"),  # simpanan tiket: pembersihan merentas sekolah oleh platform/kerja harian (ID integer)
 
