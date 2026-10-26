@@ -1,0 +1,8 @@
+# Folder sulit: tidak boleh diakses melalui web walaupun tersalah letak dalam web root.
+<IfModule mod_authz_core.c>
+Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+Order allow,deny
+Deny from all
+</IfModule>

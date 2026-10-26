@@ -1,0 +1,59 @@
+# Bina zip keluaran setiap push ke main, terbitkan ke Release "terkini", kemudian maklumkan laman (webhook).
+# Laman memasang sendiri melalui app/updater.php — lihat docs/KEMASKINI-GITHUB.md.
+# Rahsia repo (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOOKS  = senarai URL webhook dipisahkan ruang, cth. https://urustugas.my/kemaskini-hook
+#   DEPLOY_SECRET = sama dengan UPDATE_SECRET dalam .env setiap laman
+name: Bina & terbit
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: terbit
+  cancel-in-progress: true
+env:
+  ASSET: urustugas.zip
+  TAG: terkini
+jobs:
+  terbit:
+    runs-on: ubuntu-latest
+    env:
+      HOOKS: ${{ secrets.DEPLOY_HOOKS }}
+      SECRET: ${{ secrets.DEPLOY_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, gd, zip, sodium, pdo_mysql, dom, curl
+          tools: composer
+      - name: Pasang kebergantungan (tanpa dev)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+      - name: Semak sintaks PHP
+        run: find app bin public_html lib -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+      - name: Bina zip keluaran
+        run: |
+          sh release/build-zip.sh
+          Z=$(ls -t *.zip | head -1); mv "$Z" "$ASSET"
+          V=$(sed -n "s/^const APP_VERSION = '\(.*\)';/\1/p" app/install.php)
+          jq -n --arg sha "$GITHUB_SHA" --arg v "$V" --arg at "$(date -u +%FT%TZ)" --arg zip "$ASSET" \
+                --arg h "$(sha256sum "$ASSET" | cut -d' ' -f1)" --arg msg "$(git log -1 --pretty=%s)" \
+                '{sha:$sha,version:$v,built_at:$at,zip:$zip,zip_sha256:$h,message:$msg}' > manifest.json
+          cat manifest.json
+      - name: Terbit ke Release "terkini"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -f "$TAG" "$GITHUB_SHA" && git push -f origin "refs/tags/$TAG"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Terkini (automatik)" --notes "Dibina automatik daripada main. Jangan muat naik fail secara manual ke Release ini." --prerelease
+          gh release upload "$TAG" "$ASSET" manifest.json --clobber
+      - name: Maklumkan laman (webhook)
+        if: ${{ env.HOOKS != '' && env.SECRET != '' }}
+        run: |
+          BODY=$(jq -c '{event:"release",sha:.sha,version:.version}' manifest.json)
+          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
+          for U in $HOOKS; do
+            echo "→ $U"; curl -fsS -m 30 -X POST -H "Content-Type: application/json" -H "X-UrusTugas-Signature: sha256=$SIG" --data "$BODY" "$U" || echo "::warning::Webhook gagal: $U (laman akan dikemas kini oleh cron atau butang panel)"
+          done

@@ -1,0 +1,15 @@
+Options -Indexes
+DirectoryIndex index.php
+# Halaman ralat seragam (lihat app/errors.php). ralat.html ialah sandaran statik jika PHP tidak dapat berjalan.
+ErrorDocument 400 /index.php?page=ralat&kod=400
+ErrorDocument 403 /index.php?page=ralat&kod=403
+ErrorDocument 404 /index.php?page=ralat&kod=404
+ErrorDocument 500 /ralat.html
+ErrorDocument 502 /ralat.html
+ErrorDocument 503 /ralat.html
+ErrorDocument 504 /ralat.html
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]
+</IfModule>

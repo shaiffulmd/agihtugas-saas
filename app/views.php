@@ -1,0 +1,77 @@
+<?php
+require_once __DIR__.'/admin_views.php'; require_once __DIR__.'/icons.php';
+const PAGE_SIZE=25;
+$role=(string)($user['role']??'');
+$nav=['Utama'=>[['dashboard','home','Dashboard']]];
+if($role!=='admin') $nav['Utama'][]=['hebahan','info','Hebahan',function_exists('hebahan_unread_count')?hebahan_unread_count():0];
+if($role==='admin'){
+ $nav['Utama'][]=['hebahan','info','Hebahan Guru'];
+ $nav['Sistem']=[['users','key','Pengguna & Audit'],['settings','sliders','Tetapan & Tema'],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
+ $nav['Langganan & bantuan']=[['langganan','card','Langganan'],['sokongan','help','Sokongan']];
+} // Integriti & Sandaran: peringkat pelayan → panel platform
+$nav['Akaun']=[['security','user','Profil & Keselamatan']];
+const PAGE_TITLES=['dashboard'=>'Dashboard','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan & Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
+$pageTitle=PAGE_TITLES[$page]??'Halaman';
+function notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
+function field(string $key,array $f,mixed $value=''): void {
+ [$label,$type,$constraint]=$f; $required=($f[3]??true)?'required':'';
+ if($type==='richtext'){ // div, bukan label: klik dalam <label> akan dihantar ke butang pertama bar alat
+  $lid='rl-'.preg_replace('/[^a-z0-9_]/i','',$key);
+  echo '<div class="field full"><span id="'.$lid.'">'.e($label).'</span><textarea name="'.e($key).'" data-rich data-max="'.(int)$constraint.'" rows="8" aria-labelledby="'.$lid.'" aria-label="'.e($label).'">'.e($value).'</textarea><small class="muted">Gunakan bar alat untuk format: tebal, condong, senarai, subtajuk, pautan. Tampal dari Word/Google Docs dibersihkan secara automatik.</small></div>';
+  return;
+ }
+ echo '<label class="field '.($type==='textarea'?'full':'').'">'.e($label);
+ if($type==='textarea') echo '<textarea name="'.e($key).'" maxlength="'.$constraint.'" '.$required.' rows="4">'.e($value).'</textarea>';
+ elseif($type==='select'){
+  echo '<select name="'.e($key).'" '.$required.(count($constraint)>12?' data-searchable="1"':'').'><option value="">Pilih '.e(mb_strtolower($label)).'</option>';
+  foreach($constraint as $v=>$t) echo '<option value="'.e($v).'" '.((string)$value===(string)$v?'selected':'').'>'.e($t).'</option>'; echo '</select>';
+ } else { $inputType=$type==='year'?'number':$type; $limits=$type==='year'?' min="2000" max="2100" step="1"':''; echo '<input type="'.$inputType.'" name="'.e($key).'" value="'.e($value).'" '.($constraint?'maxlength="'.$constraint.'"':'').' '.$limits.' '.$required.'>'; }
+ echo '</label>';
+}
+function pagination(string $page,int $pg,int $pages,int $total,string $qs): void {
+ if($pages<=1) return;
+ $url=fn(int $n)=>'/?page='.$page.'&'.($qs!==''?$qs.'&':'').'p='.$n;
+ $from=($pg-1)*PAGE_SIZE+1; $to=min($total,$pg*PAGE_SIZE);
+ echo '<nav class="pagination" aria-label="Halaman senarai"><span class="muted">Memaparkan '.$from.'–'.$to.' daripada '.number_format($total).'</span><div>';
+ echo $pg>1?'<a class="btn outline" href="'.e($url($pg-1)).'">← Sebelum</a>':'<span class="btn outline" aria-disabled="true">← Sebelum</span>';
+ foreach(array_unique([1,max(1,$pg-1),$pg,min($pages,$pg+1),$pages]) as $n) echo $n===$pg?'<span class="btn primary" aria-current="page">'.$n.'</span>':'<a class="btn outline" href="'.e($url($n)).'">'.$n.'</a>';
+ echo $pg<$pages?'<a class="btn outline" href="'.e($url($pg+1)).'">Seterusnya →</a>':'<span class="btn outline" aria-disabled="true">Seterusnya →</span>';
+ echo '</div></nav>';
+}
+function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','Muktamad','Lulus']); return '<span class="badge '.($good?'green':'').'">'.e($text).'</span>'; }
+?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e((PAGE_TITLES[$page]??'Akaun').' · '.app_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(theme_css_url()) ?>"><?php if(logo_url()): ?><link rel="icon" href="<?= e(logo_url()) ?>"><?php endif; ?><script src="<?= e(asset('app.js')) ?>" defer></script></head><body<?= demo_mode()?' data-demo="1"':'' ?>>
+<?= icons_sprite() ?>
+<?php if(in_array($page,array_merge(['login','verify','enroll'],ACCOUNT_PAGES),true) && (!$user || $page==='enroll')): $acc=in_array($page,ACCOUNT_PAGES,true); [$accTitle,$accSub]=$acc?account_heading($page):['','']; ?>
+<div class="auth-shell"><div class="auth-story"><?= brand_html() ?><div><span class="hero-pill"><span class="dot"></span>AGIHAN TUGAS GURU · <?= date('Y') ?></span><h1><?= login_headline_html() ?></h1><p><?= e(setting('login_text')) ?></p><div class="story-grid"><span><?= icon('users') ?>Guru & jawatan</span><span><?= icon('filter') ?>Auto-agihan</span><span><?= icon('check') ?>Kelulusan</span></div></div><small>Adil untuk guru. Teratur untuk sekolah.</small></div>
+<main class="auth-panel"><div class="auth-form"><span class="eyebrow teal">RUANG PENTADBIR & GURU</span><h2><?= $acc?e($accTitle):($page==='login'?'Selamat kembali.':($page==='verify'?'Sahkan identiti anda.':'Aktifkan keselamatan 2FA.')) ?></h2><?php if(!$acc || $accSub!==''): ?><p class="muted"><?= $acc?e($accSub):($page==='login'?'Log masuk untuk meneruskan pengurusan sekolah.':'Gunakan aplikasi pengesah TOTP pada telefon anda.') ?></p><?php endif; ?>
+<?php if($error) notice($error,'error'); if($page==='enroll'): $_SESSION['enroll_secret']??=base32_encode(random_bytes(20)); ?>
+<?php $enrollEmail=(string)query('SELECT email FROM users WHERE id=? AND school_id='.sid(),[(int)($_SESSION['pending_uid']??$_SESSION['uid']??0)])->fetchColumn(); ?><ol class="enroll-steps"><li>Buka aplikasi pengesah (Google Authenticator, Microsoft Authenticator, Authy dan lain-lain).</li><li>Imbas kod QR di bawah.</li><li>Masukkan kod 6 digit yang dipaparkan.</li></ol><div class="qr-box"><?= qr_svg(totp_uri($_SESSION['enroll_secret'],$enrollEmail)) ?></div><details class="manual-key"><summary>Tidak dapat mengimbas? Masukkan kunci secara manual</summary><code class="secret"><?= e(trim(chunk_split($_SESSION['enroll_secret'],4,' '))) ?></code><small class="muted">Pilih jenis berasaskan masa (TOTP), SHA-1, 6 digit, 30 saat.</small></details><p class="muted">Jangan kongsi kod QR atau kunci ini dengan sesiapa.</p>
+<?php endif; ?>
+<?php if($acc): account_form($page); else: ?><form method="post" class="stack"><?= csrf_field() ?><input type="hidden" name="action" value="<?= e($page) ?>">
+<?php if($page==='login'): ?><label class="field">Alamat e-mel<input name="email" type="email" autocomplete="username" maxlength="190" placeholder="nama@sekolah.edu.my" required></label><label class="field">Kata laluan<input name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Masukkan kata laluan" required></label><?php else: ?><label class="field">Kod pengesahan<input name="code" inputmode="<?= $page==='enroll'?'numeric':'text' ?>" autocomplete="one-time-code" maxlength="16" placeholder="000000" required></label><?php if($page==='verify'): ?><small class="muted">Anda juga boleh menggunakan satu kod pemulihan.</small><?php endif; endif; ?>
+<?php if($page==='login' && (login_captcha_needed() || !empty($_SESSION['login_cap']))) echo captcha_field('login'); ?>
+<button class="btn primary" type="submit"><?= $page==='login'?'Log masuk →':'Sahkan & teruskan →' ?></button></form><?php if($page==='login') login_extras(); endif; ?><div class="auth-security">◈ &nbsp; Sambungan selamat · Pengesahan berlapis · v<?= e(APP_VERSION) ?></div></div></main></div>
+<?php else: ?>
+<aside class="sidebar" id="sidebar" aria-label="Menu utama"><div class="side-atas"><?= brand_html('side-brand','/?page=dashboard') ?><button type="button" class="side-tutup" aria-label="Tutup menu"><?= icon('x') ?></button></div><nav class="side-nav" aria-label="Navigasi utama"><?php foreach($nav as $group=>$items): ?><div class="kump"><?= e($group) ?></div><ul><?php foreach($items as $it): [$key,$ic,$label]=$it; $badge=(int)($it[3]??0); $on=$page===$key; ?><li><a href="/?page=<?= $key ?>" class="nav-item<?= $on?' active':'' ?>"<?= $on?' aria-current="page"':'' ?>><?= icon($ic) ?><span><?= e($label) ?></span><?php if($badge): ?><b class="nav-badge" aria-label="<?= $badge ?> belum dibaca"><?= $badge ?></b><?php endif; ?></a></li><?php endforeach; ?></ul><?php endforeach; ?></nav><div class="side-foot"><div class="school-tag"><div><strong><?= e(school_name()) ?></strong><small><?= e(setting('school_tagline')) ?></small></div></div></div></aside><div class="scrim" hidden></div>
+<div class="workspace"><header class="topbar"><button class="mobile-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar"><?= icon('menu') ?></button><div class="top-title"><p class="top-h"><?= e($pageTitle) ?></p><p><?= e(school_name()) ?> · <?= date('Y') ?></p></div><div class="top-right"><div class="user-meta"><strong><?= e($user['name']??'') ?></strong><small><?= e(role_label((string)($user['role']??''))) ?></small></div><a href="/?page=security" class="avatar-link" title="Profil & keselamatan akaun"><?= avatar_html((int)$user['id'],(string)($user['name']??'')) ?></a><form method="post"><?= csrf_field() ?><button class="btn sm outline-ink" name="action" value="logout" title="Log keluar"><?= icon('log-out') ?><span class="hide-sm">Log keluar</span></button></form></div></header>
+<main class="main-content"><?= demo_banner() ?><?= function_exists('imp_banner')?imp_banner():'' ?><?= function_exists('subscription_banner')?subscription_banner():'' ?><?= emergency_banner() ?><div class="print-school-header"><?= e(school_name()) ?> · <?= date('d/m/Y') ?></div>
+<?php if(in_array($user['role']??'',HEBAHAN_ROLES,true) && empty($user['must_change']) && !in_array($page,['security','enroll','recovery'],true)) hebahan_popup(); // jangan halang tukar kata laluan / 2FA ?>
+<?php if($error) notice($error,'error'); if(isset($_SESSION['flash'])){ notice($_SESSION['flash'],'success'); unset($_SESSION['flash']); } ?>
+<?php if($page==='dashboard'): ?><div class="page-heading"><div><span class="eyebrow teal">GAMBARAN KESELURUHAN</span><h1>Dashboard</h1><p class="muted">Selamat datang, <?= e(explode(' ',$user['name'])[0]) ?> · <?= e(role_label((string)$user['role'])) ?>.</p></div></div>
+<section class="welcome-banner"><div><span class="hero-pill"><span class="dot"></span>AGIHAN TUGAS · <?= date('Y') ?></span><h2><?= lines_html(setting('banner_title')) ?></h2><p><?= e(setting('banner_text')) ?></p></div></section>
+<?php if($user['role']==='admin' && ($np=count(pending_registrations()))): ?><div class="notice info"><?= icon('users') ?><span><strong><?= $np ?> pendaftaran guru</strong> menunggu kelulusan. <a href="/?page=users#permohonan">Semak sekarang →</a></span></div><?php endif; ?>
+<?php if(in_array($user['role'],HEBAHAN_ROLES,true) && function_exists('hebahan_dashboard_panel')) hebahan_dashboard_panel(); ?>
+<section class="panel padded spaced"><div class="empty compact"><span><?= icon('clipboard') ?></span><h3>Modul agihan tugas sedang dipasang</h3><p>Senarai guru, jawatan, lantikan, auto-agihan dan aliran kelulusan akan tersedia di sini.</p></div></section>
+<?php elseif($page==='versi'): versi_page(); ?>
+<?php elseif($page==='hebahan'): hebahan_page(); ?>
+<?php elseif($page==='langganan'): langganan_page(); ?>
+<?php elseif($page==='ipsekat'): school_page_ipblocks(); ?>
+<?php elseif($page==='sokongan'): support_page(); ?>
+<?php elseif($page==='urus_akaun'): urus_akaun_page(); ?>
+<?php elseif($page==='security'): ?><div class="page-heading"><div><span class="eyebrow teal">AKAUN ANDA</span><h1>Keselamatan Akaun</h1><p class="muted">Lindungi akses kepada data sekolah.</p></div></div><?php avatar_panel($user); ?><?php if(!empty($user['must_change'])) notice('Anda sedang menggunakan kata laluan sementara yang ditetapkan oleh pentadbir. Sila tukar kata laluan sebelum meneruskan.','error'); ?><section class="panel padded"><h3>Pengesahan dua faktor</h3><?php $req2fa=twofa_required((string)$user['role']); ?><p><?= $user['totp_secret']?'✓ 2FA aktif. Kod 6 digit dari aplikasi pengesah diperlukan setiap kali anda log masuk.':'2FA belum diaktifkan. Disyorkan untuk melindungi akaun anda walaupun kata laluan bocor.' ?></p><p class="muted"><?= $req2fa?'2FA diwajibkan untuk peranan anda.':'2FA pilihan untuk peranan anda (ditetapkan oleh pentadbir).' ?></p><?php if(!$user['totp_secret']): ?><a class="btn primary" href="/?page=enroll"><?= icon('shield') ?>Aktifkan 2FA</a><?php elseif(!$req2fa): ?><details class="manual-key"><summary>Matikan 2FA</summary><form method="post" class="stack"><?= csrf_field() ?><input type="hidden" name="action" value="twofa_disable"><label class="field">Kata laluan semasa<input name="current_password" type="password" autocomplete="current-password" required></label><button class="btn outline" type="submit">Matikan 2FA</button></form></details><?php endif; ?><p class="muted">Simpan kod pemulihan di tempat selamat. Jika semua akses hilang, hubungi pentadbir pelayan untuk pemulihan melalui CLI.</p></section><section class="panel spaced padded"><h3>Tukar kata laluan</h3><form method="post" class="form-grid"><?= csrf_field() ?><input type="hidden" name="action" value="password"><label class="field">Kata laluan semasa<input name="old_password" type="password" autocomplete="current-password" required></label><label class="field">Kata laluan baharu (12–128 aksara)<input name="new_password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><small class="muted">Gunakan frasa panjang yang mudah diingat, contohnya empat perkataan rawak.</small></label><label class="field">Sahkan kata laluan baharu<input name="new_password_confirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><div class="full"><button class="btn primary" type="submit">Kemas kini kata laluan</button></div></form></section>
+<?php elseif($page==='recovery'): ?><div class="page-heading"><div><h1>Simpan kod pemulihan anda.</h1><p class="muted">Setiap kod boleh digunakan sekali sebagai ganti TOTP.</p></div></div><section class="panel padded"><?php if(isset($_SESSION['recovery'])): ?><p>Kod ini dipaparkan sekali sahaja. Salin dan simpan dalam pengurus kata laluan anda.</p><div class="recovery-grid"><?php foreach($_SESSION['recovery'] as $code): ?><code><?= e($code) ?></code><?php endforeach; ?></div><?php unset($_SESSION['recovery']); else: notice('Kod telah dipaparkan. Gunakan salinan yang anda simpan.'); endif; ?><a class="btn primary" href="/">Teruskan ke dashboard →</a></section>
+<?php elseif($page==='users'): users_page(); ?>
+<?php elseif($page==='settings'): settings_page(); ?>
+<?php else: ?><div class="empty"><h1>Halaman tidak dijumpai</h1><a href="/">Kembali ke dashboard</a></div><?php endif; ?>
+<footer class="footer"><span><strong><?= e(app_name()) ?></strong> <span>· <?= e(school_name()) ?></span> <a class="app-version" href="/?page=versi" data-version="<?= e(APP_VERSION) ?>" title="Lihat perubahan terkini"><?= e(app_version_label()) ?></a></span><span>◈ &nbsp; Data sekolah anda, dalam jagaan anda.</span></footer></main></div>
+<?php endif; ?></body></html>

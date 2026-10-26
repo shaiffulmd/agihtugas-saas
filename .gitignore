@@ -1,6 +1,9 @@
-# Runtime data, API key hashes, logs and generated previews
+# Runtime data (pemasangan, sandaran, log, PDF sementara)
 /storage/*
 !/storage/.gitkeep
+!/storage/.htaccess
+/legacy/storage/*
+!/legacy/storage/.gitkeep
 *.sqlite
 *.sqlite-*
 *.sqlite3
@@ -9,25 +12,28 @@
 *.db-*
 *.log
 
-# Local secrets and machine-specific configuration
+# Rahsia setempat
 .env
 .env.*
 !.env.example
 *.pem
 *.key
-/integrations/koku-multi/config.local.php
-/config/local.php
+/legacy/integrations/koku-multi/config.local.php
+/legacy/config/local.php
 /dist/
 
-# Dependencies and generated packages
-/vendor/
+# Kebergantungan & pakej (vendor/.htaccess dijejak secara paksa: fail perlindungan buatan sendiri)
+/vendor/*
+!/vendor/.htaccess
 /node_modules/
 *.zip
 *.tar.gz
+/public_html/install.php.locked-*
 
-# Editor and OS files
+# Editor & OS
 .DS_Store
 .idea/
 .vscode/
 *.swp
 *.swo
+__pycache__/

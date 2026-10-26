@@ -1,0 +1,12 @@
+# Lapisan perlindungan jika keseluruhan projek tersalah diletak dalam web root.
+# Konfigurasi betul: document root = public_html/ sahaja.
+Options -Indexes
+<FilesMatch "(^\.|\.(env|md|sql|json|lock|ya?ml|py|xlsx|dist)$|^(Dockerfile|composer\.(json|lock))$)">
+<IfModule mod_authz_core.c>
+Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+Order allow,deny
+Deny from all
+</IfModule>
+</FilesMatch>

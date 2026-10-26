@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **pelan sahaja, belum dilaksanakan.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1 siap (26 Okt 2026, cawangan `fasa1-rangka`); Fasa 2 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -39,6 +39,7 @@ Setiap fasa = satu cawangan/PR, boleh diuji sendiri. Susunan ikut kebergantungan
 - Buang semua modul koku dan jadualnya daripada `schema.sql` (students, units, memberships, activities, attendance, achievements, pajsk, reports, takwim, site, agm, …). Kekalkan jadual platform: `schools`, `platform_admins`, `platform_log`, `platform_settings`, `rate_limits`, `health_log`, `users`, `recovery_codes`, `audit_logs`, `audit_heads`, `settings`, `consents`, sokongan, bayaran, keselamatan.
 - Jenama: nama aplikasi "UrusTugas", kuki `urustugas_sesi` / `urustugas_platform`, HKDF `urustugas/school/{id}`, awalan resit, nama zip.
 - Pengesahan: pemasang web pada DB kosong → `/platform/` + satu sekolah kosong boleh log masuk; `tenant_sql_audit.py` bersih.
+- **Siap 26 Okt 2026.** Kod lama di `legacy/`. Skema `0.1-m1`: 13 jadual sekolah/platform tanpa jadual koku, `users.role` = admin/pk/head/teacher, `audit_logs.detail` (dalam rantai audit). Jenis sekolah SK/SMK (`school_type`, gelaran Guru Besar/Pengetua). Had Free ditukar kepada guru/jawatan/pengguna (`free_guru`, `free_jawatan`; guru & jawatan dikira apabila jadual Fasa 2 wujud). Addon: rangka kekal, senarai kosong. Demo: 4 akaun kongsi setiap sekolah, tiada data enjin lagi. Diuji: `tests/smoke_platform.py` 65/65 (pemasang web → platform + 2FA → 2 sekolah → Pentadbir Utama 2FA & tukar kata laluan → semua halaman → peranan → pengasingan sesi → lencongan subdomain), pemasang demo + 4 peranan × 2 sekolah + 23 halaman panel platform tanpa 5xx, `tenant_sql_audit.py` bersih, `php -l` semua fail. Belum: `multi_tenant_integration.py`/ujian platform koku lain (Fasa 8).
 
 ### Fasa 2 — Skema enjin UrusTugas dengan `school_id`
 Jadual baharu (semua `school_id NOT NULL`, PK `id`, indeks unik `school_row(school_id,id)`, FK komposit):

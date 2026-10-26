@@ -1,30 +1,34 @@
 # UrusTugas SaaS
 
-Projek berasingan untuk membangunkan pengurusan agihan tugas guru sebagai SaaS bagi sekolah SK dan SMK.
+Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa, panel platform, langganan Free/Pro, bayaran, pendaftaran awam, keselamatan, kemas kini automatik, sandaran) disalin sekali daripada koku-multi commit `5fb9ba9` dan dijenamakan semula. **UrusTugas berdiri sendiri** — tiada fail, pangkalan data, kuki atau kunci yang dikongsi dengan koku-multi; integrasi (jika ada) hanya melalui API.
 
-Asas kod diambil daripada AgihTugas pada commit `072754e`. Repositori, konfigurasi dan data projek ini berasingan daripada AgihTugas. Tiada database, akaun pengguna, logo sekolah runtime, kunci API atau konfigurasi pelayan asal disalin.
+## Status
 
-## Status semasa
+- **Fasa 1 (rangka platform) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md) dan [nota kod](docs/NOTA_KOD.md).
+- Enjin agihan tugas (guru, jawatan, lantikan, auto-agihan, kelulusan, surat, API) belum dipindahkan — kod lama satu sekolah (SQLite) disimpan di [`legacy/`](legacy/) sebagai rujukan sehingga Fasa 3 siap.
 
-Ini ialah asas pembangunan SaaS. Enjin yang diwarisi masih **satu sekolah bagi satu pemasangan**, termasuk peranan pentadbir/PK/Guru Besar atau Pengetua/guru, agihan automatik, surat dan API. Pengasingan tenant, pendaftaran sekolah dan langganan belum dilaksanakan. Jangan membuka pendaftaran awam atau menempatkan beberapa sekolah dalam database yang sama sebelum pengasingan tenant siap dan diuji.
+## Keperluan
 
-Nama dan laluan dalaman AgihTugas masih dikekalkan untuk keserasian enjin asal. Penjenamaan UI SaaS boleh diubah semasa membina portal baharu.
+PHP 8.2+ (pdo_mysql, sodium/Argon2id, mbstring, zip, dom, gd, curl), MariaDB 10.6+ / MySQL 8, Composer (`composer install --no-dev` untuk mPDF). Document root = `public_html/` sahaja.
 
-## Jalankan untuk pembangunan
+## Pasang
 
-PHP 8.2+ dengan pdo_sqlite, mbstring, gd, fileinfo, session; cURL untuk ujian/integrasi.
+1. Cipta pangkalan data kosong + pengguna.
+2. Buka `/install.php` → isi butiran DB dan Pentadbir Platform (atau **Pasang demo**: 2 sekolah demo DEM0001 SMK & DEM0002 SK).
+3. Panel platform: `/platform/` (2FA wajib). Sekolah: `/KOD/` (kod KPM, cth. `/CEA1234/`) atau `kod.domain` jika subdomain dihidupkan.
+
+Peranan sekolah: Pentadbir, Penolong Kanan, Guru Besar (SK) / Pengetua (SMK), Guru.
+
+## Ujian setempat
 
 ```sh
-AGIHTUGAS_SEED_DEMO=0 php -S 127.0.0.1:8088 -t public public/router.php
-php bin/setup-admin.php
+php -S 127.0.0.1:8091 -t public_html public_html/router.php
+TEST_URL=http://127.0.0.1:8091 DB_PORT=… DB_NAME=… DB_USER=… DB_PASS=… python3 tests/smoke_platform.py
+python3 tests/tenant_sql_audit.py
 ```
 
-Buka http://127.0.0.1:8088/?page=setup dan gunakan kod sekali guna untuk mencipta akaun sendiri. Arahan pertama memulakan ruang kerja kosong; pemboleh ubah seed hanya berkesan semasa DB pertama dicipta. Port 8088 berasingan daripada pratonton AgihTugas di 8087. PHP development server bukan pelayan production.
+`smoke_platform.py` memerlukan DB kosong dan tiada `.env`. Pemasang menamakan semula `public_html/install.php` selepas siap — pulihkan sebelum commit: `mv public_html/install.php.locked-* public_html/install.php`.
 
-Pakej deployment yang diwarisi mengekalkan document root **public_html** dengan folder agihtugas-private di sebelahnya. Pakej itu masih memasang enjin satu sekolah, bukan platform SaaS berbilang sekolah.
+## Keluaran
 
-## Fasa pembangunan
-
-Lihat [pelan SaaS](docs/SAAS_ROADMAP.md). Dokumentasi dan arahan ujian enjin asal tersedia dalam [README AgihTugas](README-AGIHTUGAS.md).
-
-Repositori Git setempat ini tidak mempunyai remote. Sambungkan repositori GitHub khusus UrusTugas SaaS apabila URL baharu tersedia; jangan push ke remote AgihTugas.
+Setiap fail baharu mesti ditambah ke `release/zip-files.txt` (`sh release/build-zip.sh` → `urustugas-v<versi>-<tarikh>.zip`). Naikkan `APP_SCHEMA` (app/install.php) setiap kali skema berubah.

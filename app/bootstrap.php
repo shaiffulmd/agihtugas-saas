@@ -1,131 +1,96 @@
 <?php
 declare(strict_types=1);
-date_default_timezone_set('Asia/Kuala_Lumpur');
-require_once __DIR__.'/config.php';
-$sessionDatabase=app_database_path();
-session_name('AGIHTUGAS_'.substr(hash('sha256',$sessionDatabase),0,16));
-session_start(['gc_maxlifetime'=>7200,'cookie_httponly'=>true,'cookie_samesite'=>'Strict','cookie_secure'=>(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off'),'use_strict_mode'=>true]);
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: DENY');
-header('Referrer-Policy: no-referrer');
-require __DIR__.'/icons.php';
-require_once __DIR__.'/database.php';
-require_once __DIR__.'/allocation.php';
-require_once __DIR__.'/bulk_positions.php';
-require_once __DIR__.'/auth.php';
-require_once __DIR__.'/workflow.php';
-require_once __DIR__.'/auth_gate.php';
-function e(mixed $v): string { return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8'); }
-$settings=q('SELECT * FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
-$_SESSION['csrf'] ??= bin2hex(random_bytes(24));
-function csrf(): string { return '<input type="hidden" name="csrf" value="'.e($_SESSION['csrf']).'">'; }
-$account=auth_gate();
-function text_input(string $key,int $max=160): string { $v=trim((string)($_POST[$key]??'')); if($v==='' || mb_strlen($v)>$max) throw new RuntimeException('Sila lengkapkan medan dengan nilai yang sah.'); return $v; }
-function number_input(string $key,int $min,int $max): int { $n=filter_var($_POST[$key]??null,FILTER_VALIDATE_INT); if($n===false||$n<$min||$n>$max) throw new RuntimeException('Nilai nombor di luar julat yang dibenarkan.'); return $n; }
-$pages=['dashboard'=>'Dashboard','teachers'=>'Pengurusan Guru','positions'=>'Jawatan & Pemberat','assignments'=>'Agihan Tugas','auto'=>'Agihan Automatik','rules'=>'Pusat Syarat','bulk'=>'Tambah Jawatan Pukal','letters'=>'Surat Lantikan','asset'=>'Imej Sekolah','settings'=>'Tetapan Sekolah','workflow'=>'Semakan & Kelulusan','accounts'=>'Akaun Pengguna','profile'=>'Profil & Kata Laluan','my_tasks'=>'Tugas Saya'];
-$page=(string)($_GET['page']??'dashboard'); if(!isset($pages[$page])) { http_response_code(404); $page='dashboard'; }
-$error='';
-if($_SERVER['REQUEST_METHOD']==='POST') {
- try {
-  if(!hash_equals($_SESSION['csrf'],(string)($_POST['csrf']??''))) { http_response_code(403); throw new RuntimeException('Sesi borang tidak sah. Muat semula halaman.'); }
-  $action=(string)($_POST['action']??''); $id=(int)($_POST['id']??0);
-  $db->beginTransaction();
-  if($action==='account_save') auth_require_role($account,['admin']);
-  elseif($action==='workflow') { /* Transition service checks role, order and expected version. */ }
-  elseif($action==='profile_password') { /* Current password verified below. */ }
-  else {
-   auth_require_role($account,in_array($action,['settings','school_logo_upload','school_logo_remove','letter_branding'],true)?['admin']:['admin','pk']);
-   workflow_require_draft();
-  }
-  switch($action) {
-   case 'account_save': account_save($_POST,$account['id']); $message='Akaun pengguna disimpan.'; break;
-   case 'profile_password':
-    $old=q('SELECT password_hash FROM accounts WHERE id=?',[$account['id']])->fetchColumn();
-    if(!password_verify((string)($_POST['current_password']??''),$old)) throw new AccessError('Kata laluan semasa tidak tepat.',422);
-    $password=valid_account_password($_POST['password']??null);
-    if($password!==($_POST['confirm_password']??null)) throw new AccessError('Pengesahan kata laluan tidak sepadan.',422);
-    q('UPDATE accounts SET password_hash=?,auth_version=auth_version+1 WHERE id=?',[password_hash($password,PASSWORD_DEFAULT),$account['id']]);
-    $_SESSION['auth_version']=(int)q('SELECT auth_version FROM accounts WHERE id=?',[$account['id']])->fetchColumn(); session_regenerate_id(true);
-    $message='Kata laluan ditukar; sesi lain ditamatkan.'; break;
-   case 'workflow':
-    workflow_transition((string)($_POST['transition']??''),number_input('version',1,PHP_INT_MAX),$account,trim((string)($_POST['reason']??'')));
-    $message='Status semakan dan kelulusan dikemas kini.'; break;
-   case 'teacher':
-    $name=text_input('name'); $email=trim((string)($_POST['email']??''));
-    if($email!=='' && (!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>254)) throw new RuntimeException('Alamat e-mel tidak sah.');
-    $data=[$name,$email,mb_substr(trim((string)($_POST['specialty']??'')),0,160),number_input('capacity',1,100)];
-    if($id) { if(!q('SELECT id FROM teachers WHERE id=?',[$id])->fetch()) throw new RuntimeException('Guru tidak ditemui.'); q('UPDATE teachers SET name=?,email=?,specialty=?,capacity=? WHERE id=?',[...$data,$id]); }
-    else q('INSERT INTO teachers(name,email,specialty,capacity) VALUES (?,?,?,?)',$data);
-    $message='Maklumat guru disimpan.'; break;
-   case 'position':
-    $name=text_input('name'); $category=text_input('category'); if(!in_array($category,CATEGORIES,true)) throw new RuntimeException('Bidang tidak sah.');
-    $data=[$name,$category,number_input('weight',1,10)];
-    if($id) { if(!q('SELECT id FROM positions WHERE id=?',[$id])->fetch()) throw new RuntimeException('Jawatan tidak ditemui.'); q('UPDATE positions SET name=?,category=?,weight=? WHERE id=?',[...$data,$id]); }
-    else q('INSERT INTO positions(name,category,weight) VALUES (?,?,?)',$data);
-    $message='Jawatan dan pemberat disimpan.'; break;
-   case 'assign':
-    $tid=number_input('teacher_id',1,PHP_INT_MAX); $pid=number_input('position_id',1,PHP_INT_MAX);
-    if(!q('SELECT id FROM teachers WHERE id=?',[$tid])->fetch()||!q('SELECT id FROM positions WHERE id=?',[$pid])->fetch()) throw new RuntimeException('Pilih guru dan jawatan yang sah.');
-    q('INSERT INTO assignments(teacher_id,position_id) VALUES (?,?) ON CONFLICT(position_id) DO UPDATE SET teacher_id=excluded.teacher_id',[$tid,$pid]);
-    $message='Agihan tugas dikemas kini.'; break;
-   case 'unassign': q('DELETE FROM assignments WHERE id=?',[$id]); $message='Lantikan dilepaskan. Jawatan kini kosong.'; break;
-   case 'delete_teacher': case 'delete_position':
-    $table=$action==='delete_teacher'?'teachers':'positions'; $column=$table==='teachers'?'teacher_id':'position_id';
-    if(q("SELECT COUNT(*) FROM assignments WHERE $column=?",[$id])->fetchColumn()) throw new RuntimeException('Lepaskan agihan berkaitan dahulu sebelum memadam rekod ini.');
-    if($table==='teachers'&&q('SELECT 1 FROM accounts WHERE teacher_id=?',[$id])->fetchColumn()) throw new AccessError('Nyahpaut akaun pengguna daripada profil guru dahulu.',409);
-    if($table==='teachers'&&allocation_teacher_referenced($id)) throw new AllocationError('Buang rujukan guru ini dalam Pusat Syarat dahulu.');
-    q("DELETE FROM $table WHERE id=?",[$id]); $message='Rekod dipadam.'; break;
-   case 'allocation_rules':
-    $limits=[]; foreach(CATEGORIES as $i=>$cat) $limits[$cat]=number_input('category_'.$i,0,50);
-    $excluded=$_POST['excluded_teachers']??[]; if(!is_array($excluded)) throw new AllocationError('Senarai guru tidak sah.');
-    allocation_save_rules(['respect_capacity'=>isset($_POST['respect_capacity']),'max_tasks'=>number_input('max_tasks',1,50),'max_heavy'=>number_input('max_heavy',0,50),'heavy_threshold'=>number_input('heavy_threshold',1,10),'category_limits'=>$limits,'excluded_teachers'=>array_map('intval',$excluded)]);
-    $message='Syarat agihan automatik disimpan.'; break;
-   case 'position_rule':
-    $allowed=$_POST['allowed_teachers']??[]; if(!is_array($allowed)) throw new AllocationError('Senarai guru tidak sah.');
-    allocation_save_position_rule(number_input('position_id',1,PHP_INT_MAX),['allowed_teachers'=>array_map('intval',$allowed),'fixed_teacher_id'=>empty($_POST['fixed_teacher_id'])?null:number_input('fixed_teacher_id',1,PHP_INT_MAX),'required_specialty'=>(string)($_POST['required_specialty']??'')]);
-    $message='Syarat khusus jawatan disimpan.'; break;
-   case 'auto_preview':
-    $plan=allocation_preview((string)($_POST['mode']??'vacant')); $db->commit();
-    $_SESSION['allocation_plan']=$plan; header('Location: /?page=auto#auto-result'); exit;
-   case 'auto_apply':
-    $result=allocation_apply((string)($_POST['plan_id']??''));
-    unset($_SESSION['allocation_plan']); $message='Agihan automatik disimpan: '.$result['changed'].' perubahan, '.$result['unfilled'].' jawatan belum diisi.'; break;
-   case 'bulk_preview':
-    $text=(string)($_POST['bulk_text']??'');
-    if(isset($_FILES['csv'])&&$_FILES['csv']['error']!==UPLOAD_ERR_NO_FILE) {
-     if($_FILES['csv']['error']!==UPLOAD_ERR_OK||$_FILES['csv']['size']>131072||!is_uploaded_file($_FILES['csv']['tmp_name'])) throw new AllocationError('Muat naik CSV gagal atau melebihi 128 KB.');
-     if(trim($text)!=='') throw new AllocationError('Pilih satu sumber sahaja: tampal teks atau muat naik CSV.');
-     $text=file_get_contents($_FILES['csv']['tmp_name']);
-    }
-    $rows=bulk_positions_parse($text); $db->commit();
-    $_SESSION['bulk_preview']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows]; header('Location: /?page=bulk#bulk-result'); exit;
-   case 'bulk_apply':
-    $draft=$_SESSION['bulk_preview']??null;
-    if(!$draft||!hash_equals($draft['token'],(string)($_POST['bulk_token']??''))) throw new AllocationError('Pratonton pukal tidak sah. Jana semula.',409);
-    $validated=bulk_positions_validate($draft['rows']); $ids=bulk_positions_insert($validated); unset($_SESSION['bulk_preview']);
-    $message=count($ids).' jawatan ditambah secara pukal.'; break;
-   case 'school_logo_upload':
-    $logo=branding_upload($_FILES['school_logo']??[]);q('UPDATE settings SET value=? WHERE key="school_logo_id"',[$logo]);$message='Logo sekolah disimpan untuk draf.';break;
-   case 'school_logo_remove': q('UPDATE settings SET value="" WHERE key="school_logo_id"');$message='Logo sekolah dibuang daripada draf. Surat muktamad terdahulu tidak berubah.';break;
-   case 'letter_branding':
-    $layout=(string)($_POST['letter_header']??'');if(!isset(LETTER_HEADERS[$layout]))throw new BrandingError('Gaya kepala surat tidak sah.');
-    q('UPDATE settings SET value=? WHERE key="letter_header"',[$layout]);$message='Gaya kepala surat disimpan.';break;
-   case 'settings':
-    $type=$_POST['school_type']??school_type(); if(!is_string($type)||!isset(SCHOOL_TYPES[$type])) throw new AccessError('Jenis sekolah mesti SK atau SMK.',422);
-    q('UPDATE settings SET value=? WHERE key="school_type"',[$type]);
-    foreach(['school','principal','year','reference'] as $key) { $value=$key==='year'?(string)number_input('year',2020,2100):text_input($key); q('UPDATE settings SET value=? WHERE key=?',[$value,$key]); }
-    $message='Tetapan sekolah disimpan.'; break;
-   default: throw new RuntimeException('Tindakan tidak dikenali.');
-  }
-  q('INSERT INTO history(description) VALUES (?)',[$account['name'].' (#'.$account['id'].'): '.$message]); $db->commit();
-  $_SESSION['flash']=$message; header('Location: /?page='.$page); exit;
- } catch(Throwable $ex) { if($db->inTransaction()) $db->rollBack(); $known=$ex instanceof AccessError||$ex instanceof WorkflowError||$ex instanceof AllocationError||$ex instanceof BrandingError; if($known) http_response_code($ex->status); $error=$ex instanceof PDOException?'Rekod tidak dapat disimpan. Semak input dan cuba semula.':$ex->getMessage(); }
+function env(string $key, string $default=''): string { return $_ENV[$key] ?? (getenv($key) ?: $default); }
+$envFile=dirname(__DIR__).'/.env';
+if(is_file($envFile)) foreach(file($envFile, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line){
+    $line=trim($line); if($line==='' || str_starts_with($line,'#')) continue;
+    [$key,$value]=array_pad(explode('=',$line,2),2,''); $value=trim($value);
+    // Buang sepasang petikan luar sahaja supaya kata laluan yang mengandungi petikan kekal utuh.
+    if(strlen($value)>=2 && ($value[0]==='"' || $value[0]==="'") && $value[strlen($value)-1]===$value[0]) $value=substr($value,1,-1);
+    $_ENV[trim($key)]=$value;
 }
-$teachers=$account['role']==='teacher'?[]:q('SELECT t.*,COALESCE(SUM(p.weight),0) AS load,COUNT(a.id) AS task_count FROM teachers t LEFT JOIN assignments a ON a.teacher_id=t.id LEFT JOIN positions p ON p.id=a.position_id GROUP BY t.id ORDER BY t.name')->fetchAll();
-$positions=$account['role']==='teacher'?[]:q('SELECT p.*,a.id AS assignment_id,a.teacher_id,t.name AS teacher_name FROM positions p LEFT JOIN assignments a ON a.position_id=p.id LEFT JOIN teachers t ON t.id=a.teacher_id ORDER BY p.category,p.name')->fetchAll();
-$assigned=count(array_filter($positions,fn($r)=>$r['teacher_id']!==null));
-$over=array_filter($teachers,fn($r)=>$r['load']>$r['capacity']);
-$totalLoad=array_sum(array_column($teachers,'load'));
-function badge(array $t): string { return $t['load']>$t['capacity']?'<span class="pill red">Melebihi had</span>':($t['load']==0?'<span class="pill gray">Belum diagih</span>':'<span class="pill green">Dalam kapasiti</span>'); }
-function field(string $label,string $name,mixed $value='',string $type='text',string $attrs=''): void { echo '<label class="field">'.e($label).'<input name="'.e($name).'" type="'.e($type).'" value="'.e($value).'" '.$attrs.'></label>'; }
+date_default_timezone_set('Asia/Kuala_Lumpur');
+require_once __DIR__.'/errors.php';
+require_once __DIR__.'/tenant.php'; require_once __DIR__.'/audit_chain.php'; require_once __DIR__.'/security.php';
+// Semakan Argon2id/libsodium dibuat oleh pemasang (paparan mesra) dan index.php.
+function request_is_https(): bool { return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off') || ($_SERVER['SERVER_PORT']??'')==='443' || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO']??''))==='https'; }
+function db(?PDO $use=null): PDO {
+ static $pdo; if($use) $pdo=$use;
+ // Pelayan MySQL penuh (1040 / 1203 "Too many connections") biasanya sementara: cuba semula 2 kali sebelum menyerah.
+ for($try=0;!$pdo;$try++){
+  try { $pdo=new PDO('mysql:host='.env('DB_HOST','127.0.0.1').';port='.env('DB_PORT','3306').';dbname='.env('DB_NAME','urustugas').';charset=utf8mb4',env('DB_USER'),env('DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]); }
+  catch(PDOException $ex){ if($try>=2 || !preg_match('/\b(1040|1203)\b/',$ex->getMessage())) throw $ex; usleep(400000*($try+1)); }
+ }
+ return $pdo;
+}
+function query(string $sql,array $params=[]): PDOStatement { $s=db()->prepare($sql); $s->execute($params); return $s; }
+/** Nilai POST/GET sebagai rentetan; tatasusunan atau nilai bukan skalar ditolak sebagai kosong. */
+function input(string $key, string $source='post'): string { $v=($source==='get'?$_GET:$_POST)[$key]??''; return is_string($v)?$v:''; }
+function e(mixed $s): string { return htmlspecialchars((string)($s??''),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'); }
+function master_key(): string { $k=base64_decode(env('APP_KEY'),true); if($k===false || strlen($k)!==SODIUM_CRYPTO_SECRETBOX_KEYBYTES) throw new RuntimeException('APP_KEY tidak sah.'); return $k; }
+/** Kunci sekolah semasa (subkunci HKDF daripada APP_KEY); konteks platform mendapat subkunci platform. */
+function key_bytes(): string { static $c=[]; return $c[sid()]??=tenant_key(master_key()); }
+function encrypt_value(string $v): string { $n=random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES); return base64_encode($n.sodium_crypto_secretbox($v,$n,key_bytes())); }
+function decrypt_value(?string $v): string { if(!$v) return ''; $b=base64_decode($v,true); if($b===false || strlen($b)<40) throw new RuntimeException('Ciphertext rosak.'); $p=sodium_crypto_secretbox_open(substr($b,24),substr($b,0,24),key_bytes()); if($p===false) throw new RuntimeException('Pengesahan penyulitan gagal.'); return $p; }
+function hash_password(string $password): string { return password_hash($password,PASSWORD_ARGON2ID,['memory_cost'=>65536,'time_cost'=>3,'threads'=>1]); }
+/** URL aset dengan versi (cache-busting): berubah setiap kali fail dikemas kini, jadi pelayar tidak guna CSS/JS lama. */
+function asset(string $file): string { $p=dirname(__DIR__).'/public_html/assets/'.$file; return '/assets/'.$file.(is_file($p)?'?v='.substr(md5(filemtime($p).'-'.filesize($p)),0,10):''); }
+function redirect(string $path): never { header('Location: '.tenant_location($path)); exit; }
+function csrf(): string { return $_SESSION['csrf']??=bin2hex(random_bytes(32)); }
+function csrf_field(): string { return '<input type="hidden" name="csrf" value="'.e(csrf()).'">'; }
+function verify_csrf(): void { if(!hash_equals(csrf(),(string)($_POST['csrf']??''))){ error_page(419); } }
+function flash(string $text): void { $_SESSION['flash']=$text; }
+/** $detail: teks ringkas pilihan (≤255) untuk log sekolah, cth. nama jawatan — sebahagian daripada rantai audit. */
+function audit(string $action,string $entity,?int $id=null,string $detail=''): void {
+    if(sid()<=0){ $pid=$_SESSION['pid']??null; audit_append(0,['admin_id'=>$pid,'admin_ref'=>$pid,'school_id'=>null,'school_ref'=>null,'action'=>mb_substr($action,0,60),'detail'=>mb_substr($entity.($id!==null?' #'.$id:'').($detail!==''?' · '.$detail:''),0,255),'ip_hash'=>audit_ip_hash()]); return; }
+    $via=$_SESSION['imp']['pid']??null; audit_append(sid(),['user_id'=>$_SESSION['uid']??null,'via_platform'=>$via,'via_ref'=>$via,'action'=>$action,'entity'=>$entity,'entity_id'=>$id,'detail'=>$detail,'ip_hash'=>audit_ip_hash()]);
+}
+function current_user(): ?array { static $user=false; if($user===false) $user=isset($_SESSION['uid'])?query('SELECT id,name,email,role,totp_secret,auth_version,must_change,allowed_ips FROM users WHERE id=? AND school_id=? AND active=1',[$_SESSION['uid'],sid()])->fetch():null; if($user && (int)$user['auth_version']!==(int)($_SESSION['auth_version']??0)){ $_SESSION=[]; $user=null; } return $user?:null; }
+function can_write(): bool { return in_array(current_user()['role']??'', ['admin','pk'],true); }
+function require_writer(): void { if(!can_write()) error_page(403,'Peranan anda hanya membenarkan paparan. Hubungi pentadbir jika anda perlu mengemas kini rekod.'); }
+function require_admin(): void { if((current_user()['role']??'')!=='admin') error_page(403,'Halaman ini untuk pentadbir sistem sahaja.'); }
+function base32_encode(string $raw): string { $bits=''; foreach(str_split($raw) as $c) $bits.=str_pad(decbin(ord($c)),8,'0',STR_PAD_LEFT); $out=''; foreach(str_split($bits,5) as $b) $out.='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[bindec(str_pad($b,5,'0'))]; return $out; }
+function base32_decode(string $s): string { $bits=''; foreach(str_split(strtoupper($s)) as $c){ $i=strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',$c); if($i===false) throw new InvalidArgumentException('Rahsia TOTP tidak sah.'); $bits.=str_pad(decbin($i),5,'0',STR_PAD_LEFT); } $out=''; foreach(str_split($bits,8) as $b) if(strlen($b)===8) $out.=chr(bindec($b)); return $out; }
+function totp(string $secret,int $step,int $digits=6): string { $h=hash_hmac('sha1',pack('N2',intdiv($step,4294967296),$step%4294967296),base32_decode($secret),true); $o=ord($h[19])&15; $num=unpack('N',substr($h,$o,4))[1]&0x7fffffff; return str_pad((string)($num%(10**$digits)),$digits,'0',STR_PAD_LEFT); }
+function totp_step(string $secret,string $code): ?int { if(!preg_match('/^\d{6}$/D',$code)) return null; $now=intdiv(time(),30); foreach([$now-1,$now,$now+1] as $t) if(hash_equals(totp($secret,$t),$code)) return $t; return null; }
+function valid_password(string $p): bool { return strlen($p)>=12 && strlen($p)<=128; }
+function rate_key(string $scope,string $value): string { return hash_hmac('sha256',$scope.':'.$value,key_bytes()); }
+/** Kunci baldi had cubaan menggunakan subkunci sekolah (key_bytes), jadi kiraan tidak dikongsi antara sekolah. */
+function rate_allowed(string $key,int $limit=8): bool { $r=query('SELECT attempts,UNIX_TIMESTAMP(window_start) AS started FROM rate_limits WHERE bucket=?',[$key])->fetch(); return !$r || time()-(int)$r['started']>900 || (int)$r['attempts']<$limit; }
+function rate_hit(string $key): void { if(random_int(1,50)===1) query('DELETE FROM rate_limits WHERE window_start < DATE_SUB(NOW(), INTERVAL 1 DAY)'); query('INSERT INTO rate_limits (bucket,attempts,window_start) VALUES (?,1,NOW()) ON DUPLICATE KEY UPDATE attempts=IF(window_start < DATE_SUB(NOW(), INTERVAL 15 MINUTE),1,attempts+1), window_start=IF(window_start < DATE_SUB(NOW(), INTERVAL 15 MINUTE),NOW(),window_start)',[$key]); }
+if(PHP_SAPI!=='cli'){
+ ob_start('tenant_rewrite_html'); // Kod status (cth. 403) masih boleh ditetapkan selepas kandungan mula dijana; pautan mutlak diberi awalan /KOD dalam mod laluan.
+ tenant_boot();
+ header_remove('X-Powered-By');
+ header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'");
+ header('X-Content-Type-Options: nosniff'); header('X-Frame-Options: DENY'); header('Referrer-Policy: no-referrer'); header('Permissions-Policy: camera=(), microphone=(), geolocation=()'); header('Cache-Control: no-store');
+ if(env('SESSION_SECURE',request_is_https()?'1':'0')==='1') header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+ ini_set('session.use_strict_mode','1'); ini_set('session.use_only_cookies','1');
+ if(!defined('NO_SESSION')){
+ // Kuki sesi berasingan: sekolah (subdomain → hos sendiri; laluan → Path=/KOD/) dan platform. __Host- memerlukan Path=/.
+ $secure=env('SESSION_SECURE',request_is_https()?'1':'0')==='1'; $cpath=tenant_prefix()!==''?tenant_prefix().'/':'/'; $cname=school()?'urustugas_sesi':'urustugas_platform';
+ session_name($secure?($cpath==='/'?'__Host-':'__Secure-').$cname:$cname); session_set_cookie_params(['httponly'=>true,'secure'=>$secure,'samesite'=>'Strict','path'=>$cpath]); session_start();
+ // Sesi terikat pada sekolah: kuki sekolah lain (atau platform) tidak boleh digunakan di sini.
+ if(isset($_SESSION['school_id']) && (int)$_SESSION['school_id']!==sid()){ $_SESSION=[]; session_regenerate_id(true); }
+ $_SESSION['school_id']=sid();
+ if(isset($_SESSION['last']) && (time()-$_SESSION['last']>1800 || time()-($_SESSION['started']??time())>28800)){ $_SESSION=[]; session_regenerate_id(true); }
+ $_SESSION['last']=time(); $_SESSION['started']??=time();
+ }
+ set_exception_handler(function(Throwable $ex){
+  $ref=bin2hex(random_bytes(5)); error_log('UrusTugas error '.$ref.': '.get_class($ex).': '.$ex->getMessage().' @ '.$ex->getFile().':'.$ex->getLine());
+  // Ralat sambungan pangkalan data: mesej mesra tanpa mendedahkan butiran sulit.
+  $db=$ex instanceof PDOException && preg_match('/\b(2002|2003|2005|2006|1040|1044|1045|1049|1203)\b|could not find driver|Connection refused|No such file/i',$ex->getMessage());
+  $busy=$db && preg_match('/\b(1040|1203)\b/',$ex->getMessage());
+  $hint=$busy?'Pelayan pangkalan data sedang sibuk (terlalu banyak sambungan). Tunggu seminit dan cuba lagi. Pentadbir pelayan: semak had max_connections / max_user_connections MySQL.':($db?'Pangkalan data tidak dapat dihubungi. Semak pelayan MySQL/MariaDB sedang berjalan dan tetapan DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS dalam .env.':'');
+  if(!$hint && preg_match('/APP_KEY/',$ex->getMessage())) $hint='APP_KEY dalam .env tidak sah. Gunakan nilai base64 32 bait (php bin/key.php).';
+  // Mod local sahaja: paparkan punca sebenar untuk memudahkan pembangunan.
+  $extra=env('APP_ENV')==='local'?'<pre class="secret">'.e(get_class($ex).': '.$ex->getMessage()."\n".$ex->getFile().':'.$ex->getLine()).'</pre>':'';
+  error_page($db?503:500,$hint,['ref'=>$ref,'extra'=>$extra,'no_db'=>$db,'title'=>$busy?'Pelayan sedang sibuk':($db?'Pangkalan data tidak tersedia':null)]);
+ });
+ // Ralat PHP maut (bukan pengecualian): paparkan halaman ralat yang sama dan bukan skrin kosong.
+ register_shutdown_function(function(){
+  $err=error_get_last(); if(!$err || !in_array($err['type'],[E_ERROR,E_PARSE,E_CORE_ERROR,E_COMPILE_ERROR],true)) return;
+  $ref=bin2hex(random_bytes(5)); error_log('UrusTugas fatal '.$ref.': '.$err['message'].' @ '.$err['file'].':'.$err['line']);
+  try { error_page(500,'',['ref'=>$ref,'no_db'=>true]); } catch(Throwable) {}
+ });
+}

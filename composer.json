@@ -1,0 +1,26 @@
+{
+  "name": "sekolah/urustugas",
+  "description": "Sistem agihan tugas guru berbilang sekolah",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-mbstring": "*",
+    "ext-sodium": "*",
+    "ext-gd": "*",
+    "ext-zip": "*",
+    "ext-dom": "*",
+    "mpdf/mpdf": "^8.2.6"
+  },
+  "config": {
+    "allow-plugins": {},
+    "sort-packages": true
+  },
+  "autoload": {
+    "psr-4": {
+      "chillerlan\\QRCode\\": "lib/php-qrcode/src/",
+      "chillerlan\\Settings\\": "lib/php-settings-container/src/"
+    }
+  }
+}

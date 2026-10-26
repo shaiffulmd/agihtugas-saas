@@ -1,0 +1,144 @@
+<?php
+declare(strict_types=1);
+
+function admin_confirm_field(): string {
+    return '<label class="field confirm-field">Kata laluan anda (pengesahan pentadbir)<input name="admin_password" type="password" autocomplete="current-password" maxlength="128" required></label>';
+}
+
+function users_page(): void {
+    $me=current_user(); $sel=(int)input('user','get');
+    $users=query('SELECT id,name,email,role,active,must_change,last_login_at,allowed_ips,totp_secret IS NOT NULL AS enabled FROM users WHERE school_id='.sid().' ORDER BY active DESC,name')->fetchAll();
+    $failed=(int)query('SELECT COUNT(*) FROM audit_logs WHERE school_id='.sid().' AND action IN ("login_failed","login_blocked","2fa_failed") AND created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY)')->fetchColumn();
+    $target=null; foreach($users as $u) if((int)$u['id']===$sel) $target=$u;
+    ?><div class="page-heading"><div><span class="eyebrow teal">PENTADBIRAN</span><h1>Pengguna & Audit</h1><p class="muted">Kawal akses, urus akaun dan semak jejak tindakan.</p></div></div>
+    <section class="stats-grid admin-stats"><article class="stat-card"><div class="stat-top"><span>Pengguna aktif</span><span class="stat-icon mint">⚇</span></div><strong><?= count(array_filter($users,fn($u)=>$u['active'])) ?></strong><small>Daripada <?= count($users) ?> akaun</small></article><article class="stat-card"><div class="stat-top"><span>2FA belum aktif</span><span class="stat-icon peach">⛨</span></div><strong><?= count(array_filter($users,fn($u)=>$u['active'] && !$u['enabled'])) ?></strong><small>Perlu didaftar pada log masuk pertama</small></article><article class="stat-card <?= $failed?'alert':'' ?>"><div class="stat-top"><span>Cubaan gagal (24 jam)</span><span class="stat-icon lilac">⚠</span></div><strong><?= $failed ?></strong><small>Log masuk / 2FA gagal <a href="/?page=users&security=1#audit">↗</a></small></article><article class="stat-card"><div class="stat-top"><span>Pentadbir aktif</span><span class="stat-icon sky">⚙</span></div><strong><?= active_admin_count() ?></strong><small>Minimum seorang diperlukan</small></article></section>
+    <?php pending_panel(); ?>
+    <?php if($target): ?><section class="panel spaced manage-user" id="urus"><div class="panel-heading"><div><h3>Urus akaun: <?= e($target['name']) ?></h3><p class="muted"><?= e($target['email']) ?> · <?= $target['active']?'Aktif':'Tidak aktif' ?> · 2FA <?= $target['enabled']?'aktif':'belum aktif' ?></p></div><a class="text-link" href="/?page=users">Tutup ×</a></div><?php if(avatar_version((int)$target['id'])): ?><form method="post" class="avatar-mod delete-form" data-confirm="Buang gambar profil pengguna ini (cth. tidak sesuai)?"><?= csrf_field() ?><input type="hidden" name="action" value="avatar_admin_remove"><input type="hidden" name="user_id" value="<?= (int)$target['id'] ?>"><?= avatar_html((int)$target['id'],(string)$target['name'],'avatar avatar-sm') ?><span class="muted">Gambar profil pengguna</span><button class="delete-btn">Buang gambar</button></form><?php endif; ?>
+    <div class="manage-grid">
+     <form method="post" class="manage-card"><?= csrf_field() ?><input type="hidden" name="action" value="user_update"><input type="hidden" name="user_id" value="<?= (int)$target['id'] ?>"><h4>Maklumat & akses</h4>
+      <?php field('name',['Nama','text',120],$target['name']); field('role',['Peranan','select',role_options()],$target['role']); field('active',['Status akaun','select',['1'=>'Aktif','0'=>'Tidak aktif (sekat log masuk)']],(string)$target['active']); ?>
+      <p class="muted">Menukar peranan atau status menamatkan semua sesi aktif pengguna ini.</p><?= admin_confirm_field() ?><button class="btn primary" type="submit">Simpan perubahan</button></form>
+     <form method="post" class="manage-card"><?= csrf_field() ?><input type="hidden" name="action" value="user_ips"><input type="hidden" name="user_id" value="<?= (int)$target['id'] ?>"><h4>Had IP akaun</h4><label class="field">IP / CIDR dibenarkan (kosong = semua IP)<textarea name="allowed_ips" rows="2" placeholder="203.0.113.10&#10;2001:db8:1::/64"><?= e((string)($target['allowed_ips']??'')) ?></textarea></label><p class="muted">Akaun ini hanya boleh log masuk dan digunakan dari alamat ini.</p><?= admin_confirm_field() ?><button class="btn outline" type="submit">Simpan had IP</button></form>
+     <form method="post" class="manage-card"><?= csrf_field() ?><input type="hidden" name="action" value="user_reset_password"><input type="hidden" name="user_id" value="<?= (int)$target['id'] ?>"><h4>Reset kata laluan</h4>
+      <p class="muted">Tetapkan kata laluan sementara dan berikan kepada pengguna secara bersemuka atau melalui saluran selamat. Pengguna wajib menukarnya selepas log masuk.</p>
+      <label class="field">Kata laluan sementara (12–128 aksara)<input name="password" type="text" minlength="12" maxlength="128" autocomplete="off" required spellcheck="false"></label><?= admin_confirm_field() ?><button class="btn outline" type="submit">Tetapkan kata laluan sementara</button></form>
+     <form method="post" class="manage-card"><?= csrf_field() ?><input type="hidden" name="action" value="user_reset_2fa"><input type="hidden" name="user_id" value="<?= (int)$target['id'] ?>"><h4>Reset 2FA</h4>
+      <p class="muted">Gunakan apabila pengguna kehilangan telefon dan kod pemulihan. Sahkan identiti pengguna dahulu. Semua kod pemulihan lama dibatalkan.</p><?= admin_confirm_field() ?><button class="btn outline danger" type="submit" <?= $target['enabled']?'':'disabled' ?>>Reset 2FA pengguna</button></form>
+    </div></section><?php endif; ?>
+    <section class="panel spaced"><div class="panel-heading"><div><h3>Pengguna berdaftar</h3><p class="muted">Klik "Urus" untuk menukar peranan, menyahaktif atau reset akses.</p></div></div><div class="table-wrap"><table><thead><tr><th>Nama</th><th>E-mel</th><th>Peranan</th><th>Status</th><th>2FA</th><th>Log masuk terakhir</th><th>Tindakan</th></tr></thead><tbody><?php foreach($users as $u): ?><tr class="<?= $u['active']?'':'row-muted' ?>"><td><div class="user-cell"><?= avatar_html((int)$u['id'],(string)$u['name'],'avatar avatar-sm') ?><div><strong><?= e($u['name']) ?></strong><?= (int)$u['id']===(int)$me['id']?' <span class="small-pill">Anda</span>':'' ?></div></div></td><td><?= e($u['email']) ?></td><td><?= badge(role_label((string)$u['role'])) ?></td><td><?= $u['active']?($u['must_change']?'<span class="badge warn">Kata laluan sementara</span>':badge('Aktif')):'<span class="badge">Tidak aktif</span>' ?></td><td><?= $u['enabled']?'✓ Aktif':'<span class="muted">Belum aktif</span>' ?></td><td><?= $u['last_login_at']?e(date('d/m/Y H:i',strtotime($u['last_login_at']))):'<span class="muted">Belum pernah</span>' ?></td><td><a class="text-link" href="/?page=users&user=<?= (int)$u['id'] ?>#urus">Urus</a></td></tr><?php endforeach; ?></tbody></table></div></section>
+    <section class="panel spaced padded"><h3>Tambah pengguna</h3><form method="post" class="form-grid"><?= csrf_field() ?><input type="hidden" name="action" value="user_create"><?php field('name',['Nama','text',120]); ?><label class="field">E-mel<input name="email" type="email" maxlength="190" required></label><label class="field">Kata laluan sementara<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><small class="muted">Pengguna wajib menukar kata laluan ini dan menyediakan 2FA semasa log masuk pertama.</small></label><?php field('role',['Peranan','select',role_options()],'teacher'); ?><div class="full"><button class="btn primary">Tambah pengguna</button></div></form></section>
+    <?php audit_panel($users);
+}
+
+function audit_panel(array $users): void {
+    $f=audit_filters(); [$w,$p]=audit_where($f); $size=50;
+    $total=(int)query('SELECT COUNT(*) FROM audit_logs a'.$w,$p)->fetchColumn(); $pages=max(1,(int)ceil($total/$size)); $pg=min($pages,max(1,(int)input('ap','get')));
+    $logs=query('SELECT a.*,u.name FROM audit_logs a LEFT JOIN users u ON u.id=a.user_id'.$w.' ORDER BY a.id DESC LIMIT '.$size.' OFFSET '.(($pg-1)*$size),$p)->fetchAll();
+    $actions=array_column(query('SELECT DISTINCT action FROM audit_logs WHERE school_id='.sid().' ORDER BY action')->fetchAll(),'action');
+    $names=array_column($users,'name','id');
+    $qs=http_build_query(array_filter(['action'=>$f['action'],'user'=>$f['user']?:'','from'=>$f['from'],'to'=>$f['to'],'security'=>$f['security']?'1':''],'strlen'));
+    ?><section class="panel spaced" id="audit"><div class="panel-heading"><div><h3>Jejak audit <span class="count"><?= number_format($total) ?></span></h3><p class="muted">Setiap log masuk, perubahan data, eksport dan tindakan pentadbir direkodkan.</p></div></div>
+    <form method="get" class="audit-filter" action="/#audit"><input type="hidden" name="page" value="users">
+     <label class="field">Tindakan<select name="action"><option value="">Semua tindakan</option><?php foreach($actions as $a): ?><option value="<?= e($a) ?>" <?= $f['action']===$a?'selected':'' ?>><?= e(audit_label($a)) ?></option><?php endforeach; ?></select></label>
+     <label class="field">Pengguna<select name="user"><option value="">Semua pengguna</option><?php foreach($names as $id=>$n): ?><option value="<?= (int)$id ?>" <?= $f['user']===(int)$id?'selected':'' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
+     <label class="field">Dari<input type="date" name="from" value="<?= e($f['from']) ?>"></label><label class="field">Hingga<input type="date" name="to" value="<?= e($f['to']) ?>"></label>
+     <label class="confirm-check"><input type="checkbox" name="security" value="1" <?= $f['security']?'checked':'' ?>> Peristiwa keselamatan sahaja</label>
+     <div class="audit-filter-actions"><button class="btn outline" type="submit">Tapis</button><?php if($qs!==''): ?><a class="text-link" href="/?page=users#audit">Set semula</a><?php endif; ?></div></form>
+    <div class="table-wrap"><table><thead><tr><th>Masa</th><th>Pengguna</th><th>Tindakan</th><th>Modul</th><th>ID</th></tr></thead><tbody><?php foreach($logs as $log): $sec=in_array($log['action'],['login_failed','login_blocked','2fa_failed','admin_confirm_failed'],true); ?><tr class="<?= $sec?'row-alert':'' ?>"><td><?= e(date('d/m/Y H:i:s',strtotime($log['created_at']))) ?><?= !empty($log['via_platform'])?' <span class="badge warn" title="Sesi sokongan pentadbir platform">melalui platform</span>':'' ?></td><td><?= e($log['name']??($log['entity']==='users' && $log['entity_id']?($names[$log['entity_id']]??'—').' (cubaan)':'Sistem / tidak dikenali')) ?></td><td><?= $sec?'<span class="badge warn">'.e(audit_label($log['action'])).'</span>':e(audit_label($log['action'])) ?></td><td><?= e($log['entity']) ?></td><td><?= e($log['entity_id']) ?></td></tr><?php endforeach; ?><?php if(!$logs): ?><tr><td colspan="5" class="muted">Tiada rekod audit untuk penapis ini.</td></tr><?php endif; ?></tbody></table></div>
+    <?php if($pages>1): ?><nav class="pagination" aria-label="Halaman audit"><span class="muted">Halaman <?= $pg ?> / <?= $pages ?></span><div><?php if($pg>1): ?><a class="btn outline" href="/?page=users&<?= e($qs) ?>&ap=<?= $pg-1 ?>#audit">← Lebih baharu</a><?php endif; ?><?php if($pg<$pages): ?><a class="btn outline" href="/?page=users&<?= e($qs) ?>&ap=<?= $pg+1 ?>#audit">Lebih lama →</a><?php endif; ?></div></nav><?php endif; ?></section><?php
+}
+
+function settings_page(): void {
+    $s=settings_all(); $logo=logo_url();
+    ?><div class="page-heading"><div><span class="eyebrow teal">PENTADBIRAN</span><h1>Tetapan & Tema</h1><p class="muted">Sesuaikan identiti sekolah, warna dan teks paparan. Perubahan berkuat kuasa untuk semua pengguna.</p></div><form method="post" class="no-print"><?= csrf_field() ?><button class="btn outline" name="action" value="settings_reset_theme" type="submit" data-confirm-simple="Kembalikan warna dan mod paparan kepada tetapan asal?">↺ Tema asal</button></form></div>
+    <form method="post" enctype="multipart/form-data" class="settings-form" id="settings-form"><?= csrf_field() ?><input type="hidden" name="action" value="settings_save">
+    <div class="settings-layout"><div class="settings-main">
+    <section class="panel padded"><h3>Identiti sekolah</h3><div class="form-grid">
+     <?php field('school_name',['Nama sekolah','text',150],$s['school_name']); field('app_name',['Nama aplikasi','text',60],$s['app_name']); field('school_tagline',['Slogan (di bawah nama sekolah)','text',80,false],$s['school_tagline']); ?>
+     <div class="field logo-field">Logo sekolah<div class="logo-row"><span class="logo-preview"><?php if($logo): ?><img src="<?= e($logo) ?>" alt="Logo semasa"><?php else: ?><span class="school-monogram"><?= e(mb_strtoupper(mb_substr($s['school_name'],0,1))) ?></span><?php endif; ?></span><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></div><small class="muted">PNG, JPEG atau WebP, maksimum 2 MB. Ditukar automatik kepada WebP 512 px. Logo dipaparkan di sidebar, log masuk dan tab pelayar.</small></div>
+    </div></section>
+    <section class="panel padded spaced"><h3>Warna tema</h3><p class="muted">Pilih pratetap atau tetapkan warna sendiri. Sistem menolak warna yang menjadikan teks sukar dibaca.</p>
+     <div class="preset-grid" role="radiogroup" aria-label="Pratetap tema"><?php foreach(THEME_PRESETS+['custom'=>['label'=>'Warna tersuai','primary'=>$s['color_primary'],'dark'=>$s['color_dark'],'accent'=>$s['color_accent']]] as $key=>$pr): ?><label class="preset-card"><input type="radio" name="theme_preset" value="<?= e($key) ?>" data-primary="<?= e($pr['primary']) ?>" data-dark="<?= e($pr['dark']) ?>" data-accent="<?= e($pr['accent']) ?>" <?= $s['theme_preset']===$key?'checked':'' ?>><span class="swatches swatch-<?= e($key) ?>"><i class="sw1"></i><i class="sw2"></i><i class="sw3"></i></span><span><?= e($pr['label']) ?></span></label><?php endforeach; ?></div>
+     <div class="color-grid custom-colors"><label class="field">Warna utama (butang, pautan)<input type="color" name="color_primary" value="<?= e($s['color_primary']) ?>"></label><label class="field">Warna gelap (banner, log masuk)<input type="color" name="color_dark" value="<?= e($s['color_dark']) ?>"></label><label class="field">Warna aksen (hiasan)<input type="color" name="color_accent" value="<?= e($s['color_accent']) ?>"></label></div>
+     <h3 class="subhead">Mod paparan</h3><div class="mode-grid"><?php foreach(THEME_MODES as $k=>$label): ?><label class="mode-card"><input type="radio" name="theme_mode" value="<?= e($k) ?>" <?= $s['theme_mode']===$k?'checked':'' ?>><span class="mode-icon"><?= ['light'=>'☀','dark'=>'☾','auto'=>'◐'][$k] ?></span><?= e($label) ?></label><?php endforeach; ?></div>
+    </section>
+    <section class="panel padded spaced"><h3>Keselamatan log masuk</h3><p class="muted">Pengesahan dua faktor (2FA) menggunakan aplikasi pengesah di telefon. Pentadbir sentiasa wajib menggunakan 2FA.</p>
+     <div class="mode-grid twofa-grid"><?php foreach(['admin'=>['Wajib untuk pentadbir sahaja','PK, '.head_title().' & guru boleh memilih sendiri'],'all'=>['Wajib untuk semua pengguna','Paling selamat; setiap guru perlu mendaftar aplikasi pengesah']] as $k=>[$t,$d]): ?><label class="mode-card twofa-card"><input type="radio" name="twofa_policy" value="<?= $k ?>" <?= $s['twofa_policy']===$k?'checked':'' ?>><span class="mode-icon"><?= icon($k==='all'?'lock':'shield') ?></span><span><strong><?= e($t) ?></strong><small><?= e($d) ?></small></span></label><?php endforeach; ?></div>
+    </section>
+    <section class="panel padded spaced" id="jenis-sekolah"><h3>Jenis sekolah</h3><p class="muted">Menentukan gelaran ketua sekolah yang meluluskan senarai tugas dan ditandatangani pada surat lantikan.</p>
+     <div class="mode-grid twofa-grid"><?php foreach(SCHOOL_TYPES as $k=>[$t,$head]): ?><label class="mode-card twofa-card"><input type="radio" name="school_type" value="<?= $k ?>" <?= school_type()===$k?'checked':'' ?>><span class="mode-icon"><?= icon($k==='SMK'?'school':'book') ?></span><span><strong><?= e($k.' — '.$t) ?></strong><small>Ketua sekolah: <?= e($head) ?></small></span></label><?php endforeach; ?></div>
+    </section>
+    <section class="panel padded spaced"><h3>Teks paparan</h3><div class="form-grid">
+     <?php field('login_headline',['Tajuk halaman log masuk (baris akhir dicondongkan)','textarea',90],$s['login_headline']); field('login_text',['Teks halaman log masuk','textarea',240,false],$s['login_text']); field('banner_title',['Tajuk banner dashboard','textarea',90],$s['banner_title']); field('banner_text',['Teks banner dashboard','textarea',240,false],$s['banner_text']); ?>
+    </div></section>
+    </div><aside class="settings-preview"><div class="panel padded"><span class="eyebrow teal">PRATONTON</span><div class="preview-banner"><small>AGIHAN TUGAS · <?= date('Y') ?></small><strong id="pv-title"><?= e($s['banner_title']) ?></strong><span class="btn light">Terokai ↗</span></div><div class="preview-row"><button type="button" class="btn primary">Butang utama</button><button type="button" class="btn outline">Butang biasa</button></div><div class="preview-row"><span class="badge green">Aktif</span><span class="badge">Daerah</span><a class="text-link" href="#settings-form">Pautan teks ↗</a></div><p class="muted">Pratonton ini dikemas kini semasa anda memilih warna. Klik simpan untuk menggunakannya.</p></div>
+    <div class="settings-actions"><button class="btn primary" type="submit">Simpan tetapan & tema →</button></div></aside></div></form>
+    <?php if($logo): ?><form method="post" class="logo-remove"><?= csrf_field() ?><button class="delete-btn" name="action" value="settings_remove_logo" type="submit">Buang logo semasa</button></form><?php endif;
+}
+
+/* ---------- Integriti & Status ---------- */
+function fmt_bytes(?int $b): string { if($b===null) return '—'; foreach(['B','KB','MB','GB','TB'] as $u){ if($b<1024) return number_format($b,$u==='B'?0:1).' '.$u; $b/=1024; } return number_format($b,1).' PB'; }
+function ago(int $ts): string { $d=time()-$ts; if($d<60) return 'baru sahaja'; if($d<3600) return intdiv($d,60).' minit lalu'; if($d<86400) return intdiv($d,3600).' jam lalu'; return intdiv($d,86400).' hari lalu'; }
+
+function system_page(): void {
+    $int=integrity_last(); $base=integrity_baseline(); $key=health_key();
+    [$ok,$problems,$detail]=health_check(true);
+    $u24=uptime_percent(24); $u7=uptime_percent(24*7); $u30=uptime_percent(24*30);
+    $lastMon=query('SELECT checked_at FROM health_log WHERE source="monitor" ORDER BY id DESC LIMIT 1')->fetchColumn();
+    $days=query('SELECT DATE(checked_at) d, COUNT(*) n, SUM(ok) up FROM health_log WHERE checked_at>=DATE_SUB(CURDATE(), INTERVAL 29 DAY) GROUP BY DATE(checked_at)')->fetchAll();
+    $byDay=[]; foreach($days as $r) $byDay[$r['d']]=[(int)$r['n'],(int)$r['up']];
+    $incidents=query('SELECT checked_at,detail,source FROM health_log WHERE ok=0 ORDER BY id DESC LIMIT 15')->fetchAll();
+    $base_url=(platform_domain()!==''?tenant_scheme().'://'.platform_domain():(request_is_https()?'https':'http').'://'.((string)($_SERVER['HTTP_HOST']??'domain-anda'))).'/sihat.php'; // domain induk (platform)
+    $intLabel=['ok'=>['Sepadan','green'],'changed'=>['Fail berubah','warn'],'baseline_broken'=>['Asas diusik!','warn'],'baseline_missing'=>['Asas dipadam!','warn'],'no_baseline'=>['Tiada asas','']];
+    $exp=$_SESSION['exposure']??null;
+    $pct=fn(?float $p)=>$p===null?'—':rtrim(rtrim(number_format($p,2),'0'),'.').'<span>%</span>';
+    ?><div class="page-heading"><div><span class="eyebrow teal">PLATFORM</span><h1>Integriti & Status</h1><p class="muted">Pantau kesihatan pelayan, uptime dan sebarang perubahan tidak dijangka pada fail aplikasi (dikongsi semua sekolah).</p></div></div>
+    <section class="stats-grid"><article class="stat-card <?= $ok?'':'alert' ?>"><div class="stat-top"><span>Status sistem</span><span class="stat-icon <?= $ok?'ok':'warn' ?>"><?= icon('activity') ?></span></div><strong><?= $ok?'Sihat':'Masalah' ?></strong><small><?= $ok?'Pangkalan data '.e((string)($detail['db_ms']??'')).' ms':e(implode(', ',$problems)) ?></small></article>
+    <article class="stat-card"><div class="stat-top"><span>Uptime 24 jam</span><span class="stat-icon"><?= icon('chart') ?></span></div><strong><?= $pct($u24) ?></strong><small>7 hari: <?= strip_tags($pct($u7)) ?> · 30 hari: <?= strip_tags($pct($u30)) ?></small></article>
+    <article class="stat-card <?= ($int && $int['problem'])?'alert':'' ?>"><div class="stat-top"><span>Integriti fail</span><span class="stat-icon <?= ($int && !$int['problem'])?'ok':'warn' ?>"><?= icon('shield') ?></span></div><strong><?= !$int?'—':($int['problem']?'Amaran':'Sepadan') ?></strong><small><?= $int?'Disemak '.e(ago((int)$int['time'])):'Belum disemak' ?></small></article>
+    <article class="stat-card"><div class="stat-top"><span>Pemantau luar</span><span class="stat-icon"><?= icon('globe') ?></span></div><strong><?= $lastMon?'Aktif':'—' ?></strong><small><?= $lastMon?'Terakhir '.e(ago(strtotime($lastMon))):($key?'Belum menerima semakan':'Belum disediakan') ?></small></article></section>
+
+    <?php if($int && $int['problem']): ?><div class="notice error"><?= icon('alert') ?><span><strong>Perubahan dikesan.</strong> Jika anda baru sahaja memuat naik kemas kini sistem, semak senarai di bawah kemudian klik <strong>Terima keadaan semasa</strong>. Jika anda TIDAK membuat perubahan, anggap pelayan mungkin diceroboh: tukar kata laluan cPanel/FTP, semak fail yang disenaraikan dan pulihkan daripada sandaran.</span></div><?php endif; ?>
+
+    <div class="dashboard-grid">
+    <section class="panel"><div class="panel-heading"><div><h3>Integriti fail</h3><p class="muted"><?= $int?number_format((int)$int['total']).' fail dipantau':'Belum disemak' ?><?= ($base && empty($base['broken']))?' · asas '.e(date('d/m/Y H:i',strtotime($base['created']))).' oleh '.e($base['by']):'' ?></p></div><?php if($int): [$l,$c]=$intLabel[$int['status']]??['?','']; ?><span class="badge <?= $c ?>"><?= e($l) ?></span><?php endif; ?></div>
+     <div class="padded int-body">
+     <?php if($int): foreach(['changed'=>'Fail diubah','added'=>'Fail baharu','removed'=>'Fail hilang','suspicious'=>'Fail skrip mencurigakan (kemungkinan web shell)'] as $k=>$label): if(!empty($int[$k])): ?>
+      <details class="int-list <?= $k==='suspicious'?'danger':'' ?>" <?= $k==='suspicious'?'open':'' ?>><summary><?= e($label) ?> <span class="count"><?= count($int[$k]) ?></span></summary><ul><?php foreach(array_slice($int[$k],0,200) as $f): ?><li><code><?= e($f) ?></code></li><?php endforeach; ?></ul></details>
+     <?php endif; endforeach; if(!$int['problem']): ?><p class="int-ok"><?= icon('check') ?> Semua fail sepadan dengan asas yang dipercayai.</p><?php endif; endif; ?>
+     <p class="muted">Semakan automatik setiap 6 jam (apabila pentadbir log masuk atau pemantau uptime menghubungi sistem). Asas ditandatangani dengan kunci enkripsi sistem, jadi penceroboh tidak boleh mengubahnya tanpa dikesan.</p>
+     <div class="int-actions"><form method="post"><?= csrf_field() ?><button class="btn outline" name="action" value="system_integrity_check"><?= icon('search') ?>Semak sekarang</button></form></div>
+     <?php if($int && $int['status']!=='ok'): ?><form method="post" class="accept-form"><?= csrf_field() ?><input type="hidden" name="action" value="system_integrity_accept"><label class="confirm-check"><input type="checkbox" name="confirm_accept" value="yes" required> Saya mengesahkan perubahan ini dibuat oleh saya / pembangun (contoh: kemas kini sistem).</label><?= admin_confirm_field() ?><button class="btn primary" type="submit">Terima keadaan semasa sebagai asas</button></form><?php endif; ?>
+     </div></section>
+
+    <section class="panel"><div class="panel-heading"><div><h3>Uptime 30 hari</h3><p class="muted">Berdasarkan semakan oleh pemantau luar dan semakan manual.</p></div><form method="post"><?= csrf_field() ?><button class="btn sm outline" name="action" value="system_health_now">Semak sekarang</button></form></div>
+     <div class="padded"><svg class="uptime-bars" viewBox="0 0 300 40" role="img" aria-label="Uptime harian 30 hari"><?php for($i=29;$i>=0;$i--): $d=date('Y-m-d',strtotime("-$i days")); $x=(29-$i)*10; $v=$byDay[$d]??null; $cls=$v===null?'none':($v[1]===$v[0]?'up':($v[1]/$v[0]>=0.95?'warn':'down')); ?><rect class="<?= $cls ?>" x="<?= $x+1 ?>" y="4" width="8" height="32" rx="2"><title><?= e(date('d/m',strtotime($d)).': '.($v===null?'tiada data':round($v[1]/$v[0]*100,1).'% ('.$v[0].' semakan)')) ?></title></rect><?php endfor; ?></svg>
+      <div class="uptime-legend"><span><i class="up"></i>100%</span><span><i class="warn"></i>≥95%</span><span><i class="down"></i>&lt;95%</span><span><i class="none"></i>Tiada data</span></div>
+      <h4 class="subhead">Insiden terkini</h4>
+      <?php if(!$incidents): ?><p class="muted">Tiada insiden direkodkan.</p><?php else: ?><div class="table-wrap"><table><thead><tr><th>Masa</th><th>Punca</th><th>Sumber</th></tr></thead><tbody><?php foreach($incidents as $r): ?><tr class="row-alert"><td><?= e(date('d/m/Y H:i',strtotime($r['checked_at']))) ?></td><td><?= e($r['detail']) ?></td><td><?= $r['source']==='monitor'?'Pemantau':'Manual' ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+     </div></section>
+    </div>
+
+    <section class="panel spaced"><div class="panel-heading"><div><h3>Pemantau uptime luar</h3><p class="muted">Gunakan perkhidmatan percuma seperti UptimeRobot atau Better Stack untuk diberitahu (e-mel/Telegram) jika sistem tidak dapat diakses.</p></div></div>
+     <div class="padded monitor-setup">
+      <?php if(!$key): ?><p>Jana kunci pemantau untuk mendapatkan URL semakan penuh.</p><form method="post"><?= csrf_field() ?><button class="btn primary" name="action" value="system_health_key">Jana kunci pemantau</button></form>
+      <?php else: ?>
+      <ol class="setup-steps"><li>Daftar di <strong>uptimerobot.com</strong> (percuma) → <em>Add New Monitor</em> → jenis <strong>Keyword</strong>.</li><li>URL: salin <strong>URL semakan penuh</strong> di bawah. Keyword: <code>OK</code> (Alert when keyword not exists). Selang: 5 minit.</li><li>Tambah e-mel atau Telegram anda sebagai kenalan amaran.</li></ol>
+      <label class="field">URL semakan penuh (rahsia — jangan kongsi)<input readonly value="<?= e($base_url.'?k='.$key) ?>" class="copy-field"></label>
+      <label class="field">URL semakan asas (awam, tanpa butiran)<input readonly value="<?= e($base_url) ?>" class="copy-field"></label>
+      <p class="muted">Semakan penuh menguji pangkalan data, storan, ruang cakera dan integriti fail, merekod uptime, dan mencetuskan semakan integriti berkala. Respons: <code>OK</code> (200) atau <code>RALAT: punca</code> (503).</p>
+      <form method="post"><?= csrf_field() ?><button class="btn sm outline" name="action" value="system_health_key" data-confirm-simple="Jana kunci baharu? URL lama dalam pemantau akan berhenti berfungsi.">Jana semula kunci</button></form>
+      <?php endif; ?>
+     </div></section>
+
+    <div class="dashboard-grid spaced">
+    <section class="panel"><div class="panel-heading"><div><h3>Ujian pendedahan fail</h3><p class="muted">Cuba muat turun fail sulit melalui web untuk memastikan ia tidak terdedah.</p></div><form method="post"><?= csrf_field() ?><button class="btn sm outline" name="action" value="system_exposure">Uji sekarang</button></form></div>
+     <?php if($exp): ?><div class="table-wrap"><table><thead><tr><th>Laluan</th><th>HTTP</th><th>Keputusan</th></tr></thead><tbody><?php foreach($exp['result'] as $p=>[$code,$bad]): ?><tr class="<?= $bad?'row-alert':'' ?>"><td><code>/<?= e($p) ?></code></td><td><?= $code?:'—' ?></td><td><?= $code===0?'<span class="badge">Tidak dapat diuji</span>':($bad?'<span class="badge warn">TERDEDAH</span>':badge('Selamat')) ?></td></tr><?php endforeach; ?></tbody></table></div><p class="muted padded">Diuji <?= e(ago((int)$exp['time'])) ?>.</p><?php else: ?><p class="muted padded">Belum diuji.</p><?php endif; ?></section>
+    <section class="panel"><div class="panel-heading"><div><h3>Maklumat pelayan</h3></div></div><dl class="sys-info">
+     <div><dt>Versi aplikasi</dt><dd><?= e(APP_VERSION) ?></dd></div><div><dt>PHP</dt><dd><?= e(PHP_VERSION) ?></dd></div>
+     <div><dt>Pangkalan data</dt><dd><?= e((string)query('SELECT VERSION()')->fetchColumn()) ?></dd></div>
+     <div><dt>Ruang cakera kosong</dt><dd><?= e(fmt_bytes($detail['disk_free']??null)) ?></dd></div>
+     <div><dt>HTTPS</dt><dd><?= request_is_https()?'Aktif':'Tidak aktif' ?></dd></div>
+     <div><dt>Masa pelayan</dt><dd><?= e(date('d/m/Y H:i:s T')) ?></dd></div></dl></section>
+    </div><?php
+}
