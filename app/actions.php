@@ -73,6 +73,7 @@ function handle_action(string $page,string $action): void {
   flash('2FA dimatikan. Anda boleh mengaktifkannya semula pada bila-bila masa.'); redirect('/?page=security');
  }
  if(!empty(current_user()['must_change'])) throw new DomainException('Tukar kata laluan sementara anda dahulu.');
+ if(in_array($action,ENGINE_ACTIONS,true)) handle_engine_action($action);
  if(str_starts_with($action,'settings_')) handle_settings($action);
  if(str_starts_with($action,'system_') || str_starts_with($action,'backup_')) error_page(403,'Integriti fail dan sandaran diurus oleh pentadbir platform.'); // edisi multi
  if(str_starts_with($action,'hebahan_')) handle_hebahan($action);
@@ -83,10 +84,10 @@ function handle_action(string $page,string $action): void {
  if(str_starts_with($action,'reg_')) handle_registration_admin($action);
  if(str_starts_with($action,'user_') && $action!=='user_create') handle_user_admin($action);
  if($action==='user_create'){
-  require_admin(); free_guard('pengguna',1); $name=trim(input('name')); $email=strtolower(trim(input('email'))); $password=input('password'); $role=input('role');
+  require_admin(); free_guard('pengguna',1); $name=trim(input('name')); $email=strtolower(trim(input('email'))); $password=input('password'); $role=input('role'); $tid=user_teacher_link($role,0);
   if($name==='' || mb_strlen($name)>120 || strlen($email)>190 || !filter_var($email,FILTER_VALIDATE_EMAIL) || !valid_password($password) || !isset(ROLE_LABELS[$role])) throw new DomainException('Maklumat pengguna tidak sah. Kata laluan minimum 12 aksara.');
   if(query('SELECT id FROM users WHERE school_id='.sid().' AND email=?',[$email])->fetch()) throw new DomainException('E-mel ini sudah didaftarkan.');
-  query('INSERT INTO users (school_id,name,email,password_hash,role,must_change) VALUES (?,?,?,?,?,1)',[sid(),$name,$email,hash_password($password),$role]); audit('create','users',(int)db()->lastInsertId(),role_label($role)); flash('Pengguna ditambah. Pengguna perlu menukar kata laluan sementara dan menyediakan 2FA pada log masuk pertama.'); redirect('/?page=users');
+  query('INSERT INTO users (school_id,name,email,password_hash,role,must_change,teacher_id) VALUES (?,?,?,?,?,1,?)',[sid(),$name,$email,hash_password($password),$role,$tid]); audit('create','users',(int)db()->lastInsertId(),role_label($role)); flash('Pengguna ditambah. Pengguna perlu menukar kata laluan sementara dan menyediakan 2FA pada log masuk pertama.'); redirect('/?page=users');
  }
  throw new DomainException('Tindakan tidak sah.');
 }

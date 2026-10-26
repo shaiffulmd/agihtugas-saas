@@ -1,17 +1,19 @@
 <?php
-require_once __DIR__.'/admin_views.php'; require_once __DIR__.'/icons.php';
+require_once __DIR__.'/admin_views.php'; require_once __DIR__.'/icons.php'; require_once __DIR__.'/enjin_views.php';
 const PAGE_SIZE=25;
 $role=(string)($user['role']??'');
-$nav=['Utama'=>[['dashboard','home','Dashboard']]];
+$nav=['Utama'=>in_array($role,['admin','pk'],true)?[['dashboard','home','Dashboard']]:[]];
+$ep=engine_pages($role); $navIcons=['guru'=>'users','jawatan'=>'book','agihan'=>'filter','auto'=>'activity','syarat'=>'sliders','pukal'=>'upload','kelulusan'=>'check','surat'=>'file','tugas_saya'=>'clipboard','sekolah'=>'school','api'=>'link'];
+foreach(['Perancangan'=>['guru','jawatan','agihan','auto','syarat'],'Kelulusan & surat'=>['kelulusan','surat','tugas_saya']] as $grp=>$keys){ $items=[]; foreach($keys as $k) if(in_array($k,$ep,true)) $items[]=[$k,$navIcons[$k],ENGINE_PAGES[$k]]; if($items) $nav[$grp]=$items; }
 if($role!=='admin') $nav['Utama'][]=['hebahan','info','Hebahan',function_exists('hebahan_unread_count')?hebahan_unread_count():0];
 if($role==='admin'){
  $nav['Utama'][]=['hebahan','info','Hebahan Guru'];
- $nav['Sistem']=[['users','key','Pengguna & Audit'],['settings','sliders','Tetapan & Tema'],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
+ $nav['Sistem']=[['users','key','Pengguna & Audit'],['sekolah','school','Profil Sekolah & Surat'],['settings','sliders','Tetapan & Tema'],['api','link','API & Integrasi'],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
  $nav['Langganan & bantuan']=[['langganan','card','Langganan'],['sokongan','help','Sokongan']];
 } // Integriti & Sandaran: peringkat pelayan → panel platform
 $nav['Akaun']=[['security','user','Profil & Keselamatan']];
 const PAGE_TITLES=['dashboard'=>'Dashboard','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan & Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
-$pageTitle=PAGE_TITLES[$page]??'Halaman';
+$pageTitle=PAGE_TITLES[$page]??ENGINE_PAGES[$page]??'Halaman';
 function notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
 function field(string $key,array $f,mixed $value=''): void {
  [$label,$type,$constraint]=$f; $required=($f[3]??true)?'required':'';
@@ -39,7 +41,7 @@ function pagination(string $page,int $pg,int $pages,int $total,string $qs): void
  echo '</div></nav>';
 }
 function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','Muktamad','Lulus']); return '<span class="badge '.($good?'green':'').'">'.e($text).'</span>'; }
-?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e((PAGE_TITLES[$page]??'Akaun').' · '.app_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(theme_css_url()) ?>"><?php if(logo_url()): ?><link rel="icon" href="<?= e(logo_url()) ?>"><?php endif; ?><script src="<?= e(asset('app.js')) ?>" defer></script></head><body<?= demo_mode()?' data-demo="1"':'' ?>>
+?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= e((PAGE_TITLES[$page]??ENGINE_PAGES[$page]??'Akaun').' · '.app_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(asset('tugas.css')) ?>"><link rel="stylesheet" href="<?= e(theme_css_url()) ?>"><?php if(logo_url()): ?><link rel="icon" href="<?= e(logo_url()) ?>"><?php endif; ?><script src="<?= e(asset('app.js')) ?>" defer></script><script src="<?= e(asset('tugas.js')) ?>" defer></script></head><body<?= demo_mode()?' data-demo="1"':'' ?>>
 <?= icons_sprite() ?>
 <?php if(in_array($page,array_merge(['login','verify','enroll'],ACCOUNT_PAGES),true) && (!$user || $page==='enroll')): $acc=in_array($page,ACCOUNT_PAGES,true); [$accTitle,$accSub]=$acc?account_heading($page):['','']; ?>
 <div class="auth-shell"><div class="auth-story"><?= brand_html() ?><div><span class="hero-pill"><span class="dot"></span>AGIHAN TUGAS GURU · <?= date('Y') ?></span><h1><?= login_headline_html() ?></h1><p><?= e(setting('login_text')) ?></p><div class="story-grid"><span><?= icon('users') ?>Guru & jawatan</span><span><?= icon('filter') ?>Auto-agihan</span><span><?= icon('check') ?>Kelulusan</span></div></div><small>Adil untuk guru. Teratur untuk sekolah.</small></div>
@@ -61,7 +63,10 @@ function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','M
 <section class="welcome-banner"><div><span class="hero-pill"><span class="dot"></span>AGIHAN TUGAS · <?= date('Y') ?></span><h2><?= lines_html(setting('banner_title')) ?></h2><p><?= e(setting('banner_text')) ?></p></div></section>
 <?php if($user['role']==='admin' && ($np=count(pending_registrations()))): ?><div class="notice info"><?= icon('users') ?><span><strong><?= $np ?> pendaftaran guru</strong> menunggu kelulusan. <a href="/?page=users#permohonan">Semak sekarang →</a></span></div><?php endif; ?>
 <?php if(in_array($user['role'],HEBAHAN_ROLES,true) && function_exists('hebahan_dashboard_panel')) hebahan_dashboard_panel(); ?>
-<section class="panel padded spaced"><div class="empty compact"><span><?= icon('clipboard') ?></span><h3>Modul agihan tugas sedang dipasang</h3><p>Senarai guru, jawatan, lantikan, auto-agihan dan aliran kelulusan akan tersedia di sini.</p></div></section>
+<?php if(can_plan($user)){ engine_open('dashboard',$user); engine_dashboard(); } ?>
+<?php elseif(isset(ENGINE_PAGES[$page])): $locked=engine_open($page,$user);
+ match($page){'guru'=>guru_page($error),'jawatan'=>jawatan_page($error),'pukal'=>pukal_page(),'agihan'=>agihan_page(),'syarat'=>syarat_page(),'auto'=>auto_page(),'kelulusan'=>kelulusan_page($user),'surat'=>surat_page(),'tugas_saya'=>tugas_saya_page($user),'sekolah'=>sekolah_page(),'api'=>api_page()};
+ if($locked) echo '</fieldset>'; ?>
 <?php elseif($page==='versi'): versi_page(); ?>
 <?php elseif($page==='hebahan'): hebahan_page(); ?>
 <?php elseif($page==='langganan'): langganan_page(); ?>

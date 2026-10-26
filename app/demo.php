@@ -10,8 +10,12 @@ const DEMO_ACCOUNTS=[
     ['admin','Cikgu Aina (Pentadbir)','admin@demo.test','Demo-Admin-2026','Semua halaman, akaun pengguna & tetapan sekolah'],
     ['pk','En. Rahman (Penolong Kanan)','pk@demo.test','Demo-PK-2026','Merancang jawatan & lantikan, hantar untuk semakan'],
     ['head','Hj. Ahmad Fauzi (Ketua Sekolah)','ketua@demo.test','Demo-Ketua-2026','Meluluskan & memuktamadkan senarai tugas'],
-    ['teacher','En. Hakim bin Ismail (Guru)','guru@demo.test','Demo-Guru-2026','Melihat tugas sendiri & surat lantikan'],
+    ['teacher','Nur Aisyah Abdullah (Guru)','guru@demo.test','Demo-Guru-2026','Melihat tugas sendiri & surat lantikan'],
 ];
+const DEMO_TEACHERS=[['Nur Aisyah Abdullah','Bahasa Melayu',25],['Muhammad Hafiz Ahmad','Matematik',25],['Siti Nurhaliza Hassan','Sains',20],['Ahmad Firdaus Ismail','Pendidikan Jasmani',25],['Nurul Huda Osman','Bahasa Inggeris',25],['Chong Wei Ling','Matematik',20],['Ravindran Kumar','Reka Bentuk & Teknologi',25],['Farah Nadia Zainal','Pendidikan Islam',20],['Mohd Faizal Yusof','Sejarah',25],['Siti Aminah Ali','Pendidikan Seni',25],['Lee Mei Yee','Bahasa Inggeris',20],['Nor Azlina Rahman','Pemulihan',20]];
+const DEMO_POSITIONS=[['Setiausaha Pengurusan','Pentadbiran',8],['Penyelaras Aset','Pentadbiran',6],['Setiausaha Mesyuarat Guru','Pentadbiran',5],['Penyelaras Data Sekolah','Pentadbiran',8],['Penyelaras Dokumentasi','Pentadbiran',4],['AJK Pengurusan Pejabat','Pentadbiran',3],['Ketua Panitia Bahasa Melayu','Kurikulum',8],['Ketua Panitia Matematik','Kurikulum',8],['Ketua Panitia Sains','Kurikulum',8],['Setiausaha Peperiksaan','Kurikulum',9],['Penyelaras Pusat Sumber','Kurikulum',7],['Penyelaras Pemulihan','Kurikulum',7],['Setiausaha HEM','HEM',9],['Penyelaras Disiplin','HEM',9],['Penyelaras Bantuan Murid','HEM',7],['Penyelaras Kantin','HEM',5],['Penyelaras Kesihatan','HEM',5],['Penyelaras Keselamatan','HEM',6],['Setiausaha Kokurikulum','Kokurikulum',9],['Setiausaha Sukan','Kokurikulum',9],['Penyelaras Unit Beruniform','Kokurikulum',7],['Penyelaras Kelab & Persatuan','Kokurikulum',6],['Penyelaras Sukan & Permainan','Kokurikulum',7],['Penyelaras PAJSK','Kokurikulum',8]];
+/** jawatan (1-24) => guru (1-12) */
+const DEMO_ASSIGN=[1=>1,2=>1,3=>2,4=>1,5=>5,6=>6,7=>1,8=>2,9=>3,10=>5,11=>10,12=>12,13=>8,14=>9,15=>6,16=>7,17=>10,18=>11,19=>4,20=>4];
 const DEMO_BLOCKED=[
     'password'=>'akaun','twofa_disable'=>'akaun','enroll'=>'akaun','lupa'=>'akaun','reset'=>'akaun','daftar'=>'akaun',
     'user_create'=>'pengguna','user_update'=>'pengguna','user_reset_2fa'=>'pengguna','user_reset_password'=>'pengguna','avatar_admin_remove'=>'pengguna',
@@ -61,14 +65,19 @@ function demo_reset(): void {
     @file_put_contents(demo_stamp_path(),date('Y-m-d H:i:s'),LOCK_EX);
 }
 
-/** Jana data rekaan: tetapan sekolah & akaun kongsi. Data enjin (guru, jawatan, lantikan) ditambah apabila modul enjin dipindahkan. */
+/** Jana data rekaan: tetapan sekolah, akaun kongsi, guru, jawatan & lantikan (draf). */
 function demo_seed(string $type='SMK'): void {
     $school=(string)(school()['name']??'SMK Demo UrusTugas');
     save_settings(['school_name'=>$school,'school_type'=>$type==='SK'?'SK':'SMK','school_tagline'=>'Demo agihan tugas guru','reg_mode'=>'off','mail_method'=>'mail','site_url'=>'']);
     db()->beginTransaction();
     try {
         school_engine_init();
-        foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at) VALUES ('.sid().',?,?,?,?,NOW())',[$name,$email,hash_password($pass),$role]);
+        // Guru, jawatan & lantikan contoh (data seed UrusTugas asal): 12 guru, 24 jawatan, 20 lantikan, status Draf.
+        $tid=[]; foreach(DEMO_TEACHERS as $i=>[$n,$spec,$cap]){ query('INSERT INTO teachers(school_id,name,email,specialty,capacity) VALUES ('.sid().',?,?,?,?)',[$n,'guru'.($i+1).'@sekolah.demo',$spec,$cap]); $tid[$i+1]=(int)db()->lastInsertId(); }
+        $pid=[]; foreach(DEMO_POSITIONS as $i=>[$n,$cat,$w]){ query('INSERT INTO positions(school_id,name,category,weight) VALUES ('.sid().',?,?,?)',[$n,$cat,$w]); $pid[$i+1]=(int)db()->lastInsertId(); }
+        foreach(DEMO_ASSIGN as $p=>$t) query('INSERT INTO assignments(school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$tid[$t],$pid[$p]]);
+        foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at,teacher_id) VALUES ('.sid().',?,?,?,?,NOW(),?)',[$name,$email,hash_password($pass),$role,$role==='teacher'?$tid[1]:null]);
+        query('INSERT INTO settings(school_id,name,value) VALUES ('.sid().',"principal",?),('.sid().',"session_year",?)',['Hj. Ahmad Fauzi bin Ismail',date('Y')]);
         db()->commit();
     } catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
 }

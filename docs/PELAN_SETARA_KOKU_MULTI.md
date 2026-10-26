@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1 & 2 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema`); Fasa 3 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–3 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema` → `fasa3-enjin`); Fasa 4 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -65,6 +65,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 | `auth.php`, `auth_gate.php` | `users.php`, `accounts.php` koku-multi | 2FA, kata laluan sementara, sekatan IP akaun |
 - Import guru CSV/Excel: guna `teacher_import.php` koku-multi.
 - Ujian: port `tests/{allocation,workflow,api,school_types,branding}.php` ke pemasangan berbilang sekolah; tambah ujian silang sekolah (UI, API, surat, logo, eksport).
+- **Siap 26 Okt 2026 (versi 0.2, tiada perubahan skema).** Modul: `app/enjin.php` (guru, jawatan, lantikan, guru pukal CSV, kunci API), `app/tugas_auto.php` (auto-agihan & jawatan pukal — algoritma sama), `app/kelulusan.php`, `app/surat_lantikan.php` (logo/Jata per sekolah, surat HTML & PDF mPDF), `app/enjin_actions.php`, `app/enjin_views.php`, `app/api.php` (API v1 di `/KOD/api/v1`, kunci dicipta di UI, bukan CLI). Halaman `?page=` guru, jawatan, agihan, auto, syarat, pukal, kelulusan, surat, tugas_saya, sekolah, api; akses mengikut `engine_pages()`; GB/Pengetua → kelulusan, Guru → tugas_saya. Akaun Pengguna lama digabung ke Pengguna & Audit (pilihan profil guru, wajib untuk peranan Guru). Nama/jenis sekolah dan tetapan surat dikunci bukan Draf. `NOW()` DB diset `+08:00` supaya selaras dengan PHP. Import guru guna CSV ringkas (`name,email,specialty,capacity`), bukan `teacher_import.php` koku (yang mengimport akaun pengguna). Diuji: `tests/engine_integration.py` 85/85 (peranan, CRUD, pukal, syarat, auto-agihan lapuk/sekali guna, aliran penuh & kunci, surat HTML/PDF, Tugas Saya, API & kunci per sekolah, pengasingan), `tests/allocation_engine.php` 45/45 (port ujian algoritma lama + pengasingan), `smoke_platform.py` 67/67, `schema_engine.php` 53/53, audit SQL bersih, semakan visual dashboard/guru/agihan/surat. Belum: had Pro (auto-agihan/API/surat pukal untuk Pro sahaja) → Fasa 4; klien integrasi koku-multi → Fasa 7.
 
 ### Fasa 4 — Platform & langganan (ambil terus, sesuaikan had)
 - `subscription.php`: tukar `free_count()` kepada guru/jawatan/pengguna; `free_guard()` pada tambah guru, import, tambah jawatan, cipta pengguna; sekat auto-agihan/API/surat pukal bila Free.

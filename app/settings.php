@@ -31,6 +31,8 @@ function setting_defaults(): array {
         'logo_mime'      => 'image/webp',
         'theme_version'  => '1',
         'twofa_policy'   => 'admin', 'school_type' => 'SMK',
+        // Surat lantikan (Profil Sekolah & Surat). Logo surat & Jata Negara = id aset dalam school_assets.
+        'principal' => '', 'session_year' => '', 'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual', 'school_logo_id' => '', 'national_crest_id' => '',
         'reg_mode' => 'off', 'reg_domains' => '', 'login_captcha' => 'failures', 'ip_admin' => '', 'site_url' => '', 'mail_method' => 'platform', 'smtp_preset' => 'custom', 'mail_from' => '', 'mail_from_name' => '',
         'smtp_host' => '', 'smtp_port' => '587', 'smtp_secure' => 'tls', 'smtp_user' => '', 'smtp_pass' => '',
     ];
@@ -150,6 +152,8 @@ function handle_settings(string $action): never {
         $img=image_reencode((string)file_get_contents($f['tmp_name']),512);
         $out['logo']=base64_encode($img['bytes']); $out['logo_mime']=$img['mime'];
     }
+    // Nama & jenis sekolah masuk ke snapshot revisi: hanya boleh diubah ketika agihan dalam Draf.
+    if(($out['school_name']!==school_name() || $out['school_type']!==school_type()) && workflow_state()['status']!=='draft') throw new DomainException('Nama dan jenis sekolah dikunci semasa semakan / kelulusan. Kembalikan agihan kepada draf dahulu.');
     save_settings($out); audit('settings_saved','settings');
     flash('Tetapan & tema berjaya disimpan.'); redirect('/?page=settings');
 }

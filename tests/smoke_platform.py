@@ -142,8 +142,16 @@ def main():
     a = sc['UTA0001']
     s, page, _, _ = a.req('/UTA0001/?page=users')
     check('Pengetua' in page and 'Penolong Kanan' in page and 'Pembaca' not in page, 'pilihan peranan SMK: Pentadbir/PK/Pengetua/Guru')
+    s, page, _, _ = a.post('/UTA0001/?page=users', page, {'action': 'user_create', 'name': 'Tanpa profil', 'email': 'tanpa@uta.test', 'password': 'Sementara-Ujian-2026', 'role': 'teacher'})
+    check('profil guru' in notice_error(page), 'akaun Guru tanpa profil guru ditolak')
+    s, page, _, _ = a.req('/UTA0001/?page=guru')
+    s, page, _, _ = a.post('/UTA0001/?page=guru', page, {'action': 'guru_save', 'id': 0, 'name': 'Guru Profil', 'email': '', 'specialty': 'Sains', 'capacity': 20})
+    tid = re.search(r'page=guru&amp;edit=(\d+)', page)
+    check(tid is not None, 'profil guru dicipta')
+    s, page, _, _ = a.req('/UTA0001/?page=users')
     for role, email in [('pk', 'pk@uta.test'), ('head', 'ketua@uta.test'), ('teacher', 'guru@uta.test')]:
-        s, page, _, _ = a.post('/UTA0001/?page=users', page, {'action': 'user_create', 'name': 'Ujian ' + role, 'email': email, 'password': 'Sementara-Ujian-2026', 'role': role})
+        s, page, _, _ = a.post('/UTA0001/?page=users', page, {'action': 'user_create', 'name': 'Ujian ' + role, 'email': email, 'password': 'Sementara-Ujian-2026', 'role': role,
+                                                              'teacher_id': tid.group(1) if (tid and role == 'teacher') else ''})
         check('Pengguna ditambah' in page, 'tambah pengguna peranan %s %s' % (role, notice_error(page)))
     s, page, _, _ = a.post('/UTA0001/?page=users', page, {'action': 'user_create', 'name': 'Ujian lama', 'email': 'lama@uta.test', 'password': 'Sementara-Ujian-2026', 'role': 'guru'})
     check('tidak sah' in notice_error(page), 'peranan koku lama (guru) ditolak')

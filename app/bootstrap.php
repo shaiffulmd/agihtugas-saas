@@ -18,7 +18,7 @@ function db(?PDO $use=null): PDO {
  static $pdo; if($use) $pdo=$use;
  // Pelayan MySQL penuh (1040 / 1203 "Too many connections") biasanya sementara: cuba semula 2 kali sebelum menyerah.
  for($try=0;!$pdo;$try++){
-  try { $pdo=new PDO('mysql:host='.env('DB_HOST','127.0.0.1').';port='.env('DB_PORT','3306').';dbname='.env('DB_NAME','urustugas').';charset=utf8mb4',env('DB_USER'),env('DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]); }
+  try { $pdo=new PDO('mysql:host='.env('DB_HOST','127.0.0.1').';port='.env('DB_PORT','3306').';dbname='.env('DB_NAME','urustugas').';charset=utf8mb4',env('DB_USER'),env('DB_PASS'),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]); $pdo->exec("SET time_zone='+08:00'"); } // NOW() DB = waktu Malaysia, sama seperti date() PHP
   catch(PDOException $ex){ if($try>=2 || !preg_match('/\b(1040|1203)\b/',$ex->getMessage())) throw $ex; usleep(400000*($try+1)); }
  }
  return $pdo;

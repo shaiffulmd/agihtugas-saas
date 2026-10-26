@@ -4,8 +4,8 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa,
 
 ## Status
 
-- **Fasa 1 (rangka platform) & Fasa 2 (skema enjin dengan `school_id`) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md) dan [nota kod](docs/NOTA_KOD.md).
-- Logik & halaman enjin agihan tugas (guru, jawatan, lantikan, auto-agihan, kelulusan, surat, API) belum dipindahkan — kod lama satu sekolah (SQLite) disimpan di [`legacy/`](legacy/) sebagai rujukan sehingga Fasa 3 siap.
+- **Fasa 1 (rangka platform), Fasa 2 (skema enjin) & Fasa 3 (modul enjin) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
+- Enjin: guru, jawatan, lantikan, auto-agihan, Pusat Syarat, aliran kelulusan, surat lantikan (cetak/PDF), Tugas Saya dan API v1 per sekolah. Kod lama satu sekolah (SQLite) kekal di [`legacy/`](legacy/) sebagai rujukan sejarah.
 
 ## Keperluan
 
@@ -26,6 +26,8 @@ php -S 127.0.0.1:8091 -t public_html public_html/router.php
 TEST_URL=http://127.0.0.1:8091 DB_PORT=… DB_NAME=… DB_USER=… DB_PASS=… python3 tests/smoke_platform.py
 python3 tests/tenant_sql_audit.py
 php tests/schema_engine.php        # pada pemasangan sedia ada (.env): FK & kekangan enjin
+php tests/allocation_engine.php    # algoritma auto-agihan & jawatan pukal
+php tests/setup_engine_test.php > ujian.json && SETUP_JSON=ujian.json python3 tests/engine_integration.py
 ```
 
 `smoke_platform.py` memerlukan DB kosong dan tiada `.env`. Pemasang menamakan semula `public_html/install.php` selepas siap — pulihkan sebelum commit: `mv public_html/install.php.locked-* public_html/install.php`.

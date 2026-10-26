@@ -14,6 +14,14 @@ function confirm_admin_password(): void {
     if(!rate_allowed($rk)) throw new DomainException('Terlalu banyak cubaan pengesahan. Cuba selepas 15 minit.');
     if(!password_verify(input('admin_password'),$me['password_hash'])){ rate_hit($rk); audit('admin_confirm_failed','users',(int)$me['id']); throw new DomainException('Kata laluan anda (pengesahan pentadbir) tidak sah.'); }
 }
+/** Profil guru bagi akaun: wajib & unik untuk peranan Guru, pilihan untuk peranan lain (cth. PK yang juga guru). */
+function user_teacher_link(string $role,int $userId): ?int {
+    $tid=(int)input('teacher_id');
+    if(!$tid){ if($role==='teacher') throw new DomainException('Akaun guru mesti dipautkan kepada profil guru.'); return null; }
+    if(!teacher_find($tid)) throw new DomainException('Profil guru tidak ditemui.');
+    if(query('SELECT 1 FROM users WHERE school_id='.sid().' AND teacher_id=? AND id<>?',[$tid,$userId])->fetchColumn()) throw new DomainException('Profil guru telah dipautkan kepada akaun lain.');
+    return $tid;
+}
 function active_admin_count(): int { return (int)query('SELECT COUNT(*) FROM users WHERE school_id='.sid().' AND role="admin" AND active=1')->fetchColumn(); }
 function handle_user_admin(string $action): never {
     require_admin();
@@ -28,8 +36,8 @@ function handle_user_admin(string $action): never {
         if($self && ($role!=='admin' || !$active)) throw new DomainException('Anda tidak boleh menurunkan peranan atau menyahaktifkan akaun sendiri.');
         if($target['role']==='admin' && (int)$target['active']===1 && ($role!=='admin' || !$active) && active_admin_count()<=1) throw new DomainException('Sekurang-kurangnya seorang pentadbir aktif diperlukan.');
         if($active===1 && (int)$target['active']===0) free_guard('pengguna',1);
-        $changedAccess=$role!==$target['role'] || $active!==(int)$target['active'];
-        query('UPDATE users SET name=?,role=?,active=?'.($changedAccess?',auth_version=auth_version+1':'').' WHERE id=? AND school_id='.sid(),[$name,$role,$active,$id]);
+        $tid=user_teacher_link($role,$id); $changedAccess=$role!==$target['role'] || $active!==(int)$target['active'] || $tid!==($target['teacher_id']!==null?(int)$target['teacher_id']:null);
+        query('UPDATE users SET name=?,role=?,active=?,teacher_id=?'.($changedAccess?',auth_version=auth_version+1':'').' WHERE id=? AND school_id='.sid(),[$name,$role,$active,$tid,$id]);
         audit($active?($changedAccess?'user_access_changed':'user_updated'):'user_deactivated','users',$id);
         flash($active?'Akaun dikemas kini.':'Akaun dinyahaktifkan. Sesi aktif pengguna ditamatkan.');
     } elseif($action==='user_ips'){
@@ -63,6 +71,11 @@ const AUDIT_LABELS = [
     'register'=>'Daftar kendiri','register_duplicate'=>'Cubaan daftar e-mel sedia ada','register_approved'=>'Lulus pendaftaran','register_rejected'=>'Tolak pendaftaran','email_verified'=>'Sahkan e-mel',
     'password_reset_requested'=>'Minta reset kata laluan','password_reset'=>'Reset kata laluan (e-mel)','login_inactive'=>'Log masuk akaun tidak aktif','login_ip_denied'=>'Log masuk ditolak (IP)','session_ip_denied'=>'Sesi ditolak (IP)','bot_blocked'=>'Bot disekat',
     'reg_settings'=>'Tetapan pendaftaran & e-mel','mail_test'=>'Uji e-mel','avatar_saved'=>'Tukar gambar profil','avatar_removed'=>'Buang gambar profil','avatar_admin_removed'=>'Buang gambar profil (pentadbir)',
+    'teacher_create'=>'Tambah guru','teacher_update'=>'Kemas kini guru','teacher_delete'=>'Padam guru','teacher_bulk'=>'Tambah guru pukal','teacher_sync'=>'Segerak guru (API)',
+    'position_create'=>'Tambah jawatan','position_update'=>'Kemas kini jawatan','position_delete'=>'Padam jawatan','position_bulk'=>'Tambah jawatan pukal','position_rule'=>'Syarat jawatan',
+    'assign'=>'Lantik guru','unassign'=>'Lepaskan lantikan','allocation_rules'=>'Syarat agihan automatik','allocation_apply'=>'Simpan agihan automatik',
+    'workflow_submit'=>'Hantar untuk semakan','workflow_approve'=>'Luluskan agihan','workflow_finalize'=>'Muktamadkan agihan','workflow_return'=>'Kembalikan kepada draf',
+    'school_profile'=>'Profil sekolah (surat)','letter_logo'=>'Logo surat','letter_logo_removed'=>'Buang logo surat','letter_header'=>'Gaya kepala surat','api_key_create'=>'Cipta kunci API','api_key_revoke'=>'Batal kunci API',
     'cli_create'=>'Cipta pentadbir (CLI)','cli_password'=>'Tukar kata laluan (CLI)','cli_2fa_reset'=>'Reset 2FA (CLI)',
 ];
 function audit_label(string $a): string { return AUDIT_LABELS[$a]??$a; }

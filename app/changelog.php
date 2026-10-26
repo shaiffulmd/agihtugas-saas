@@ -6,6 +6,13 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '0.2'=>['2026-10-26',[
+        'Enjin agihan tugas dipindahkan ke platform berbilang sekolah: Pengurusan Guru (termasuk tambah pukal CSV), Jawatan & Pemberat, Agihan Tugas, Pusat Syarat, Agihan Automatik (pratonton & simpan) dan Tambah Jawatan Pukal.',
+        'Semakan & Kelulusan: Draf → Semakan → Lulus → Muktamad dengan kunci versi; data perancangan, nama & jenis sekolah dikunci semasa semakan.',
+        'Surat Lantikan daripada versi muktamad (cetak & PDF), Tugas Saya untuk guru, logo sekolah & Jata Negara bagi setiap sekolah.',
+        'API v1 per sekolah (/KOD/api/v1) dengan kunci API yang dicipta di halaman API & Integrasi; kunci sekolah lain ditolak.',
+        'Akaun Guru wajib dipautkan kepada profil guru; had pakej Free dikira daripada bilangan guru & jawatan.',
+    ]],
     '0.1'=>['2026-10-26',[
         'Rangka berbilang sekolah baharu (diambil daripada koku-multi): panel platform, sekolah dengan kod KPM (/KOD/ atau subdomain), langganan Free/Pro, bayaran, pendaftaran awam, keselamatan dan kemas kini automatik.',
         'Pangkalan data MariaDB/MySQL dengan school_id pada setiap jadual sekolah dan kunci asing komposit.',

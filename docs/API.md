@@ -1,20 +1,12 @@
-# AgihTugas API v1
+# UrusTugas API v1
 
-Base URL setempat: `http://127.0.0.1:8087/api/v1`. Semua data daripada ruang kerja/pangkalan data yang sama dengan UI. Kontrak mesin: `public/openapi.json` (OpenAPI 3.0.3). Klien koku-multi dan panduan disediakan dalam `integrations/koku-multi/`.
+Setiap sekolah mempunyai API sendiri: `https://DOMAIN/KOD/api/v1` (mod laluan) atau `https://kod.DOMAIN/api/v1` (mod subdomain), cth. `http://127.0.0.1:8091/CEA1234/api/v1` setempat. Data sama seperti UI sekolah itu. Kontrak mesin: `public_html/assets/api/openapi.json` (dihidangkan di `/assets/api/openapi.json`).
 
-## API key
+## Kunci API
 
-Cipta key pada terminal pelayan AgihTugas:
+Pentadbir sekolah mencipta kunci di **API & Integrasi** (menu Sistem): nama sistem + skop `read` (baca sahaja) atau `write` (baca & ubah). Kunci penuh (`ut_` + 64 heks) dipaparkan **sekali**; hanya HMAC-SHA256 disimpan (subkunci platform — hash unik global). Kunci hanya sah untuk sekolah yang menciptanya: kunci sekolah A pada URL sekolah B → `401 unauthorized`. Batalkan kunci di halaman yang sama; untuk putaran akses cipta kunci baharu, kemas kini sistem pemanggil, kemudian batalkan kunci lama.
 
-```sh
-php bin/api-key.php create 'koku-multi - sekolah saya' write
-php bin/api-key.php list
-php bin/api-key.php revoke 1
-```
-
-`read` ialah skop lalai; `write` membenarkan bacaan dan perubahan. Nilai penuh key dipaparkan sekali ketika dicipta; hanya hash SHA-256 disimpan. Arahan list menunjukkan prefix, bukan key penuh. Key dibatalkan terus ditolak. Cipta key baharu, kemas kini sistem pemanggil, kemudian batalkan key lama untuk putaran akses.
-
-Semua endpoint memerlukan header `Authorization: Bearer <API_KEY>`. Cookie sesi atau key dalam query URL tidak diterima. Jangan simpan key dalam JavaScript/pelayar. Untuk sambungan backend koku-multi tidak memerlukan CORS.
+Semua endpoint memerlukan `Authorization: Bearer <KUNCI>`. Kuki sesi atau kunci dalam query URL tidak diterima. Jangan simpan kunci dalam JavaScript/pelayar. Cubaan kunci gagal dihadkan (120 / 15 minit / IP). Sekolah dengan langganan tamat → `403 subscription_expired`; mod kecemasan platform → `503 maintenance` (tulisan) atau semua (mod tutup).
 
 ## Endpoint
 
@@ -37,7 +29,7 @@ DELETE guru atau jawatan yang masih mempunyai lantikan menghasilkan 409. POST as
 
 ## Permintaan dan respons
 
-Badan POST/PATCH/PUT mesti objek JSON dengan Content-Type: application/json (maksimum 64 KB). Medan tidak dikenali ditolak. Integer mesti nombor JSON, bukan rentetan. PATCH mengekalkan medan yang tidak dihantar. Medan nama maksimum 160 aksara; email maksimum 254.
+Badan POST/PATCH/PUT mesti objek JSON dengan Content-Type: application/json (maksimum 64 KB). Medan tidak dikenali ditolak. Integer mesti nombor JSON, bukan rentetan. PATCH mengekalkan medan yang tidak dihantar. Medan nama maksimum 160 aksara; email maksimum 190. `external_id` unik dalam sekolah (sekolah lain boleh menggunakan nilai sama).
 
 Guru: `name` dan `capacity` (1–100) diperlukan ketika POST; `email` dan `specialty` pilihan. `external_id` pilihan dan unik, contoh `koku-multi:12:89`. POST /teachers/sync memerlukan external_id; guru baharu juga memerlukan name, dengan capacity lalai 25. Sync guru sedia ada mengekalkan medan yang tidak dihantar. Untuk memautkan rekod AgihTugas sedia ada, PATCH external_id dahulu supaya sync tidak mencipta rekod kedua. Hanya guru boleh dipautkan melalui external_id pada versi ini.
 
@@ -61,20 +53,20 @@ Kod HTTP: 400 JSON rosak; 401 key tiada/tidak sah; 403 skop tidak mencukupi; 404
 
 ## Contoh cURL
 
-Tetapkan AGIHTUGAS_API_KEY dalam persekitaran shell. Jangan commit nilainya.
+Tetapkan URUSTUGAS_API_KEY dalam persekitaran shell. Jangan commit nilainya.
 
 ```sh
-curl -H "Authorization: Bearer $AGIHTUGAS_API_KEY" \
-  http://127.0.0.1:8087/api/v1/summary
+curl -H "Authorization: Bearer $URUSTUGAS_API_KEY" \
+  http://127.0.0.1:8091/CEA1234/api/v1/summary
 
-curl -X POST -H "Authorization: Bearer $AGIHTUGAS_API_KEY" \
+curl -X POST -H "Authorization: Bearer $URUSTUGAS_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"external_id":"koku-multi:12:89","name":"Guru Contoh","email":"guru@example.com"}' \
-  http://127.0.0.1:8087/api/v1/teachers/sync
+  http://127.0.0.1:8091/CEA1234/api/v1/teachers/sync
 
-curl -X PUT -H "Authorization: Bearer $AGIHTUGAS_API_KEY" \
+curl -X PUT -H "Authorization: Bearer $URUSTUGAS_API_KEY" \
   -H 'Content-Type: application/json' -d '{"teacher_id":13}' \
-  http://127.0.0.1:8087/api/v1/positions/21/assignment
+  http://127.0.0.1:8091/CEA1234/api/v1/positions/21/assignment
 ```
 
 Gantikan ID dalam contoh dengan ID sebenar respons API.
@@ -83,7 +75,7 @@ Gantikan ID dalam contoh dengan ID sebenar respons API.
 
 UI dilindungi log masuk dan peranan; API kekal menggunakan Bearer key berasingan. Semua mutasi data API memerlukan status Draf. API key tidak boleh meluluskan atau memuktamadkan agihan. Untuk pemasangan pelayan, gunakan HTTPS dan document root `public/`, jauhkan storage serta bin daripada webroot. Apache memerlukan mod_rewrite dan .htaccess yang disertakan; pelayan lain perlu menghantar /api/* kepada index.php sambil mengekalkan Authorization.
 
-Secara lalai tiada CORS untuk laman lain. Jika diperlukan untuk aplikasi pelayar yang dipercayai, tetapkan AGIHTUGAS_CORS_ORIGINS dengan senarai origin tepat dipisah koma, kemudian mulakan semula PHP. Tiada wildcard atau Access-Control-Allow-Credentials. CORS bukan pengesahan. Key rahsia untuk koku-multi hendaklah kekal di backend.
+Secara lalai tiada CORS untuk laman lain. Jika diperlukan untuk aplikasi pelayar yang dipercayai, tetapkan API_CORS_ORIGINS dalam .env dengan senarai origin tepat dipisah koma. Tiada wildcard atau Access-Control-Allow-Credentials. CORS bukan pengesahan. Kunci rahsia untuk sistem lain (cth. Sekolah Koku) hendaklah kekal di backend.
 
 Satu ruang kerja AgihTugas mewakili satu sekolah. API ini belum mempunyai tenant, webhook, auto-sync atau arkib sesi. /letters mengembalikan salinan versi muktamad terkini dalam JSON (409 jika belum dimuktamadkan); PDF masih melalui cetakan UI. Auto-agihan tersedia melalui aliran preview dan apply seperti di bawah.
 
