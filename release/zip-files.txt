@@ -949,6 +949,7 @@ bin/user.php
 bin/.htaccess
 bin/backup.php
 bin/demo-reset.php
+bin/import-agihtugas.php
 bin/install.php
 bin/upgrade.php
 bin/update.php

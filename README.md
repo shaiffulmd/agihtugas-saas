@@ -4,7 +4,7 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa,
 
 ## Status
 
-- **Fasa 1–6 siap** (rangka platform, skema enjin, modul enjin, langganan Free/Pro, keselamatan & operasi, halaman awam & demo). Panduan demo: [docs/PANDUAN-DEMO.md](docs/PANDUAN-DEMO.md). Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
+- **Fasa 1–7 siap** (rangka platform, skema enjin, modul enjin, langganan Free/Pro, keselamatan & operasi, halaman awam & demo, import AgihTugas & klien integrasi). Panduan demo: [docs/PANDUAN-DEMO.md](docs/PANDUAN-DEMO.md). Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
 - Enjin: guru, jawatan, lantikan, auto-agihan, Pusat Syarat, aliran kelulusan, surat lantikan (cetak/PDF), Tugas Saya dan API v1 per sekolah. Kod lama satu sekolah (SQLite) kekal di [`legacy/`](legacy/) sebagai rujukan sejarah.
 
 ## Keperluan
@@ -48,6 +48,15 @@ php tests/setup_engine_test.php > ujian.json && TEST_URL=http://127.0.0.1:8092 p
 ```
 
 Panduan kemas kini automatik daripada GitHub: [docs/KEMASKINI-GITHUB.md](docs/KEMASKINI-GITHUB.md).
+
+## Pindah daripada AgihTugas / UrusTugas satu sekolah
+
+```sh
+php bin/import-agihtugas.php --db=/laluan/agihtugas.sqlite --code=CEA1234 --dry-run   # semak dahulu
+php bin/import-agihtugas.php --db=/laluan/agihtugas.sqlite --code=CEA1234 [--name="…"] [--type=SK|SMK] [--state=Pahang]
+```
+
+Sekolah baharu dicipta dengan semua guru, jawatan, lantikan, akaun (kata laluan lama), syarat, versi muktamad & surat, logo dan sejarah. Kunci API lama perlu dicipta semula (API & Integrasi). Ujian: `php tests/import_agihtugas.php`. Sistem lain yang bersambung: [integrations/koku-multi/README.md](integrations/koku-multi/README.md).
 
 ## Keluaran
 

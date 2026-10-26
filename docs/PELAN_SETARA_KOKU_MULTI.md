@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1–6 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa6-awam`); Fasa 7 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–7 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa7-import`); Fasa 8 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -89,6 +89,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 ### Fasa 7 — Migrasi & integrasi
 - `bin/import-agihtugas.php --db=/laluan/agihtugas.sqlite --code=KOD`: bawa satu pemasangan AgihTugas/UrusTugas SQLite ke satu sekolah (petakan ID, `--dry-run`, semak bilangan baris).
 - Klien `integrations/koku-multi/`: sokong API key per sekolah dan URL `/KOD/api/v1`.
+- **Siap 26 Okt 2026 (versi 0.6).** `bin/import-agihtugas.php --db=FAIL.sqlite --code=KOD [--name] [--type=SK|SMK] [--state] [--admin-email] [--dry-run]`: SQLite dibuka baca sahaja; sekolah baharu (Pro percubaan) tanpa Pentadbir Utama automatik — akaun sumber dibawa dengan hash bcrypt asal (ditukar ke Argon2id semasa log masuk; 2FA didaftar); jika tiada pentadbir aktif, `--admin-email` mencipta Pentadbir Utama dengan kata laluan sementara. ID guru/jawatan/akaun/revisi dipetakan semula termasuk dalam JSON syarat (`excluded_teachers`, `allowed_teachers`, `fixed_teacher_id`) dan snapshot revisi (guru/jawatan yang telah dipadam → ID negatif, tidak berlanggar). Revisi yang sedang Semakan/Lulus dibina semula dalam format baharu supaya boleh diteruskan. Masa SQLite (UTC) → MYT. Aset logo/Jata dengan id kandungan sama (disahkan sha256). Sejarah → `audit_logs` (`import_history`, berantai). Kunci API lama tidak dibawa (hash sahaja). Satu transaksi + semakan bilangan. Klien baharu `integrations/koku-multi/UrusTugasClient.php` (kelas `UrusTugas\Integration\UrusTugasClient`, `UrusTugasError::apiCode`): satu objek = satu sekolah (URL utama `/KOD` atau subdomain), kunci `ut_`, tidak mengikut lencongan (melaporkan URL utama), `syncKokuTeacher()` mengekalkan `external_id = koku-multi:{sid}:{id}`. Fixture `tests/fixtures/agihtugas-sample.sql` dijana oleh kod lama sebenar (`tests/fixtures/make_agihtugas_sample.php`). Diuji: `tests/import_agihtugas.php` 27/27 (peta ID disemak mengikut nama, syarat, akaun & kata laluan, surat muktamad, pindaan draf, logo, audit, varian tanpa pentadbir & semakan sedang berjalan, input tidak sah), `tests/integration_client.php` 21/21 (laluan) & 22/22 (subdomain, termasuk lencongan), audit SQL & simbol statik bersih. Perlu sambungan PHP `pdo_sqlite` pada pelayan yang menjalankan import.
 
 ### Fasa 8 — QA & keluaran
 - Ujian penuh: `multi_tenant_integration.py`, `tenant_sql_audit.py`, `platform_integration.py`, `payment_integration.py`, `security_integration.py` (disesuaikan) + ujian enjin.

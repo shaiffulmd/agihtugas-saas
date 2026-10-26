@@ -6,6 +6,10 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '0.6'=>['2026-10-26',[
+        'Import pemasangan AgihTugas / UrusTugas satu sekolah (SQLite) ke sekolah baharu: php bin/import-agihtugas.php --db=FAIL --code=KOD [--dry-run]. Guru, jawatan, lantikan, akaun (kata laluan lama), syarat, revisi & surat muktamad, logo dan sejarah dibawa dengan ID dipetakan semula.',
+        'Klien integrasi baharu integrations/koku-multi/UrusTugasClient.php untuk API per sekolah (/KOD/api/v1 atau subdomain, kunci ut_).',
+    ]],
     '0.5'=>['2026-10-26',[
         'Halaman utama: bahagian "Cara ia berfungsi" (4 langkah) dan "Demo tanpa daftar" (mod demo); 11 contoh soalan lazim khusus agihan tugas guru.',
         'Demo lebih lengkap: syarat jawatan contoh, hebahan, dan versi muktamad #1 (surat & Tugas Saya terus boleh dilihat) yang dibuka semula sebagai draf pindaan; panduan docs/PANDUAN-DEMO.md.',
