@@ -1,0 +1,12 @@
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+<FilesMatch "\.(sqlite|sqlite3|db|log|env|bak|zip|tar|gz)$">
+    Require all denied
+</FilesMatch>

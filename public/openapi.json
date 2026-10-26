@@ -1,0 +1,5081 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AgihTugas API",
+    "version": "1.2.0",
+    "description": "Single-school API. Bearer read/write keys. Mutations allowed only during draft. Approval and finalization require human role-based UI sessions."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/teachers": {
+      "get": {
+        "summary": "List teachers",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "external_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create teachers",
+        "responses": {
+          "201": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/TeacherInput"
+                  },
+                  {
+                    "required": [
+                      "name",
+                      "capacity"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/teachers/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read teachers",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partial update teachers",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeacherInput"
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      },
+      "delete": {
+        "summary": "Delete teachers",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/positions": {
+      "get": {
+        "summary": "List positions",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Pentadbiran",
+                "Kurikulum",
+                "HEM",
+                "Kokurikulum"
+              ]
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create positions",
+        "responses": {
+          "201": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PositionInput"
+                  },
+                  {
+                    "required": [
+                      "name",
+                      "category",
+                      "weight"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/positions/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read positions",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partial update positions",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionInput"
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      },
+      "delete": {
+        "summary": "Delete positions",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/assignments": {
+      "get": {
+        "summary": "List assignments",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "teacher_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "position_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create assignments",
+        "responses": {
+          "201": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AssignmentInput"
+                  },
+                  {
+                    "required": [
+                      "teacher_id",
+                      "position_id"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/assignments/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read assignments",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partial update assignments",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentInput"
+              }
+            }
+          }
+        },
+        "description": "Change teacher_id. A different position_id is rejected; release and create a new assignment instead. Requires draft workflow status. Locked states return 409 workflow_locked."
+      },
+      "delete": {
+        "summary": "Delete assignments",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/teachers/sync": {
+      "post": {
+        "summary": "Upsert teacher by external_id (new teacher defaults to capacity 25)",
+        "responses": {
+          "201": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing teacher updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/TeacherInput"
+                  },
+                  {
+                    "required": [
+                      "external_id"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/summary": {
+      "get": {
+        "summary": "School workload summary",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/school": {
+      "get": {
+        "summary": "School profile",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/letters/{id}": {
+      "get": {
+        "summary": "Read frozen finalized letter data; 409 before first publication",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LetterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reads latest finalized snapshot. Draft edits do not change the published letter."
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ]
+    },
+    "/teachers/{id}/assignments": {
+      "get": {
+        "summary": "Assignments for one teacher",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherAssignmentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ]
+    },
+    "/positions/{id}/assignment": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "put": {
+        "summary": "Idempotent assignment or transfer of a position",
+        "responses": {
+          "200": {
+            "description": "Success; teachers/sync returns 200 on update, 201 on create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "teacher_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "teacher_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/allocation/rules": {
+      "get": {
+        "summary": "Read general and per-position rules",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "general": {
+                          "$ref": "#/components/schemas/AllocationRules"
+                        },
+                        "positions": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "$ref": "#/components/schemas/PositionRule"
+                          }
+                        }
+                      }
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update supplied general rule fields",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AllocationRules"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationRules"
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/positions/{id}/rules": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read one position rule",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PositionRule"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace one position rule (omitted fields use defaults)",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PositionRule"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionRule"
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/allocation/preview": {
+      "post": {
+        "summary": "Generate a 30-minute draft without changing assignments",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AllocationPlan"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "vacant",
+                      "rebalance"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/allocation/apply": {
+      "post": {
+        "summary": "Apply stored draft; reject stale, used or expired plan with 409",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AllocationSummary"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "plan_id"
+                ],
+                "properties": {
+                  "plan_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/positions/bulk": {
+      "post": {
+        "summary": "Atomically create up to 1000 seats, rejecting duplicates",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "uniqueItems": true
+                        }
+                      }
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rows"
+                ],
+                "properties": {
+                  "rows": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "category",
+                        "weight"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 145
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "Pentadbiran",
+                            "Kurikulum",
+                            "HEM",
+                            "Kokurikulum"
+                          ]
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 50,
+                          "default": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires draft workflow status. Locked states return 409 workflow_locked."
+      }
+    },
+    "/workflow": {
+      "get": {
+        "summary": "Read WorkflowState",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WorkflowState"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow/published": {
+      "get": {
+        "summary": "Read PublishedAllocation",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PublishedAllocation"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read-only key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 64 KB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON Content-Type required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/{id}": {
+      "get": {
+        "summary": "Read immutable school image (PNG bytes)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PNG image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required"
+          },
+          "404": {
+            "description": "Image not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API key (agt_...)"
+      }
+    },
+    "schemas": {
+      "TeacherInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254
+          },
+          "specialty": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "external_id": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 160
+          }
+        }
+      },
+      "PositionInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "Pentadbiran",
+              "Kurikulum",
+              "HEM",
+              "Kokurikulum"
+            ]
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        }
+      },
+      "AssignmentInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teacher_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Teacher": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "capacity",
+          "load",
+          "task_count",
+          "over_capacity"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          },
+          "external_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "load": {
+            "type": "integer"
+          },
+          "task_count": {
+            "type": "integer"
+          },
+          "over_capacity": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Position": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer"
+          },
+          "assignment_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "teacher_id": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "Assignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "teacher_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "teacher_name": {
+            "type": "string"
+          },
+          "position_name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer"
+          },
+          "teacher": {
+            "$ref": "#/components/schemas/Teacher"
+          }
+        }
+      },
+      "TeacherAssignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position_name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer"
+          }
+        }
+      },
+      "School": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "string"
+          },
+          "principal": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "school_type": {
+            "type": "string",
+            "enum": [
+              "SK",
+              "SMK"
+            ]
+          },
+          "principal_title": {
+            "type": "string",
+            "enum": [
+              "Guru Besar",
+              "Pengetua"
+            ]
+          },
+          "branding": {
+            "type": "object",
+            "properties": {
+              "layout": {
+                "type": "string",
+                "enum": [
+                  "dual",
+                  "school",
+                  "national"
+                ]
+              },
+              "school_logo": {
+                "$ref": "#/components/schemas/SchoolAsset"
+              },
+              "national_crest": {
+                "$ref": "#/components/schemas/SchoolAsset"
+              },
+              "shared_crest_url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Summary": {
+        "type": "object",
+        "properties": {
+          "teachers": {
+            "type": "integer"
+          },
+          "positions": {
+            "type": "integer"
+          },
+          "assigned": {
+            "type": "integer"
+          },
+          "vacant": {
+            "type": "integer"
+          },
+          "total_load": {
+            "type": "integer"
+          },
+          "over_capacity": {
+            "type": "integer"
+          },
+          "by_category": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "positions": {
+                  "type": "integer"
+                },
+                "assigned": {
+                  "type": "integer"
+                },
+                "load": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Letter": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "$ref": "#/components/schemas/School"
+          },
+          "teacher": {
+            "$ref": "#/components/schemas/Teacher"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherAssignment"
+            }
+          },
+          "revision_id": {
+            "type": "integer"
+          },
+          "finalized_at": {
+            "type": "string"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "TeacherResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Teacher"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "TeacherListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Teacher"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "PositionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PositionListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "AssignmentResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AssignmentListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Assignment"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "TeacherAssignmentResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TeacherAssignment"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "TeacherAssignmentListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherAssignment"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "SchoolResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/School"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SchoolListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/School"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "SummaryResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SummaryListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Summary"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "LetterResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Letter"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "LetterListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Letter"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "AllocationRules": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "respect_capacity": {
+            "type": "boolean"
+          },
+          "max_tasks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "max_heavy": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "heavy_threshold": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "category_limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "Pentadbiran",
+              "Kurikulum",
+              "HEM",
+              "Kokurikulum"
+            ],
+            "properties": {
+              "Pentadbiran": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "Kurikulum": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "HEM": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "Kokurikulum": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              }
+            }
+          },
+          "excluded_teachers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "uniqueItems": true
+          }
+        }
+      },
+      "PositionRule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "allowed_teachers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "uniqueItems": true
+          },
+          "fixed_teacher_id": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "required_specialty": {
+            "type": "string",
+            "maxLength": 160
+          }
+        }
+      },
+      "AllocationSummary": {
+        "type": "object",
+        "properties": {
+          "assigned": {
+            "type": "integer"
+          },
+          "unfilled": {
+            "type": "integer"
+          },
+          "changed": {
+            "type": "integer"
+          },
+          "released": {
+            "type": "integer"
+          }
+        }
+      },
+      "AllocationRow": {
+        "type": "object",
+        "properties": {
+          "position_id": {
+            "type": "integer"
+          },
+          "position_name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer"
+          },
+          "before_teacher_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "before_teacher_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "teacher_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "teacher_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "changed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AllocationPlan": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "vacant",
+              "rebalance"
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllocationRow"
+            }
+          },
+          "unfilled": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "position_id": {
+                  "type": "integer"
+                },
+                "position_name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "specialty": {
+                  "type": "string"
+                },
+                "capacity": {
+                  "type": "integer"
+                },
+                "external_id": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "load": {
+                  "type": "integer"
+                },
+                "task_count": {
+                  "type": "integer"
+                },
+                "over_capacity": {
+                  "type": "boolean"
+                },
+                "heavy": {
+                  "type": "integer"
+                },
+                "categories": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AllocationSummary"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/AllocationRules"
+          }
+        }
+      },
+      "WorkflowState": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "approved",
+              "finalized"
+            ]
+          },
+          "revision_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "PublishedAllocation": {
+        "type": "object",
+        "properties": {
+          "revision_id": {
+            "type": "integer"
+          },
+          "finalized_at": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "object",
+            "properties": {
+              "school": {
+                "$ref": "#/components/schemas/School"
+              },
+              "teachers": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "positions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "position_rules": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SchoolAsset": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "mime": {
+            "type": "string",
+            "enum": [
+              "image/png"
+            ]
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
