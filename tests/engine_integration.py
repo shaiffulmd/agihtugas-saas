@@ -74,6 +74,9 @@ class Client:
         s, p, u = self.post('login', {'action': 'login', 'email': c['emails'][role], 'password': c['password']})
         if 'page=verify' in u:
             s, p, u = self.post('verify', {'action': 'verify', 'code': totp(c['totp'])})
+            if 'page=verify' in u:  # kod langkah ini sudah digunakan (perlindungan main semula) → tunggu langkah TOTP seterusnya
+                time.sleep(31 - int(time.time()) % 30)
+                s, p, u = self.post('verify', {'action': 'verify', 'code': totp(c['totp'])})
         return u
 
 

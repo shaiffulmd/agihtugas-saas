@@ -4,7 +4,7 @@ Sistem agihan tugas guru berbilang sekolah (SK & SMK). Rangka platform (penyewa,
 
 ## Status
 
-- **Fasa 1 (rangka platform), Fasa 2 (skema enjin) & Fasa 3 (modul enjin) — siap.** Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
+- **Fasa 1–5 siap** (rangka platform, skema enjin, modul enjin, langganan Free/Pro, keselamatan & operasi). Lihat [pelan](docs/PELAN_SETARA_KOKU_MULTI.md), [nota kod](docs/NOTA_KOD.md) dan [API](docs/API.md).
 - Enjin: guru, jawatan, lantikan, auto-agihan, Pusat Syarat, aliran kelulusan, surat lantikan (cetak/PDF), Tugas Saya dan API v1 per sekolah. Kod lama satu sekolah (SQLite) kekal di [`legacy/`](legacy/) sebagai rujukan sejarah.
 
 ## Keperluan
@@ -31,6 +31,21 @@ php tests/setup_engine_test.php > ujian.json && SETUP_JSON=ujian.json python3 te
 ```
 
 `smoke_platform.py` memerlukan DB kosong dan tiada `.env`. Pemasang menamakan semula `public_html/install.php` selepas siap — pulihkan sebelum commit: `mv public_html/install.php.locked-* public_html/install.php`.
+
+### Ujian keselamatan & operasi (pemasangan berasingan)
+
+Ujian ini mengubah tetapan platform, jadi jalankan pada **salinan projek** dengan `.env` & DB sendiri: `APP_ENV=local`, `DEMO_MODE=0`, `REQUIRE_2FA=1`, `TENANT_PRIMARY=subdomain`, `PLATFORM_DOMAIN=localhost:8092`, `PAYMENT_TEST_BASE=http://127.0.0.1:8095`, kemudian `php tests/setup_test_install.php` dan `php -d session.save_path=DIR -S 127.0.0.1:8092 -t public_html public_html/router.php`.
+
+```sh
+TEST_URL=http://dem0001.localhost:8092 SESSION_DIR=DIR python3 tests/security_integration.py
+TEST_URL=http://dem0001.localhost:8092 python3 tests/integrity_integration.py
+UPD_TEST_ENV=.env python3 tests/updater_local.py
+php tests/security.php
+php tests/backup_roundtrip.php DB_KOSONG_SASARAN
+php tests/setup_engine_test.php > ujian.json && TEST_URL=http://127.0.0.1:8092 python3 tests/api_security.py
+```
+
+Panduan kemas kini automatik daripada GitHub: [docs/KEMASKINI-GITHUB.md](docs/KEMASKINI-GITHUB.md).
 
 ## Keluaran
 

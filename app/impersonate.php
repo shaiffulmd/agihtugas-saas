@@ -11,7 +11,7 @@ declare(strict_types=1);
  *  Disekat semasa sesi: tukar kata laluan / 2FA akaun pentadbir itu.
  */
 const IMP_TTL=120, IMP_MAX=3600;
-const IMP_BLOCKED=['password','twofa_disable','enroll'];
+const IMP_BLOCKED=['password','twofa_disable','enroll','api_cipta']; // kunci API kekal selepas sesi sokongan tamat — hanya pentadbir sekolah sendiri
 
 function imp_key(): string { return hash_hkdf('sha256',master_key(),32,'urustugas/masuk-sebagai'); }
 /** Token untuk pengguna $uid (mesti pentadbir aktif sekolah $school). */
@@ -67,7 +67,7 @@ function imp_enter(): never {
     exit;
 }
 /** Panggil sebelum handle_action(): akaun pentadbir yang dipinjam tidak boleh ditukar kata laluan / 2FA. */
-function imp_guard(string $action): void { if(impersonating() && in_array($action,IMP_BLOCKED,true)) throw new DomainException('Sesi sokongan platform: kata laluan dan 2FA akaun ini tidak boleh diubah.'); }
+function imp_guard(string $action): void { if(impersonating() && in_array($action,IMP_BLOCKED,true)) throw new DomainException($action==='api_cipta'?'Sesi sokongan platform: kunci API hanya boleh dicipta oleh pentadbir sekolah sendiri.':'Sesi sokongan platform: kata laluan dan 2FA akaun ini tidak boleh diubah.'); }
 /** Log keluar daripada sesi sokongan. */
 function imp_end_log(): void { $i=impersonating(); if($i){ audit('platform_impersonate_end','users',(int)($_SESSION['uid']??0)); platform_log('school_impersonate_end',sid(),'log keluar',(int)$i['pid']); query('DELETE FROM platform_settings WHERE name=? AND value=?',['imp_live_'.(int)$i['pid'],(string)$i['live']]); } }
 /** URL mutlak halaman sekolah ini di panel platform (domain induk). */

@@ -22,7 +22,7 @@ try {
     if($sqlOut!==null){
         $out=fopen($sqlOut,'wb'); if(!$out) throw new RuntimeException('Tidak dapat menulis '.$sqlOut);
         while(!gzeof($gz)) fwrite($out,(string)gzread($gz,1048576)); fclose($out); gzclose($gz); @chmod($sqlOut,0600);
-        echo "Fail SQL ditulis: $sqlOut\nImport ke pangkalan data KOSONG (phpMyAdmin → Import). Padam fail ini selepas selesai — ia mengandungi data murid.\n"; exit(0);
+        echo "Fail SQL ditulis: $sqlOut\nImport ke pangkalan data KOSONG (phpMyAdmin → Import). Padam fail ini selepas selesai — ia mengandungi data sekolah.\n"; exit(0);
     }
     if(cli_ask('Pulihkan ke pangkalan data '.env('DB_NAME').'? Taip PULIH untuk teruskan: ')!=='PULIH') exit("Dibatalkan.\n");
     $n=0; $complete=false;

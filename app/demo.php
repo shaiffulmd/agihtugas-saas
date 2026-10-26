@@ -20,7 +20,7 @@ const DEMO_BLOCKED=[
     'password'=>'akaun','twofa_disable'=>'akaun','enroll'=>'akaun','lupa'=>'akaun','reset'=>'akaun','daftar'=>'akaun',
     'user_create'=>'pengguna','user_update'=>'pengguna','user_reset_2fa'=>'pengguna','user_reset_password'=>'pengguna','avatar_admin_remove'=>'pengguna',
     'reg_approve'=>'pengguna','reg_reject'=>'pengguna',
-    'reg_settings_save'=>'emel','reg_test_mail'=>'emel',
+    'reg_settings_save'=>'emel','reg_test_mail'=>'emel','api_cipta'=>'api',
 ];
 const DEMO_BLOCK_MSG=[
     'akaun'=>'Mod demo: akaun demo dikongsi oleh semua penguji, jadi kata laluan, e-mel dan 2FA tidak boleh diubah.',
@@ -28,6 +28,7 @@ const DEMO_BLOCK_MSG=[
     'emel'=>'Mod demo: tetapan SMTP dan penghantaran e-mel dimatikan.',
     'fail'=>'Mod demo: muat naik fail (gambar, logo, avatar, CSV) dimatikan. Data contoh sudah disediakan.',
     'sandaran'=>'Mod demo: sandaran Google Drive dimatikan.',
+    'api'=>'Mod demo: kunci API dimatikan (akaun demo dikongsi semua penguji).',
 ];
 
 /** Pemasangan dibenarkan menjalankan demo (DEMO_MODE=1 dalam .env). */

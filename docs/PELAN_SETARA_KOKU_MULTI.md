@@ -1,6 +1,6 @@
 # Pelan naik taraf: UrusTugas SaaS setara koku-multi
 
-> Disediakan 26 Okt 2026. Status: **Fasa 1–4 siap (26 Okt 2026, cawangan `fasa1-rangka` → `fasa2-skema` → `fasa3-enjin` → `fasa4-langganan`); Fasa 5 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
+> Disediakan 26 Okt 2026. Status: **Fasa 1–5 siap (26 Okt 2026, cawangan `fasa1-rangka` → … → `fasa5-operasi`); Fasa 6 seterusnya.** Menggantikan garis kasar dalam [SAAS_ROADMAP.md](SAAS_ROADMAP.md).
 > Rujukan: `/Users/babah/Documents/projek/koku-multi` (v2.15, `APP_SCHEMA 2.15-m10`), terutama `handover.md` §2–§6.
 
 ## 0. Jurang semasa
@@ -79,6 +79,7 @@ Tulis semula setiap fail `app/` lama sebagai modul berasaskan `sid()` mengikut p
 - Ambil `security.php`, `security_pages.php`, `audit_chain.php`, `integrity.php`, `backup.php`, `updater.php`, `domain.php`, `sihat.php`, `bin/security.php`, `bin/backup.php`, `bin/restore.php`.
 - Sediakan repo GitHub baharu UrusTugas (bukan remote AgihTugas) untuk kemas kini automatik; rahsia webhook baharu.
 - Senarai `release/zip-files.txt` dikemas kini.
+- **Siap 26 Okt 2026 (versi 0.4).** Modul keselamatan/operasi koku-multi sudah dibawa sejak Fasa 1; fasa ini mengesahkannya pada UrusTugas dengan suite ujian koku-multi yang dipindah: `tests/security_integration.py` 72/72 (rantai audit, sekatan IP sekolah/platform/auto + Cloudflare olok-olok, had IP akaun, CAPTCHA Turnstile olok-olok, wajib 2FA, mod kecemasan, security.txt, laporan), `tests/security.php` (RFC 6238, secretbox, Argon2id), `tests/integrity_integration.py` 28/28 (integriti, web shell, sihat.php), `tests/updater_local.py` 13/13 (GitHub API olok-olok, SHA-256, laluan berbahaya, rollback, webhook HMAC). Baharu: `tests/backup_roundtrip.php` 12/12 (sandaran .kbak → pulih ke DB kosong: 35 jadual sama termasuk BLOB/JSON, kunci API, medan tersulit, rantai audit), `tests/api_security.py` 17/17 (Bearer sahaja, kecemasan, sekatan IP JSON, had 120 kunci salah → 429, kunci dibatalkan, sekolah digantung). Ujian ini dijalankan pada **salinan pemasangan berasingan** (mod subdomain, `APP_ENV=local`, DB sendiri) — lihat README. Pembetulan: kunci API disekat dalam mod demo & sesi sokongan platform; `build-zip.sh` gagal jika fail `app/ bin/ public_html/ database/` yang dijejak git tiada dalam senarai. Panduan `docs/KEMASKINI-GITHUB.md` (repo GitHub UrusTugas sendiri). **Tindakan pengguna:** cipta repo GitHub peribadi UrusTugas, token baca sahaja, `UPDATE_*` dalam `.env` dan rahsia `DEPLOY_*`. Belum diuji: Cloudflare/CAPTCHA/Google Drive sebenar dan ujian pendedahan fail (perlu Apache, `EXPOSURE_TEST=1`).
 
 ### Fasa 6 — Halaman awam
 - `landing.php`, `appearance.php`, `directory.php`, `faq.php`, `links.php`: kandungan pemasaran agihan tugas guru, pakej Free/Pro, FAQ contoh.

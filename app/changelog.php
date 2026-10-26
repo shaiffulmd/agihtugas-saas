@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '0.4'=>['2026-10-26',[
+        'Keselamatan & operasi disahkan untuk UrusTugas: rantai audit, sekatan IP, CAPTCHA, wajib 2FA, mod kecemasan, integriti fail, semakan kesihatan, kemas kini automatik GitHub dan sandaran tersulit (termasuk data enjin & logo surat).',
+        'API mematuhi mod kecemasan, sekatan IP, sekolah digantung dan had cubaan kunci salah (respons JSON).',
+        'Kunci API tidak boleh dicipta dalam mod demo atau sesi sokongan platform.',
+        'Binaan zip keluaran gagal jika fail aplikasi baharu tertinggal daripada senarai keluaran.',
+    ]],
     '0.3'=>['2026-10-26',[
         'Pakej Free/Pro: ciri Pro boleh dipilih oleh pentadbir platform (lalai: agihan automatik & Pusat Syarat, surat pukal & PDF, API, sejarah versi semakan; pilihan: import pukal). Sekolah Free melihat panel naik taraf; data kekal.',
         'Had Free dikira daripada guru, jawatan dan pengguna aktif (lalai 30 / 60 / 10) di semua titik tambah termasuk import pukal dan API.',
