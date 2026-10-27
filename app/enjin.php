@@ -278,10 +278,14 @@ function subject_find(int $id): ?array { return query('SELECT * FROM subjects WH
 /** Kepakaran guru (teks) → senarai nama MP. */
 function specialty_tokens(string $s): array { return array_values(array_filter(array_map('trim',explode(',',$s)),fn($x)=>$x!=='')); }
 /** Bilangan guru yang memegang setiap MP: [nama huruf kecil => n]. */
-function subject_usage(): array {
-    $n=[]; foreach(query('SELECT specialty FROM teachers WHERE school_id='.sid().' AND specialty<>""')->fetchAll(PDO::FETCH_COLUMN) as $sp) foreach(array_unique(array_map('mb_strtolower',specialty_tokens((string)$sp))) as $k) $n[$k]=($n[$k]??0)+1;
+/** Guru mengikut MP (nama MP huruf kecil => [[id, name], …], tersusun ikut nama) — padanan tepat token kepakaran. */
+function subject_teachers(): array {
+    $n=[]; foreach(query('SELECT id,name,specialty FROM teachers WHERE school_id='.sid().' AND specialty<>"" ORDER BY name,id')->fetchAll() as $t)
+        foreach(array_unique(array_map('mb_strtolower',specialty_tokens((string)$t['specialty']))) as $k) $n[$k][]=['id'=>(int)$t['id'],'name'=>(string)$t['name']];
     return $n;
 }
+/** Bilangan guru bagi setiap MP (nama huruf kecil => bilangan). */
+function subject_usage(): array { return array_map('count',subject_teachers()); }
 function subject_validate(array $d): array {
     $name=trim(preg_replace('/\s+/u',' ',(string)($d['name']??''))); $grp=trim((string)($d['grp']??''));
     if($name==='' || mb_strlen($name)>100) throw new EngineError('Nama mata pelajaran diperlukan (maksimum 100 aksara).');

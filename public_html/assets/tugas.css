@@ -55,6 +55,7 @@ fieldset.pro-ciri{border:1px solid var(--line);border-radius:10px;padding:12px 1
 /* Pemulangan draf: guru ditanda oleh Guru Besar / Pengetua untuk disemak semula oleh PK */
 .workflow-banner.returned{border-color:color-mix(in srgb,var(--danger) 35%,var(--surface));background:color-mix(in srgb,var(--danger) 7%,var(--surface))}
 .return-notice{display:block}.return-notice p{margin:.45rem 0 0}.return-reason{font-style:italic}
+.subject-teachers summary{cursor:pointer;color:var(--primary);font-weight:600;white-space:nowrap}.subject-teachers ul{margin:.35rem 0 0;padding-left:1rem;line-height:1.6}.subject-teachers li{margin-bottom:.25rem}.subject-teachers li .index-cell{display:inline-flex;flex-wrap:wrap;gap:.2rem;margin-left:.3rem;font-size:.8rem}
 .flag-list{margin:.4rem 0 0;padding-left:1.1rem;line-height:1.7}.flag-list .badge{margin-left:.2rem}
 tr.row-flagged>td{background:color-mix(in srgb,var(--danger) 6%,var(--surface))}
 tr.row-flagged>td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--danger) 70%,var(--surface))}

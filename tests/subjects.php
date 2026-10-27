@@ -32,6 +32,7 @@ with_school($A,function(){
     $t1=teacher_save(0,['name'=>'Guru Satu','email'=>'','specialty'=>'Pendidikan Kewangan, Matematik','capacity'=>20]);
     $t2=teacher_save(0,['name'=>'Guru Dua','email'=>'','specialty'=>'Pendidikan Kewangan Lanjutan','capacity'=>20]);
     check((subject_usage()['pendidikan kewangan']??0)===1,'bilangan guru dikira ikut nama tepat, bukan sebahagian teks');
+    $who=subject_teachers(); check(array_column($who['pendidikan kewangan'],'id')===[$t1] && array_column($who['matematik'],'name')===['Guru Satu'] && !isset($who['pendidikan kewangan lanjutan'][1]),'senarai nama guru setiap MP (padanan tepat, tersusun ikut nama)');
     [,$n]=subject_save($id,['name'=>'Literasi Kewangan','grp'=>'Elektif sekolah']);
     check($n===1 && teacher_find($t1)['specialty']==='Literasi Kewangan, Matematik' && teacher_find($t2)['specialty']==='Pendidikan Kewangan Lanjutan','tukar nama mengemas kini kepakaran guru yang tepat sahaja');
     subject_delete($id); check(!subject_find($id) && teacher_find($t1)['specialty']==='Literasi Kewangan, Matematik','padam daripada senarai; kepakaran guru kekal');
