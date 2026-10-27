@@ -4,7 +4,7 @@ declare(strict_types=1);
  *  - Syarat umum (allocation_config, satu baris setiap sekolah) & syarat jawatan (position_rules).
  *  - Mod "vacant" (kekal lantikan sedia ada, amaran pelanggaran) dan "rebalance" (kira semula dari kosong).
  *  - Pratonton disimpan dengan hash keadaan; apply menolak jika keadaan berubah, sudah digunakan atau > 30 minit.
- *  - Jawatan pukal: CSV name,category,weight,count. */
+ *  - Jawatan pukal: CSV / Excel — nama, bidang, pemberat, bilangan (tajuk Inggeris lama name,category,weight,count turut diterima). */
 
 function allocation_defaults(): array { return ['respect_capacity'=>true,'max_tasks'=>13,'max_heavy'=>2,'heavy_threshold'=>8,'category_limits'=>array_fill_keys(CATEGORIES,4),'excluded_teachers'=>[]]; }
 function allocation_rules(): array {
@@ -191,13 +191,15 @@ function bulk_positions_validate(array $rows): array {
     }
     return $result;
 }
+/** Tajuk lajur jawatan pukal yang diterima (lihat bulk_header_key()). */
+const BULK_POSITION_COLS=[['nama','nama_jawatan','jawatan','name'],['bidang','kategori','category'],['pemberat','mata','weight'],['bilangan','bil','count']];
 function bulk_positions_parse(string $text): array {
     if(strlen($text)>131072) throw new AllocationError('Fail / teks pukal maksimum 128 KB.');
-    try { $raw=csv_rows($text,[['name','category','weight','count']],3,4); } catch(EngineError $ex){ throw new AllocationError($ex->getMessage().' Gunakan lajur name, category, weight dan count (pilihan).'); }
-    $rows=[];
+    try { $raw=csv_rows($text,BULK_POSITION_COLS,3,4); } catch(EngineError $ex){ throw new AllocationError($ex->getMessage().' Gunakan lajur nama, bidang, pemberat dan bilangan (pilihan).'); }
+    $rows=[]; $cats=array_combine(array_map('mb_strtolower',CATEGORIES),CATEGORIES);
     foreach($raw as $r){
         if(!ctype_digit($r[2]) || (isset($r[3]) && $r[3]!=='' && !ctype_digit($r[3]))) throw new AllocationError('Pemberat dan bilangan mesti nombor bulat.');
-        $rows[]=['name'=>$r[0],'category'=>$r[1],'weight'=>(int)$r[2],'count'=>isset($r[3]) && $r[3]!==''?(int)$r[3]:1];
+        $rows[]=['name'=>$r[0],'category'=>$cats[mb_strtolower($r[1])]??$r[1],'weight'=>(int)$r[2],'count'=>isset($r[3]) && $r[3]!==''?(int)$r[3]:1]; // bidang tanpa beza huruf (hem → HEM)
     }
     return bulk_positions_validate($rows);
 }

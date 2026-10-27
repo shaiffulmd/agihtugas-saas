@@ -972,6 +972,8 @@ public_html/assets/shared/jata-negara.png
 public_html/assets/shared/SOURCES.md
 public_html/assets/templat/
 public_html/assets/templat/guru.csv
+public_html/assets/templat/guru.xlsx
 public_html/assets/templat/jawatan.csv
+public_html/assets/templat/jawatan.xlsx
 public_html/assets/api/
 public_html/assets/api/openapi.json

@@ -135,11 +135,13 @@ function engine_counts(): array {
     return ['teachers'=>(int)$r['t'],'positions'=>(int)$r['p'],'assigned'=>(int)$r['a'],'vacant'=>(int)$r['p']-(int)$r['a']];
 }
 
-/* ---------- Guru pukal (CSV: name,email,specialty,capacity[,teaching_periods]) ---------- */
+/* ---------- Guru pukal (lajur: nama, emel, kepakaran, kapasiti[, masa_mengajar]) ---------- */
+/** Tajuk lajur yang diterima (dinormalkan: huruf kecil, ruang/sengkang → _). Tajuk Inggeris lama kekal diterima. */
+const BULK_TEACHER_COLS=[['nama','nama_guru','name'],['emel','e_mel','e_mail','email'],['kepakaran','mata_pelajaran','mp','opsyen','specialty'],['kapasiti','kapasiti_mata','capacity'],['masa_mengajar','waktu_mengajar','masa','teaching_periods']];
 function bulk_teachers_parse(string $text): array {
     if(strlen($text)>131072) throw new EngineError('Fail / teks pukal maksimum 128 KB.');
     $rows=[];
-    foreach(csv_rows($text,[['name','email','specialty','capacity','teaching_periods'],['name','email','specialty','capacity']],3,5) as $i=>$r){
+    foreach(csv_rows($text,BULK_TEACHER_COLS,3,5) as $i=>$r){
         $cap=($r[3]??'')===''?'25':$r[3]; if(!ctype_digit($cap)) throw new EngineError('Baris '.($i+1).': kapasiti mesti nombor bulat.');
         $per=($r[4]??'')===''?'0':$r[4]; if(!ctype_digit($per)) throw new EngineError('Baris '.($i+1).': masa mengajar mesti nombor bulat.');
         $rows[]=['name'=>$r[0],'email'=>$r[1],'specialty'=>$r[2],'capacity'=>(int)$cap,'teaching_periods'=>(int)$per];
@@ -162,8 +164,10 @@ function bulk_teachers_validate(array $rows): array {
     }
     return $out;
 }
-/** Baca CSV / lajur bertab. $headers: baris pengepala yang dilangkau. Setiap baris mesti $min–$max lajur. */
-function csv_rows(string $text,array $headers,int $min,int $max): array {
+/** Normalkan tajuk lajur untuk padanan: "Masa Mengajar" / "masa-mengajar" → masa_mengajar. */
+function bulk_header_key(string $h): string { return trim((string)preg_replace('/[\s\-]+/u','_',mb_strtolower(trim($h))),'_'); }
+/** Baca CSV / lajur bertab. $cols: alias tajuk bagi setiap lajur (ikut kedudukan) — baris pertama dilangkau jika ia baris tajuk. Setiap baris mesti $min–$max lajur. */
+function csv_rows(string $text,array $cols,int $min,int $max): array {
     $text=(string)preg_replace('/^\xEF\xBB\xBF/','',$text);
     $first=strtok($text,"\r\n"); $delim=str_contains((string)$first,"\t")?"\t":',';
     $s=fopen('php://temp','r+'); fwrite($s,$text); rewind($s); $rows=[]; $isFirst=true;
@@ -171,22 +175,68 @@ function csv_rows(string $text,array $headers,int $min,int $max): array {
         while(($row=fgetcsv($s,0,$delim,'"',''))!==false){
             if(count($row)===1 && trim((string)($row[0]??''))==='') continue;
             $row=array_map(fn($c)=>trim((string)$c),$row);
-            if($isFirst){ $isFirst=false; $lower=array_map('strtolower',$row); foreach($headers as $h) if($lower===$h || $lower===array_slice($h,0,$min)) continue 2; }
+            if($isFirst){ $isFirst=false; $hit=count($row)>=$min && count($row)<=count($cols); foreach($row as $i=>$c) $hit=$hit && in_array(bulk_header_key($c),$cols[$i]??[],true); if($hit) continue; }
             if(count($row)<$min || count($row)>$max) throw new EngineError('Bilangan lajur tidak sah pada baris '.(count($rows)+1).'.');
             $rows[]=$row; if(count($rows)>500) throw new EngineError('Maksimum 500 baris bagi satu import.');
         }
     } finally { fclose($s); }
     return $rows;
 }
-/** Baca teks tampal atau fail CSV yang dimuat naik (satu sumber sahaja). */
+/** Baca teks tampal atau fail CSV / Excel (.xlsx) yang dimuat naik (satu sumber sahaja). */
 function bulk_source(string $field='csv',string $textField='bulk_text'): string {
     $text=input($textField); $f=$_FILES[$field]??null;
     if(is_array($f) && ($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){
-        if(is_array($f['error']) || $f['error']!==UPLOAD_ERR_OK || $f['size']>131072 || !is_uploaded_file((string)$f['tmp_name'])) throw new EngineError('Muat naik CSV gagal atau melebihi 128 KB.');
-        if(trim($text)!=='') throw new EngineError('Pilih satu sumber sahaja: tampal teks atau muat naik CSV.');
-        $text=(string)file_get_contents((string)$f['tmp_name']);
+        if(is_array($f['error']) || $f['error']!==UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) throw new EngineError('Muat naik fail gagal. Cuba sekali lagi.');
+        if(trim($text)!=='') throw new EngineError('Pilih satu sumber sahaja: tampal teks atau muat naik fail.');
+        $tmp=(string)$f['tmp_name']; $ext=strtolower(pathinfo((string)($f['name']??''),PATHINFO_EXTENSION)); $magic=(string)file_get_contents($tmp,false,null,0,8);
+        if($ext==='xls' || str_starts_with($magic,"\xD0\xCF\x11\xE0")) throw new EngineError('Format Excel lama (.xls) tidak disokong. Dalam Excel: Fail → Simpan Sebagai → Buku Kerja Excel (.xlsx) atau CSV.');
+        if($ext==='xlsx' || str_starts_with($magic,"PK\x03\x04")){
+            if($f['size']>2097152) throw new EngineError('Fail Excel maksimum 2 MB.');
+            return xlsx_text($tmp);
+        }
+        if($f['size']>131072) throw new EngineError('Fail CSV maksimum 128 KB.');
+        $text=(string)file_get_contents($tmp);
     }
     return $text;
+}
+/** Helaian pertama fail .xlsx → teks bertab (setiap sel dipetik) untuk csv_rows(). Tanpa pustaka luar: ZipArchive + SimpleXML. */
+function xlsx_text(string $path): string {
+    if(!class_exists('ZipArchive')) throw new EngineError('Pelayan tidak menyokong fail Excel (sambungan PHP zip tiada). Simpan sebagai CSV atau tampal senarai.');
+    $z=new ZipArchive(); if($z->open($path,ZipArchive::RDONLY)!==true) throw new EngineError('Fail Excel tidak dapat dibaca. Simpan semula sebagai .xlsx atau CSV.');
+    $bad=fn()=>new EngineError('Fail Excel tidak sah atau rosak. Simpan semula sebagai .xlsx atau CSV.');
+    try {
+        // Had saiz XML selepas nyahmampat (elak bom zip); entiti luaran tidak dimuat (LIBXML_NONET).
+        $read=function(string $n)use($z): ?string { $st=$z->statName($n); if($st===false) return null; if($st['size']>8388608) throw new EngineError('Fail Excel terlalu besar (maksimum 500 baris).'); $x=$z->getFromName($n); return $x===false?null:$x; };
+        $xml=function(?string $x)use($bad): ?SimpleXMLElement { if($x===null) return null; $e=simplexml_load_string($x,'SimpleXMLElement',LIBXML_NONET); if($e===false) throw $bad(); return $e; };
+        $R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        $sheet='xl/worksheets/sheet1.xml';
+        if(($wb=$xml($read('xl/workbook.xml'))) && isset($wb->sheets->sheet[0]) && ($rels=$xml($read('xl/_rels/workbook.xml.rels')))){
+            $rid=(string)$wb->sheets->sheet[0]->attributes($R)['id'];
+            foreach($rels->Relationship as $r) if((string)$r['Id']===$rid){ $t=(string)$r['Target']; $sheet=str_starts_with($t,'/')?ltrim($t,'/'):'xl/'.$t; }
+        }
+        $ss=[]; if($sx=$xml($read('xl/sharedStrings.xml'))) foreach($sx->si as $si) $ss[]=implode('',array_map('strval',$si->xpath('.//*[local-name()="t"][not(ancestor::*[local-name()="rPh"])]')?:[]));
+        $ws=$xml($read($sheet)); if(!$ws) throw $bad();
+        $out=[];
+        foreach($ws->sheetData->row??[] as $row){
+            $cells=[]; $next=0;
+            foreach($row->c as $c){
+                $col=preg_match('/^([A-Z]+)/',(string)$c['r'],$m)?array_reduce(str_split($m[1]),fn($n,$ch)=>$n*26+ord($ch)-64,0)-1:$next; $next=$col+1;
+                if($col>25) continue;
+                $t=(string)$c['t'];
+                $v=match($t){ 's'=>$ss[(int)$c->v]??'', 'inlineStr'=>implode('',array_map('strval',$c->xpath('.//*[local-name()="t"]')?:[])), 'b'=>(string)$c->v==='1'?'TRUE':'FALSE', default=>(string)$c->v };
+                if(!in_array($t,['s','inlineStr','str'],true) && is_numeric($v) && (float)$v==floor((float)$v) && abs((float)$v)<1e15) $v=(string)(int)$v; // 25 / 25.0 / 2.5E1 → 25
+                $cells[$col]=trim(preg_replace('/[\t\r\n]+/',' ',$v));
+            }
+            if(!$cells) continue;
+            $line=[]; for($i=0;$i<=max(array_keys($cells));$i++) $line[]=$cells[$i]??'';
+            while($line && end($line)==='') array_pop($line); // lajur kosong di hujung (format sel) diabaikan
+            if(!$line) continue;
+            $out[]='"'.implode("\"\t\"",array_map(fn($x)=>str_replace('"','""',$x),$line)).'"';
+            if(count($out)>501) throw new EngineError('Maksimum 500 baris bagi satu import.');
+        }
+        if(!$out) throw new EngineError('Helaian pertama fail Excel kosong.');
+        return implode("\n",$out)."\n";
+    } finally { $z->close(); }
 }
 
 /* ---------- Peranan & skor ----------
