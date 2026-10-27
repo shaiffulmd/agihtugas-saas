@@ -6,6 +6,10 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.5'=>['2026-10-27',[
+        'Urus beban guru: butang "Urus beban" di Pengurusan Guru (dan klik indeks atau nama di Analisis Beban / Dashboard) membuka panel beban guru itu di Agihan Tugas.',
+        'Dalam panel: pindahkan setiap jawatan kepada guru lain — calon disusun daripada indeks paling rendah dengan anggaran indeks sekarang → selepas — atau lepaskan sahaja; guru kurang beban boleh terus dilantik ke jawatan kosong. Selepas disimpan, halaman kembali ke panel guru yang sama.',
+    ]],
     '1.4'=>['2026-10-27',[
         'Halaman baharu Mata Pelajaran (Pentadbir & PK): tambah, sunting dan padam mata pelajaran sekolah, dengan kumpulan dan bilangan guru bagi setiap mata pelajaran.',
         'Senarai standard untuk diimport secara terpilih: KSSR (Semakan 2017), KSSM termasuk elektif menengah atas, Kurikulum Persekolahan 2027 sekolah rendah (senarai BPK) dan sekolah menengah (senarai awal — semak DSKP). Mata pelajaran yang sudah ada dilangkau.',

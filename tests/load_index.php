@@ -39,6 +39,8 @@ with_school($S,function(){
     check(near($t[$T[3]]['index'],round(0.6*24/27+0.4*2/4,2)) && $t[$T[3]]['label']==='seimbang','D: 0.6×0.89 + 0.4×0.5 = 0.73 → Seimbang');
     check($t[$T[4]]['index']===null && $t[$T[4]]['label']==='dikecualikan','pentadbir dikecualikan tiada indeks walaupun memegang jawatan');
     check($t[$T[5]]['label']==='tidak_aktif' && in_array('tidak_aktif',$t[$T[5]]['warnings'],true),'guru cuti yang memegang lantikan diberi amaran');
+    check(near(index_after($t[$T[0]],-5,$x),round(0.6*28/27+0.4*5/4,2)) && near(index_after($t[$T[3]],5,$x),round(0.6*24/27+0.4*7/4,2)),'anggaran indeks selepas pindah tugas (A −5, D +5)');
+    check(index_after($t[$T[4]],5,$x)===null,'tiada anggaran untuk guru dikecualikan');
 
     echo "Tetapan\n";
     db()->beginTransaction(); index_settings_save(['teach_share'=>'100','high'=>'1.5','low'=>'0.5','exam_factor'=>'1.2','max_tasks'=>'1']); db()->commit();

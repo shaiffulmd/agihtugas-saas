@@ -285,6 +285,12 @@ function index_settings_save(array $d): void {
     if($low>=$high) throw new EngineError('Ambang rendah mesti lebih kecil daripada ambang tinggi.');
     engine_setting_set(['index_teach_share'=>(string)(int)$share,'index_high'=>number_format($high,2,'.',''),'index_low'=>number_format($low,2,'.',''),'index_exam_factor'=>number_format($exam,2,'.',''),'index_max_tasks'=>(string)(int)$max]);
 }
+/** Anggaran indeks guru jika skor tugasnya berubah $delta (median sekolah dianggap tetap). null jika guru tidak dikira. */
+function index_after(array $t,float $delta,array $idx): ?float {
+    if(!$t['counted']) return null; $B=$idx['basis']; $share=$B['share'];
+    if($B['teaching']<=0 && $B['score']<=0) return null;
+    return round($share*($B['teaching']>0?$t['teaching']/$B['teaching']:0)+(1-$share)*($B['score']>0?max(0,$t['score']+$delta)/$B['score']:0),2);
+}
 function median(array $xs): float {
     if(!$xs) return 0.0; sort($xs); $n=count($xs); $m=intdiv($n,2);
     return $n%2?(float)$xs[$m]:($xs[$m-1]+$xs[$m])/2;

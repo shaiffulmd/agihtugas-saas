@@ -62,8 +62,8 @@ function engine_dashboard(): void {
 /* ---------- Guru ---------- */
 function teacher_table(array $rows,bool $actions): void { $flag=workflow_flagged(); ?>
 <div class="table-wrap"><table id="jadual-guru"><thead><tr><th>Guru</th><th>Bil. tugas</th><th>Masa mengajar</th><th>Beban / kapasiti</th><th>Indeks beban</th><?php if($actions): ?><th><span class="sr-only">Tindakan</span></th><?php endif; ?></tr></thead><tbody>
-<?php foreach($rows as $t): ?><tr class="<?= isset($flag[(int)$t['id']])?'row-flagged':'' ?>"><td><strong><?= e($t['name']) ?></strong><?= isset($flag[(int)$t['id']])?' <span class="badge warn flag-badge">Ditanda</span>':'' ?><small class="cell-sub"><?= e(trim($t['specialty'].($t['email']!==''?' · '.$t['email']:''),' ·')) ?><?= $t['external_id']!==null?' · '.e($t['external_id']):'' ?></small><?= index_warnings_html($t) ?></td><td><?= (int)$t['task_count'] ?> tugas</td><td><?= (int)$t['teaching_periods'] ?: '—' ?><?= (int)$t['exam_class']?' <span class="badge">Peperiksaan</span>':'' ?><?= $t['status']!=='aktif'?' <span class="badge">'.e(TEACHER_STATUSES[$t['status']]).'</span>':'' ?></td><td><?= load_cell((int)$t['load'],(int)$t['capacity']) ?><?= load_badge($t) ?></td><td><?= index_badge($t) ?></td>
-<?php if($actions): ?><td><div class="row-actions"><a class="text-link" href="/?page=guru&amp;edit=<?= (int)$t['id'] ?>#editor">Sunting</a><?= engine_delete_button('guru_delete',(int)$t['id']) ?></div></td><?php endif; ?></tr><?php endforeach; ?></tbody></table>
+<?php foreach($rows as $t): ?><tr class="<?= isset($flag[(int)$t['id']])?'row-flagged':'' ?>"><td><strong><?= e($t['name']) ?></strong><?= isset($flag[(int)$t['id']])?' <span class="badge warn flag-badge">Ditanda</span>':'' ?><small class="cell-sub"><?= e(trim($t['specialty'].($t['email']!==''?' · '.$t['email']:''),' ·')) ?><?= $t['external_id']!==null?' · '.e($t['external_id']):'' ?></small><?= index_warnings_html($t) ?></td><td><?= (int)$t['task_count'] ?> tugas</td><td><?= (int)$t['teaching_periods'] ?: '—' ?><?= (int)$t['exam_class']?' <span class="badge">Peperiksaan</span>':'' ?><?= $t['status']!=='aktif'?' <span class="badge">'.e(TEACHER_STATUSES[$t['status']]).'</span>':'' ?></td><td><?= load_cell((int)$t['load'],(int)$t['capacity']) ?><?= load_badge($t) ?></td><td><?= can_plan()?'<a class="index-link" href="/?page=agihan&amp;guru='.(int)$t['id'].'#beban-guru" title="Urus beban '.e($t['name']).'">'.index_badge($t).'</a>':index_badge($t) ?></td>
+<?php if($actions): ?><td><div class="row-actions"><a class="text-link" href="/?page=agihan&amp;guru=<?= (int)$t['id'] ?>#beban-guru">Urus beban</a><a class="text-link" href="/?page=guru&amp;edit=<?= (int)$t['id'] ?>#editor">Sunting</a><?= engine_delete_button('guru_delete',(int)$t['id']) ?></div></td><?php endif; ?></tr><?php endforeach; ?></tbody></table>
 <?php if(!$rows): ?><p class="empty">Tiada guru dalam senarai ini.</p><?php endif; ?><p class="search-empty muted" hidden>Tiada guru sepadan.</p></div><?php
 }
 function guru_page(string $error): void {
@@ -116,9 +116,10 @@ function agihan_page(): void {
     // Calon disusun daripada indeks beban paling rendah; guru tidak dikira (pentadbir / cuti / bertukar) di hujung.
     $teachers=array_values($idx['teachers']); usort($teachers,fn($a,$b)=>[!$a['counted'],$a['index']??0,$a['load'],$a['name']]<=>[!$b['counted'],$b['index']??0,$b['load'],$b['name']]);
     $B=$idx['basis']; $S=$idx['settings'];
-    $ri=workflow_return_info(); $flag=$ri?array_fill_keys($ri['flags'],true):[]; $only=$flag && isset($_GET['tanda']);
+    $ri=workflow_return_info(); $flag=$ri?array_fill_keys($ri['flags'],true):[]; $only=$flag && isset($_GET['tanda']); $focus=$idx['teachers'][(int)input('guru','get')]??null;
     ?><div class="page-heading"><div><span class="eyebrow teal">PERANCANGAN SESI <?= e(setting('session_year')?:date('Y')) ?></span><h1>Agihan Tugas</h1><p class="muted">Pilih penyandang untuk setiap jawatan. Beban guru dikemas kini selepas disimpan.</p></div><?php if(feature_on('auto')): ?><a class="btn primary" href="/?page=auto"><?= icon('filter') ?>Agihan automatik</a><?php else: ?><a class="btn outline" href="/?page=auto"><?= icon('filter') ?>Agihan automatik · Pro</a><?php endif; ?></div>
 <?= return_notice($ri) ?>
+<?= $focus?teacher_load_panel($focus,$idx,$positions,$teachers):'' ?>
 <section class="panel editor-panel"><div class="panel-heading"><div><h3>Tetapkan lantikan</h3><p class="muted">Memilih jawatan yang telah diisi akan memindahkannya kepada guru baharu.</p></div></div><form method="post" class="form-grid padded"><?= csrf_field() ?><input type="hidden" name="action" value="agih">
 <label class="field">Jawatan<select name="position_id" id="pilih-jawatan" required data-searchable="1"><option value="">Pilih jawatan</option><?php foreach($positions as $p): ?><option value="<?= (int)$p['id'] ?>" data-weight="<?= (int)$p['weight'] ?>" data-score="<?= position_score($p) ?>" data-current="<?= (int)$p['teacher_id'] ?>"><?= e($p['name']) ?> · <?= (int)$p['weight'] ?> mata<?= $p['teacher_id']?' (telah diisi)':'' ?></option><?php endforeach; ?></select></label>
 <label class="field">Guru penyandang<select name="teacher_id" id="pilih-guru" required data-searchable="1"><option value="">Pilih guru</option><?php foreach($teachers as $t): ?><option value="<?= (int)$t['id'] ?>" data-load="<?= (int)$t['load'] ?>" data-capacity="<?= (int)$t['capacity'] ?>" data-score="<?= $t['score'] ?>" data-teach-ratio="<?= $t['teach_ratio']??0 ?>" data-index="<?= $t['index']??'' ?>"><?= e($t['name']) ?> · <?= $t['index']!==null?'indeks '.number_format($t['index'],2):e(INDEX_LABELS[$t['label']][0]) ?> · <?= (int)$t['load'] ?>/<?= (int)$t['capacity'] ?> mata<?= isset($flag[(int)$t['id']])?' · ditanda':'' ?></option><?php endforeach; ?></select></label>
@@ -166,7 +167,7 @@ function analisis_page(array $user): void {
     $count=array_count_values(array_column($all,'label')); $n=fn(string $k)=>(int)($count[$k]??0);
     $attention=array_values(array_filter($all,fn($t)=>$t['warnings']!==[])); usort($attention,fn($a,$b)=>[$b['index']??-1,$a['name']]<=>[$a['index']??-1,$b['name']]);
     $ranked=$all; usort($ranked,fn($a,$b)=>[$b['index']??-1,$a['name']]<=>[$a['index']??-1,$b['name']]);
-    $edit=fn(array $t)=>$plan?'<a href="/?page=guru&amp;edit='.(int)$t['id'].'#editor">'.e($t['name']).'</a>':e($t['name']);
+    $edit=fn(array $t)=>$plan?'<a href="/?page=agihan&amp;guru='.(int)$t['id'].'#beban-guru" title="Urus beban">'.e($t['name']).'</a>':e($t['name']);
     $num=fn($v)=>$v===null?'—':number_format((float)$v,2);
     ?><div class="page-heading"><div><span class="eyebrow teal">KESAKSAMAAN BEBAN</span><h1>Analisis Beban</h1><p class="muted">Indeks beban menggabungkan masa mengajar dan tugas, dibandingkan dengan guru biasa di sekolah ini. 1.00 = setara guru biasa.</p></div></div>
 <section class="stats-grid"><?php foreach([['Terbeban',$n('terbeban'),'Indeks melebihi '.number_format($S['high'],2),'alert',true],['Seimbang',$n('seimbang'),number_format($S['low'],2).' – '.number_format($S['high'],2),'check',false],['Kurang beban',$n('kurang'),'Masih ada ruang (bawah '.number_format($S['low'],2).')','users',false],['Tidak dikira',$n('dikecualikan')+$n('tidak_aktif')+$n('belum'),'Pentadbir, cuti atau bertukar','info',false]] as [$label,$value,$sub,$ic,$warn]): ?>
@@ -194,6 +195,29 @@ function analisis_page(array $user): void {
 <label class="field full">Faktor kelas peperiksaan<input name="exam_factor" type="number" min="1" max="2" step="0.05" value="<?= number_format($S['exam_factor'],2,'.','') ?>" required><small class="muted">1.00 = tiada kesan. Contohnya 1.20 menambah 20% masa mengajar guru kelas peperiksaan.</small></label>
 <div class="full form-actions"><button class="btn primary" type="submit">Simpan &amp; kira semula</button></div></form>
 <?php else: ?><p class="muted">Bahagian mengajar <?= (int)round($S['teach_share']*100) ?>% · ambang <?= number_format($S['low'],2) ?> – <?= number_format($S['high'],2) ?> · faktor peperiksaan <?= number_format($S['exam_factor'],2) ?> · had <?= (int)$S['max_tasks'] ?> jawatan. Tetapan diurus oleh Pentadbir / PK.</p><?php endif; ?></section></div><?php
+}
+
+/** Panel beban seorang guru di Agihan Tugas: jawatan dipegang (pindah / lepas) dan jawatan kosong untuk ditambah. Anggaran indeks "sekarang → selepas". */
+function teacher_load_panel(array $t,array $idx,array $positions,array $ranked): string {
+    $id=(int)$t['id']; $num=fn(?float $v)=>$v===null?'—':number_format($v,2); $hidden='<input type="hidden" name="guru" value="'.$id.'">';
+    $mine=array_values(array_filter($positions,fn($p)=>(int)$p['teacher_id']===$id)); $vacant=array_values(array_filter($positions,fn($p)=>$p['teacher_id']===null));
+    $h='<section class="panel spaced load-focus" id="beban-guru"><div class="panel-heading"><div><span class="eyebrow teal">URUS BEBAN GURU</span><h3>'.e($t['name']).'</h3><p class="muted">'.(int)$t['task_count'].' tugas · '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · masa mengajar '.((int)$t['teaching_periods']?:'—').'</p></div><div class="button-group">'.index_badge($t).'<a class="btn sm outline" href="/?page=guru&amp;edit='.$id.'#editor">Sunting profil</a><a class="btn sm outline" href="/?page=agihan">Tutup ×</a></div></div>';
+    if($t['warnings']) $h.='<p class="padded-x warning-text">'.e(implode(' · ',array_map(fn($k)=>INDEX_WARNINGS[$k],$t['warnings']))).'</p>';
+    $h.='<div class="table-wrap"><table><thead><tr><th>Jawatan dipegang</th><th>Skor</th><th>Pindahkan kepada guru lain / lepaskan</th></tr></thead><tbody>';
+    foreach($mine as $p){ $ps=position_score($p); $after=index_after($t,-$ps,$idx);
+        $opts='<option value="">Pilih guru (indeks sekarang → selepas)</option>';
+        foreach($ranked as $c){ if((int)$c['id']===$id) continue; $na=index_after($c,$ps,$idx); $opts.='<option value="'.(int)$c['id'].'">'.e($c['name']).' · '.($c['index']!==null?$num($c['index']).' → '.$num($na):e(INDEX_LABELS[$c['label']][0])).' · '.(int)$c['load'].'+'.(int)$p['weight'].'/'.(int)$c['capacity'].' mata</option>'; }
+        $h.='<tr><td><strong>'.e($p['name']).'</strong><small class="cell-sub">'.e($p['category']).($t['index']!==null?' · indeks '.e($t['name']).' jadi '.$num($after).' jika dipindahkan':'').'</small></td><td>'.rtrim(rtrim(number_format($ps,2),'0'),'.').'</td>'
+            .'<td><form method="post" class="inline-move">'.csrf_field().'<input type="hidden" name="action" value="agih"><input type="hidden" name="position_id" value="'.(int)$p['id'].'">'.$hidden.'<select name="teacher_id" required aria-label="Guru baharu untuk '.e($p['name']).'">'.$opts.'</select><button class="btn sm primary" type="submit">⇄ Pindah</button></form>'
+            .'<form method="post" class="delete-form move-release" data-confirm="Lepaskan '.e($p['name']).' daripada '.e($t['name']).'? Jawatan menjadi kosong.">'.csrf_field().'<input type="hidden" name="action" value="agih_lepas"><input type="hidden" name="id" value="'.(int)$p['assignment_id'].'">'.$hidden.'<button class="delete-btn" type="submit">Lepaskan sahaja (jadi kosong)</button></form></td></tr>';
+    }
+    if(!$mine) $h.='<tr><td colspan="3" class="muted">Tiada jawatan dipegang.</td></tr>';
+    $h.='</tbody></table></div>';
+    if($vacant){
+        $opts='<option value="">Pilih jawatan kosong</option>'; foreach($vacant as $p){ $na=index_after($t,position_score($p),$idx); $opts.='<option value="'.(int)$p['id'].'">'.e($p['name']).' · '.(int)$p['weight'].' mata'.($t['index']!==null?' · indeks jadi '.$num($na):'').'</option>'; }
+        $h.='<form method="post" class="form-grid padded">'.csrf_field().'<input type="hidden" name="action" value="agih"><input type="hidden" name="teacher_id" value="'.$id.'">'.$hidden.'<label class="field">Tambah jawatan kosong ('.count($vacant).')<select name="position_id" required data-searchable="1">'.$opts.'</select></label><div class="form-actions align-end"><button class="btn outline" type="submit">'.icon('plus').'Lantik '.e($t['name']).'</button></div></form>';
+    }
+    return $h.'<p class="muted small-note padded-x">Anggaran indeks menganggap median sekolah tidak berubah; indeks sebenar dikira semula selepas disimpan.</p></section>';
 }
 
 /* ---------- Pusat Syarat ---------- */

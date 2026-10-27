@@ -62,8 +62,10 @@ function handle_engine_action(string $action): never {
                 audit('position_bulk','positions',null,count($ids).' jawatan'); $msg=count($ids).' jawatan ditambah secara pukal.'; break;
             case 'agih':
                 $pid=post_int('position_id',1,PHP_INT_MAX,'Jawatan'); $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru');
-                $aid=assign_position($pid,$tid); audit('assign','assignments',$aid,'jawatan #'.$pid.' → guru #'.$tid); $msg='Agihan tugas dikemas kini.'; break;
-            case 'agih_lepas': $a=unassign($id); audit('unassign','assignments',$id,(string)$a['position_name']); $msg='Lantikan dilepaskan. Jawatan kini kosong.'; break;
+                $aid=assign_position($pid,$tid); audit('assign','assignments',$aid,'jawatan #'.$pid.' → guru #'.$tid); $msg='Agihan tugas dikemas kini.';
+                if(($g=(int)input('guru'))>0) $anchor='&guru='.$g.'#beban-guru'; break;
+            case 'agih_lepas': $a=unassign($id); audit('unassign','assignments',$id,(string)$a['position_name']); $msg='Lantikan dilepaskan. Jawatan kini kosong.';
+                if(($g=(int)input('guru'))>0) $anchor='&guru='.$g.'#beban-guru'; break;
             case 'indeks_tetapan':
                 index_settings_save(['teach_share'=>input('teach_share'),'high'=>input('high'),'low'=>input('low'),'exam_factor'=>input('exam_factor'),'max_tasks'=>input('max_tasks')]);
                 audit('load_index_settings','settings'); $msg='Tetapan indeks beban disimpan. Indeks dikira semula.'; break;
