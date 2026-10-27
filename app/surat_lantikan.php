@@ -5,7 +5,13 @@ declare(strict_types=1);
  *    kerana snapshot revisi merujuk id asal. Tiada perkongsian imej antara sekolah.
  *  - Surat dijana daripada revisi muktamad sahaja (salinan tetap), sebagai HTML (cetak) atau PDF (mPDF). */
 
-const LETTER_HEADERS=['dual'=>'Jata Negara + logo sekolah','school'=>'Logo sekolah sahaja','national'=>'Jata Negara sahaja'];
+/** Gaya kepala surat: [label, keterangan]. Kunci lama (dual/school/national) dikekalkan untuk snapshot terdahulu. */
+const LETTER_HEADERS=['dual'=>['Jata Negara + logo sekolah','Jata di kiri, nama & alamat, logo sekolah di kanan'],'dual_tel'=>['Jata Negara + no. telefon','Jata di kiri, nama & alamat, telefon/faks di kanan'],
+    'school'=>['Logo sekolah di tengah','Logo sekolah, nama & alamat di tengah'],'national'=>['Jata Negara di tengah','Jata Negara, nama & alamat di tengah']];
+/** Bilangan surat bagi setiap guru: [label, keterangan]. */
+const LETTER_MODES=['satu'=>['Satu surat','Semua jawatan guru dalam satu surat'],'jawatan'=>['Satu surat bagi setiap jawatan','Guru menerima surat berasingan bagi setiap jawatan']];
+/** Format surat untuk snapshot terdahulu (sebelum 1.3) yang tiada school.letter. */
+const LETTER_LEGACY=['mode'=>'satu','effective'=>'','para'=>'Kerjasama dan komitmen tuan/puan dalam melaksanakan tanggungjawab ini amat dihargai. Sebarang perubahan tugas akan dimaklumkan oleh pihak pentadbiran sekolah.','slogan'=>'“BERKHIDMAT UNTUK NEGARA”','address'=>'','tel'=>'','fax'=>''];
 
 function branding_store(string $bytes,int $w,int $h): string {
     $id=hash('sha256',$bytes);
@@ -34,6 +40,23 @@ function branding_profile(): array {
     branding_install();
     $layout=setting('letter_header'); if(!isset(LETTER_HEADERS[$layout])) $layout='dual';
     return ['layout'=>$layout,'school_logo'=>branding_asset(setting('school_logo_id')),'national_crest'=>branding_asset(setting('national_crest_id')),'shared_crest_url'=>'/assets/shared/jata-negara.png'];
+}
+/** Format surat semasa (masuk ke snapshot revisi melalui school_profile()). */
+function letter_profile(): array {
+    $eff=setting('letter_effective');
+    return ['mode'=>isset(LETTER_MODES[setting('letter_mode')])?setting('letter_mode'):'satu','effective'=>preg_match('/^\d{4}-\d{2}-\d{2}$/D',$eff)?$eff:'',
+        'para'=>setting('letter_para'),'slogan'=>setting('letter_slogan'),'address'=>setting('school_address'),'tel'=>setting('school_tel'),'fax'=>setting('school_fax')];
+}
+/** Sahkan & simpan format surat. $d: letter_header, letter_mode, letter_effective (Y-m-d atau kosong), letter_para, letter_slogan. */
+function letter_settings_save(array $d): void {
+    $hd=(string)($d['letter_header']??''); $mode=(string)($d['letter_mode']??''); $eff=trim((string)($d['letter_effective']??''));
+    $para=trim((string)($d['letter_para']??'')); $slogan=trim((string)($d['letter_slogan']??''));
+    if(!isset(LETTER_HEADERS[$hd])) throw new EngineError('Gaya kepala surat tidak sah.');
+    if(!isset(LETTER_MODES[$mode])) throw new EngineError('Pilihan bilangan surat tidak sah.');
+    if($eff!=='' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$eff) || !checkdate((int)substr($eff,5,2),(int)substr($eff,8,2),(int)substr($eff,0,4)))) throw new EngineError('Tarikh berkuat kuasa tidak sah.');
+    if(mb_strlen($para)>1500) throw new EngineError('Perenggan tanggungjawab maksimum 1,500 aksara.');
+    if(mb_strlen($slogan)>200) throw new EngineError('Slogan maksimum 200 aksara.');
+    engine_setting_set(['letter_header'=>$hd,'letter_mode'=>$mode,'letter_effective'=>$eff,'letter_para'=>$para,'letter_slogan'=>$slogan]);
 }
 function branding_image_url(?array $asset): string { return $asset?'/?page=aset&id='.rawurlencode($asset['id']):''; }
 /** Logo surat: PNG/JPG/WebP ≤2 MB, ≤4096 px & 4 MP, diproses semula GD → PNG ≤640 px (lutsinar dikekalkan). */
@@ -66,32 +89,62 @@ function branding_serve(string $id): never {
 
 /* ---------- Surat ---------- */
 function letter_date(?string $dt): string { return $dt?date('d/m/Y',strtotime($dt)):date('d/m/Y'); }
-/** Imej kepala surat [kiri, kanan] mengikut gaya dalam snapshot. */
+/** Imej kepala surat [kiri, kanan] mengikut gaya dalam snapshot. Gaya tengah: imej di kiri sahaja (dipaparkan di atas nama). */
 function letter_emblems(array $school): array {
     $b=$school['branding']??null; if(!$b) return [null,null];
-    $left=in_array($b['layout'],['dual','national'],true)?($b['national_crest']??null):null;
-    $right=in_array($b['layout'],['dual','school'],true)?($b['school_logo']??null):null;
-    return [$left,$right];
+    return match($b['layout']){
+        'school'=>[$b['school_logo']??null,null],
+        'national','dual_tel'=>[$b['national_crest']??null,null],
+        default=>[$b['national_crest']??null,$b['school_logo']??null]};
 }
-/** HTML surat. $img: fn(array $asset): string src (skrin → URL aset; PDF → var:nama). */
+function letter_date_long(string $ymd): string {
+    $m=['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+    $t=strtotime($ymd); return $t?(int)date('j',$t).' '.$m[(int)date('n',$t)-1].' '.date('Y',$t):$ymd;
+}
+/** Kepala surat: nama & alamat sekolah dengan Jata/logo atau telefon/faks mengikut gaya. */
+function letter_head_html(array $s,array $L,callable $img): string {
+    [$left,$right]=letter_emblems($s); $layout=$s['branding']['layout']??'dual'; $title=(string)($s['principal_title']??head_title());
+    $tag=fn(?array $a,string $alt)=>$a?'<img src="'.e($img($a)).'" alt="'.$alt.'" class="letter-emblem">':'';
+    $name='<strong class="letter-school">'.e(mb_strtoupper((string)$s['school'])).'</strong>'.(trim($L['address'])!==''?'<div class="letter-addr">'.nl2br(e(mb_strtoupper(trim($L['address'])))).'</div>':'');
+    if(!isset($s['letter'])) $name.='<p class="letter-office">PEJABAT '.e(mb_strtoupper($title)).'</p>'; // snapshot lama: kepala asal
+    if(in_array($layout,['school','national'],true)) return '<header class="letter-head is-center">'.$tag($left,$layout==='school'?'Logo sekolah':'Jata Negara').'<div>'.$name.'</div></header>';
+    $r=$layout==='dual_tel'?'<div class="letter-tel">'.(trim($L['tel'])!==''?'NO. TEL : '.e($L['tel']):'').(trim($L['fax'])!==''?'<br>NO. FAKS : '.e($L['fax']):'').'</div>':$tag($right,'Logo sekolah');
+    return '<table class="letter-head is-row"><tr><td class="lh-l">'.$tag($left,'Jata Negara').'</td><td class="lh-m">'.$name.'</td><td class="lh-r">'.$r.'</td></tr></table>';
+}
+/** HTML surat. $img: fn(array $asset): string src (skrin → URL aset; PDF → var:nama). $doc['part'] = no. surat bagi mod satu surat setiap jawatan. */
 function letter_html(array $doc,callable $img): string {
-    $t=$doc['teacher']; $s=$doc['school']; [$left,$right]=letter_emblems($s); $title=(string)($s['principal_title']??head_title());
-    $h='<article class="letter"><header class="letter-head"><div class="letter-identities">';
-    foreach([[$left,'Jata Negara'],[$right,'Logo sekolah']] as [$a,$alt]) if($a) $h.='<img src="'.e($img($a)).'" alt="'.$alt.'" class="letter-emblem">';
-    $h.='</div><h2>'.e($s['school']).'</h2><p>PEJABAT '.e(mb_strtoupper($title)).' · VERSI MUKTAMAD #'.(int)$doc['revision_no'].'</p></header>';
-    $h.='<div class="letter-meta">Ruj. Kami: '.e($s['reference']).' ('.(int)$t['id'].' / V'.(int)$doc['revision_no'].')<br>Tarikh: '.e(letter_date($doc['finalized_at'])).'</div>';
-    $h.='<p><strong>'.e($t['name']).'</strong><br>'.e($s['school']).'</p><p>Tuan/Puan,</p><h3>PELANTIKAN TUGAS DAN TANGGUNGJAWAB BAGI SESI '.e($s['year']).'</h3>';
-    $h.='<p>Dengan hormatnya perkara di atas dirujuk.</p><p>2. Sukacita dimaklumkan bahawa tuan/puan dilantik untuk menjalankan tugas berikut bagi sesi '.e($s['year']).':</p>';
+    $t=$doc['teacher']; $s=$doc['school']; $title=(string)($s['principal_title']??head_title()); $L=($s['letter']??[])+LETTER_LEGACY; $new=isset($s['letter']);
+    $one=count($doc['assignments'])===1; $part=isset($doc['part'])?' / '.(int)$doc['part']:'';
+    $h='<article class="letter">'.letter_head_html($s,$L,$img);
+    $h.='<div class="letter-meta">Ruj. Kami: '.e($s['reference']).' ('.(int)$t['id'].' / V'.(int)$doc['revision_no'].$part.')<br>Tarikh: '.e(letter_date($doc['finalized_at'])).'</div>';
+    $h.='<p>'.($new?'Kepada,<br>':'').'<strong>'.e($t['name']).'</strong><br>'.e($s['school']).'</p><p>Tuan/Puan,</p>';
+    $h.='<h3>'.($new && $one?'PELANTIKAN SEBAGAI '.e(mb_strtoupper((string)$doc['assignments'][0]['name'])).' BAGI SESI '.e($s['year']):'PELANTIKAN TUGAS DAN TANGGUNGJAWAB BAGI SESI '.e($s['year'])).'</h3>';
+    $h.='<p>Dengan hormatnya perkara di atas dirujuk.</p><p>2. Sukacita dimaklumkan bahawa tuan/puan dilantik untuk menjalankan tugas berikut bagi sesi '.e($s['year']).($L['effective']!==''?', berkuat kuasa mulai <strong>'.e(letter_date_long($L['effective'])).'</strong>':'').':</p>';
     $h.='<table class="letter-table"><thead><tr><th>Bil.</th><th>Jawatan</th><th>Bidang</th></tr></thead><tbody>';
     foreach($doc['assignments'] as $i=>$p) $h.='<tr><td>'.($i+1).'</td><td>'.e($p['name']).'</td><td>'.e($p['category']).'</td></tr>';
-    $h.='</tbody></table><p>3. Kerjasama dan komitmen tuan/puan dalam melaksanakan tanggungjawab ini amat dihargai. Sebarang perubahan tugas akan dimaklumkan oleh pihak pentadbiran sekolah.</p><p>Sekian, terima kasih.</p><p>“BERKHIDMAT UNTUK NEGARA”</p>';
-    $h.='<div class="letter-sign">........................................................<br><strong>'.e($s['principal']).'</strong><br>'.e($title).'<br>'.e($s['school']).'</div></article>';
-    return $h;
+    $h.='</tbody></table>';
+    $n=3; if(trim($L['para'])!=='') $h.='<p>'.($n++).'. '.nl2br(e(trim($L['para']))).'</p>';
+    $h.='<p>Sekian, terima kasih.</p>'.(trim($L['slogan'])!==''?'<p class="letter-slogan"><strong>'.nl2br(e(trim($L['slogan']))).'</strong></p>':'');
+    $h.='<div class="letter-sign">'.($new?'Saya yang menjalankan amanah,<br><br><br>':'').'........................................................<br><strong>'.e($s['principal']).'</strong><br>'.e($title).'<br>'.e($s['school']).'</div>';
+    if($new) $h.='<p class="letter-note">Surat ini dijana oleh sistem '.e(app_name()).($doc['revision_no']?' daripada versi muktamad #'.(int)$doc['revision_no']:'').'.</p>';
+    return $h.'</article>';
 }
-/** Surat bagi guru dalam revisi muktamad yang mempunyai lantikan. $only: hadkan kepada ID guru ini. */
+/** Mod "satu surat bagi setiap jawatan": pecahkan surat guru kepada satu surat setiap jawatan (bernombor). */
+function letter_split(array $doc): array {
+    if((($doc['school']['letter']['mode']??'satu')!=='jawatan') || count($doc['assignments'])<2) return [$doc];
+    $out=[]; foreach($doc['assignments'] as $i=>$p) $out[]=['assignments'=>[$p],'part'=>$i+1]+$doc;
+    return $out;
+}
+/** Surat bagi guru dalam revisi muktamad yang mempunyai lantikan (dipecah mengikut mod). $only: hadkan kepada ID guru ini. */
 function letter_docs(array $published,?int $only=null): array {
-    $docs=[]; foreach($published['data']['teachers'] as $t){ if($only!==null && $t['id']!==$only) continue; $d=workflow_letter($t['id'],$published); if($d['assignments']) $docs[]=$d; }
+    $docs=[]; foreach($published['data']['teachers'] as $t){ if($only!==null && $t['id']!==$only) continue; $d=workflow_letter($t['id'],$published); if($d['assignments']) array_push($docs,...letter_split($d)); }
     return $docs;
+}
+/** Contoh surat dengan format & profil semasa (draf) — untuk pratonton sebelum dimuktamadkan. */
+function letter_sample(): array {
+    $ps=query('SELECT name,category FROM positions WHERE school_id='.sid().' ORDER BY FIELD(category,"Pentadbiran","Kurikulum","HEM","Kokurikulum"),name LIMIT 3')->fetchAll();
+    if(!$ps) $ps=[['name'=>'Setiausaha Peperiksaan','category'=>'Kurikulum'],['name'=>'Penyelaras Disiplin','category'=>'HEM']];
+    return letter_split(['revision_id'=>0,'revision_no'=>0,'school'=>school_profile(),'teacher'=>['id'=>0,'name'=>'NAMA GURU (CONTOH)'],'assignments'=>$ps,'finalized_at'=>null]);
 }
 /** PDF surat (satu guru atau semua) — mPDF, imej daripada aset sekolah sahaja. */
 function letters_pdf(array $docs,string $fname): never {
@@ -105,7 +158,7 @@ function letters_pdf(array $docs,string $fname): never {
     try {
         $pdf=new \Mpdf\Mpdf(['tempDir'=>$tmp,'format'=>'A4','margin_left'=>20,'margin_right'=>20,'margin_top'=>16,'margin_bottom'=>18,'default_font'=>'dejavusans','default_font_size'=>10.5]);
         $pdf->SetTitle('Surat lantikan'); $pdf->SetAuthor(school_name()); $pdf->imageVars=$images;
-        $pdf->WriteHTML('body{font-family:dejavusans;color:#111;line-height:1.55}.letter-head{text-align:center;border-bottom:1.5px solid #222;padding-bottom:6px;margin-bottom:12px}.letter-identities{text-align:center}.letter-emblem{height:22mm;margin:0 6mm}h2{font-size:14pt;margin:4px 0}h3{font-size:11pt;margin:14px 0 6px}.letter-head p{font-size:8.5pt;margin:2px 0;color:#444}.letter-meta{text-align:right;font-size:9.5pt;margin-bottom:10px}table.letter-table{width:100%;border-collapse:collapse;margin:8px 0}table.letter-table th,table.letter-table td{border:1px solid #888;padding:5px 7px;font-size:9.5pt;text-align:left}table.letter-table th{background:#eee}.letter-sign{margin-top:28px}',\Mpdf\HTMLParserMode::HEADER_CSS);
+        $pdf->WriteHTML('body{font-family:dejavusans;color:#111;line-height:1.55}.letter-head{text-align:center;border-bottom:1.5px solid #222;padding-bottom:6px;margin-bottom:12px}table.letter-head{width:100%;border-collapse:collapse;text-align:left}.lh-l{width:28mm;vertical-align:middle}.lh-m{vertical-align:middle;text-align:center}.lh-r{width:44mm;text-align:right;vertical-align:middle;font-size:8.5pt;white-space:nowrap}.letter-emblem{height:22mm}.letter-school{font-size:13pt}.is-row .letter-school{font-size:11.5pt}.letter-addr{font-size:9pt}.letter-office{font-size:8.5pt;margin:2px 0;color:#444}h3{font-size:11pt;margin:14px 0 6px;text-decoration:underline}.letter-slogan{margin:12px 0}.letter-note{margin-top:20px;font-size:8pt;color:#666;font-style:italic}p{text-align:justify}.letter-meta{text-align:right;font-size:9.5pt;margin-bottom:10px}table.letter-table{width:100%;border-collapse:collapse;margin:8px 0}table.letter-table th,table.letter-table td{border:1px solid #888;padding:5px 7px;font-size:9.5pt;text-align:left}table.letter-table th{background:#eee}.letter-sign{margin-top:28px}',\Mpdf\HTMLParserMode::HEADER_CSS);
         $pdf->WriteHTML($html,\Mpdf\HTMLParserMode::HTML_BODY);
         $bytes=$pdf->Output('',\Mpdf\Output\Destination::STRING_RETURN);
     } finally {

@@ -81,7 +81,7 @@ function demo_seed(string $type='SMK'): void {
         $pid=[]; foreach(DEMO_POSITIONS as $i=>$r){ query('INSERT INTO positions(school_id,name,category,weight,level,term) VALUES ('.sid().',?,?,?,?,?)',[$r[0],$r[1],$r[2],$r[3]??'sokongan',$r[4]??'tahunan']); $pid[$i+1]=(int)db()->lastInsertId(); }
         foreach(DEMO_ASSIGN as $p=>$t) query('INSERT INTO assignments(school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$tid[$t],$pid[$p]]);
         foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass]) query('INSERT INTO users(school_id,name,email,password_hash,role,last_login_at,teacher_id) VALUES ('.sid().',?,?,?,?,NOW(),?)',[$role==='head'?$name.' ('.($type==='SK'?'Guru Besar':'Pengetua').')':$name,$email,hash_password($pass),$role,$role==='teacher'?$tid[1]:null]);
-        engine_setting_set(['index_exam_factor'=>'1.20']); // contoh: guru kelas peperiksaan +20% masa mengajar
+        engine_setting_set(['index_exam_factor'=>'1.20','school_address'=>'Jalan Pendidikan, 25200 Kuantan, Pahang','school_tel'=>'09-512 3456','school_fax'=>'09-512 3457']); // contoh: guru kelas peperiksaan +20% masa mengajar
         engine_setting_set(['principal'=>$type==='SK'?'Hj. Ahmad Fauzi bin Ismail':'Dr. Rohani binti Yusof','session_year'=>date('Y'),'letter_reference'=>($type==='SK'?'SKD':'SMKD').'.100-1/5/1']);
         // Syarat contoh di Pusat Syarat: kepakaran & penyandang tetap (lihat juga Agihan Automatik).
         allocation_save_position_rule($pid[8],['required_specialty'=>'Matematik']);                      // Ketua Panitia Matematik

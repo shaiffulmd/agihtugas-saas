@@ -34,7 +34,9 @@ function setting_defaults(): array {
         // Indeks beban (Analisis Beban): bahagian mengajar %, ambang tinggi/rendah, faktor kelas peperiksaan, had bilangan jawatan.
         'index_teach_share' => '60', 'index_high' => '1.30', 'index_low' => '0.70', 'index_exam_factor' => '1.0', 'index_max_tasks' => '8',
         // Surat lantikan (Profil Sekolah & Surat). Logo surat & Jata Negara = id aset dalam school_assets.
-        'principal' => '', 'session_year' => '', 'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual', 'school_logo_id' => '', 'national_crest_id' => '',
+        'principal' => '', 'session_year' => '', 'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual',
+        'school_address' => '', 'school_tel' => '', 'school_fax' => '', 'letter_mode' => 'satu', 'letter_effective' => '',
+        'letter_para' => 'Kerjasama dan komitmen tuan/puan dalam melaksanakan tanggungjawab ini amat dihargai. Sebarang perubahan tugas akan dimaklumkan oleh pihak pentadbiran sekolah.', 'letter_slogan' => "\"MALAYSIA MADANI\"\n\"BERKHIDMAT UNTUK NEGARA\"", 'school_logo_id' => '', 'national_crest_id' => '',
         'reg_mode' => 'off', 'reg_domains' => '', 'login_captcha' => 'failures', 'ip_admin' => '', 'site_url' => '', 'mail_method' => 'platform', 'smtp_preset' => 'custom', 'mail_from' => '', 'mail_from_name' => '',
         'smtp_host' => '', 'smtp_port' => '587', 'smtp_secure' => 'tls', 'smtp_user' => '', 'smtp_pass' => '',
     ];

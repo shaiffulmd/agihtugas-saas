@@ -4,7 +4,7 @@ declare(strict_types=1);
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
 const ENGINE_ACTIONS=['guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
-    'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','api_cipta','api_batal','indeks_tetapan'];
+    'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
     $n=filter_var(input($key),FILTER_VALIDATE_INT); if($n===false || $n<$min || $n>$max) throw new EngineError($label.' di luar julat yang dibenarkan ('.$min.'–'.$max.').'); return $n;
@@ -13,7 +13,7 @@ function post_ids(string $key): array { $v=$_POST[$key]??[]; if(!is_array($v)) t
 
 function handle_engine_action(string $action): never {
     $me=current_user();
-    $adminOnly=in_array($action,['sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','api_cipta','api_batal'],true);
+    $adminOnly=in_array($action,['sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal'],true);
     if($action==='kelulusan'){ if(!in_array($me['role'],['admin','pk','head'],true)) error_page(403); }
     elseif($adminOnly) require_admin();
     else require_planner();
@@ -76,15 +76,19 @@ function handle_engine_action(string $action): never {
             case 'kelulusan':
                 workflow_transition(input('transition'),post_int('version',1,PHP_INT_MAX,'Versi'),$me,input('reason'),array_map('intval',array_filter((array)($_POST['flag']??[]),'is_scalar'))); $msg='Status semakan dan kelulusan dikemas kini.'; break;
             case 'sekolah_profil':
-                $p=trim(input('principal')); $ref=trim(input('letter_reference'));
+                $p=trim(input('principal')); $ref=trim(input('letter_reference')); $addr=trim(input('school_address')); $tel=trim(input('school_tel')); $fax=trim(input('school_fax'));
                 if($p==='' || mb_strlen($p)>160 || $ref==='' || mb_strlen($ref)>160) throw new EngineError('Nama '.head_title().' dan rujukan surat diperlukan (maksimum 160 aksara).');
-                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref]);
+                if(mb_strlen($addr)>300 || mb_strlen($tel)>40 || mb_strlen($fax)>40) throw new EngineError('Alamat maksimum 300 aksara; telefon dan faks maksimum 40 aksara.');
+                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref,'school_address'=>$addr,'school_tel'=>$tel,'school_fax'=>$fax]);
                 audit('school_profile','settings'); $msg='Profil sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo': engine_setting_set(['school_logo_id'=>branding_upload($_FILES['school_logo']??null)]); audit('letter_logo','settings'); $msg='Logo sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo_buang': engine_setting_set(['school_logo_id'=>'']); audit('letter_logo_removed','settings'); $msg='Logo dibuang daripada draf. Surat muktamad terdahulu tidak berubah.'; break;
             case 'sekolah_kepala':
                 $l=input('letter_header'); if(!isset(LETTER_HEADERS[$l])) throw new EngineError('Gaya kepala surat tidak sah.');
                 engine_setting_set(['letter_header'=>$l]); audit('letter_header','settings',null,$l); $msg='Gaya kepala surat disimpan.'; break;
+            case 'sekolah_surat':
+                letter_settings_save(['letter_header'=>input('letter_header'),'letter_mode'=>input('letter_mode'),'letter_effective'=>input('letter_effective'),'letter_para'=>input('letter_para'),'letter_slogan'=>input('letter_slogan')]);
+                audit('letter_format','settings',null,input('letter_header').' · '.input('letter_mode')); $msg='Format surat disimpan. Berkuat kuasa untuk draf dan versi muktamad seterusnya.'; break;
             case 'api_cipta':
                 [$kid,$token]=api_key_create(input('name'),input('scope')); audit('api_key_create','api_keys',$kid,input('scope'));
                 $_SESSION['api_token_baru']=['sid'=>sid(),'token'=>$token]; $msg='Kunci API dicipta. Salin sekarang — ia tidak akan dipaparkan lagi.'; break;

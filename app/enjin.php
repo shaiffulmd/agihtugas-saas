@@ -42,7 +42,7 @@ function require_planner(): void { if(!can_plan()) error_page(403,'Hanya Pentadb
 /* ---------- Profil sekolah (surat & snapshot) ---------- */
 function school_profile(): array {
     return ['school'=>school_name(),'school_type'=>school_type(),'principal'=>setting('principal'),'principal_title'=>head_title(),
-        'year'=>setting('session_year')?:date('Y'),'reference'=>setting('letter_reference'),'branding'=>branding_profile()];
+        'year'=>setting('session_year')?:date('Y'),'reference'=>setting('letter_reference'),'branding'=>branding_profile(),'letter'=>letter_profile()];
 }
 
 /* ---------- Guru ---------- */

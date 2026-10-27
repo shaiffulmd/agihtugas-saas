@@ -256,7 +256,7 @@ def main():
 
     print('6. Surat & Tugas Saya')
     s, p, _ = head.req('/?page=surat&semua=1')
-    check(p.count('<article class="letter">') >= 2 and 'PEJABAT PENGETUA' in p and 'Ketua UJT0001' in p, 'surat muktamad semua guru (Pengetua)')
+    check(p.count('<article class="letter">') >= 2 and 'Pengetua' in p and 'Saya yang menjalankan amanah' in p and 'Ketua UJT0001' in p, 'surat muktamad semua guru (Pengetua)')
     imgs = re.findall(r'src="(/UJT0001/\?page=aset&amp;id=[0-9a-f]{64})"', p)
     check(len(imgs) >= 1, 'kepala surat: Jata Negara')
     if imgs:

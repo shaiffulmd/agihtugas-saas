@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.3'=>['2026-10-27',[
+        'Format surat lantikan (Profil Sekolah & Surat): empat gaya kepala surat — Jata Negara + logo sekolah, Jata Negara + no. telefon/faks, logo sekolah di tengah, Jata Negara di tengah — dengan nama dan alamat sekolah.',
+        'Pilihan bilangan surat: satu surat (semua jawatan) atau satu surat bagi setiap jawatan, bernombor dalam rujukan. Cetak & PDF semua surat sekaligus mengikut pilihan ini.',
+        'Tetapan baharu: alamat, telefon & faks sekolah, tarikh berkuat kuasa, perenggan tanggungjawab dan slogan. Pratonton contoh surat dengan format semasa sebelum dimuktamadkan.',
+        'Format disimpan dalam versi muktamad: surat muktamad terdahulu tidak berubah, dan draf yang sedang menunggu kelulusan tidak perlu dihantar semula.',
+    ]],
     '1.2'=>['2026-10-27',[
         'Indeks Beban: setiap guru diberi satu nombor yang menggabungkan masa mengajar seminggu (60%) dan tugas jawatan (40%), dibandingkan dengan median guru di sekolah sendiri. 1.00 = setara guru biasa; lebih 1.30 Terbeban, bawah 0.70 Kurang beban.',
         'Halaman baharu Analisis Beban (Pentadbir, PK, Guru Besar / Pengetua): bilangan guru terbeban / seimbang / kurang beban, senarai perlu perhatian, pecahan nisbah setiap guru dan tetapan indeks (bahagian mengajar, ambang, faktor kelas peperiksaan, had bilangan jawatan).',

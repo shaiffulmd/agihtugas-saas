@@ -66,3 +66,20 @@ tr.row-over>td{background:color-mix(in srgb,var(--danger) 4%,var(--surface))}
 .badge.info{background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary)}
 .index-cell{display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap}
 .index-steps{margin:.4rem 0 .8rem;padding-left:1.2rem;display:grid;gap:.4rem;font-size:.9rem}
+/* Kepala & format surat (selaras koku-multi) */
+table.letter-head{width:100%;border-collapse:collapse;border-bottom:2px solid #222;margin-bottom:14px}table.letter-head td{padding:0 0 8px;vertical-align:middle}
+.lh-l{width:110px}.lh-m{text-align:center}.lh-r{width:130px;text-align:right;font-size:.75rem}.lh-r .letter-emblem{margin-left:auto}
+.letter-head.is-center .letter-emblem{display:block;margin:0 auto 6px}
+.letter-school{display:block;font-size:1.15rem;letter-spacing:.02em}.is-row .letter-school{font-size:1rem}.letter-addr{font-size:.78rem;line-height:1.4}.letter-office{margin:2px 0 0;font-size:.75rem;color:#444;letter-spacing:.04em}
+.letter h3{text-decoration:underline}.letter p{text-align:justify}.letter-slogan{margin:14px 0}.letter-note{margin-top:22px;font-size:.72rem;color:#666;font-style:italic}
+.surat-opt{border:0;padding:0;margin:0}.surat-opt legend{font-weight:600;margin-bottom:.5rem;font-size:.9rem}
+.surat-hd-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.hd-mini{flex:none;width:58px;height:40px;border:1px solid var(--line);border-radius:6px;background:var(--surface);position:relative;display:block}
+.hd-mini i,.hd-mini em{position:absolute;top:7px;width:11px;height:13px;border-radius:3px}
+.hd-mini b{position:absolute;height:3px;border-radius:2px;background:var(--ink);opacity:.55}.hd-mini b:nth-of-type(1){top:9px}.hd-mini b:nth-of-type(2){top:15px;opacity:.3}
+.hd-mini:after{content:"";position:absolute;left:5px;right:5px;top:27px;height:2px;background:var(--ink)}
+.hd-dual b,.hd-dual_tel b{left:20px;right:20px}.hd-dual i,.hd-dual_tel i{left:5px;background:#b8860b}.hd-dual em{right:5px;background:var(--primary)}
+.hd-dual_tel em{right:5px;width:12px;height:2px;top:12px;background:var(--muted);box-shadow:0 4px 0 var(--muted)}
+.hd-school b,.hd-national b{left:14px;right:14px}.hd-school b:nth-of-type(1),.hd-national b:nth-of-type(1){top:19px}.hd-school b:nth-of-type(2),.hd-national b:nth-of-type(2){top:23px}
+.hd-school em,.hd-national em{display:none}.hd-school i,.hd-national i{left:23px;top:3px}.hd-school i{background:var(--primary)}.hd-national i{background:#b8860b}.hd-school:after,.hd-national:after{top:30px}
+.panel-heading.flush{padding:0 0 1rem;border:0}

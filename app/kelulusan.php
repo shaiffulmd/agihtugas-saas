@@ -52,10 +52,12 @@ function workflow_transition(string $action,int $expectedVersion,array $actor,st
     } elseif(in_array($action,['approve','finalize'],true)){
         if($actor['role']!=='head') throw new WorkflowError('Hanya '.head_title().' boleh meluluskan atau memuktamadkan.',403);
         if($status!==($action==='approve'?'submitted':'approved')) throw new WorkflowError('Urutan status tidak sah.');
-        $r=query('SELECT submitted_by,source_hash FROM workflow_revisions WHERE id=? AND school_id='.sid(),[$rid])->fetch();
+        $r=query('SELECT submitted_by,source_hash,payload FROM workflow_revisions WHERE id=? AND school_id='.sid(),[$rid])->fetch();
         if(!$r) throw new WorkflowError('Revisi tidak ditemui.',404);
         if($uid===(int)$r['submitted_by']) throw new WorkflowError('Penghantar tidak boleh meluluskan agihan sendiri.',403);
-        if(!hash_equals((string)$r['source_hash'],workflow_hash(workflow_source()))) throw new WorkflowError('Data telah berubah sejak dihantar. Kembalikan kepada draf dan hantar semula.');
+        // Revisi dihantar sebelum 1.3 tiada format surat (school.letter) dalam snapshot — bandingkan tanpa medan itu.
+        $now=workflow_source(); if(!isset(json_decode((string)$r['payload'],true)['school']['letter'])) unset($now['school']['letter']);
+        if(!hash_equals((string)$r['source_hash'],workflow_hash($now))) throw new WorkflowError('Data telah berubah sejak dihantar. Kembalikan kepada draf dan hantar semula.');
         $target=$action==='approve'?'approved':'finalized'; $col=$action==='approve'?'approved':'finalized';
         query('UPDATE workflow_revisions SET status=?,'.$col.'_by=?,'.$col.'_at=NOW() WHERE id=? AND school_id='.sid(),[$target,$uid,$rid]);
     } elseif($action==='return'){

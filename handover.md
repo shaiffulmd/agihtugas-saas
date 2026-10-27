@@ -1,4 +1,4 @@
-# Serahan pembangun — UrusTugas SaaS 1.2
+# Serahan pembangun — UrusTugas SaaS 1.3
 
 Dokumen ini untuk pembangun yang menyambung kerja. Pengguna akhir: [README.md](README.md) dan [docs/PEMASANGAN.md](docs/PEMASANGAN.md). Sejarah naik taraf (Fasa 1–8, 26 Okt 2026): [docs/PELAN_SETARA_KOKU_MULTI.md](docs/PELAN_SETARA_KOKU_MULTI.md); nota analisis asal: [docs/NOTA_KOD.md](docs/NOTA_KOD.md).
 
@@ -50,7 +50,7 @@ Lapisan platform (tenant, platform, payments, registration, security, audit_chai
 | Kumpulan | Persekitaran | Suite (semakan pada 1.0) |
 |---|---|---|
 | `statik` | tiada pelayan | `php -l` semua fail, `tenant_sql_audit.py`, `static_symbols.php` |
-| `demo` | `DEMO_MODE=1`, mod path | `public_demo` 27, `multi_tenant_integration` 57, `engine_integration` 98, `plan_integration` 33, `allocation_engine` 45, `load_index` 26, `schema_engine` 53, `import_agihtugas` 27, `integration_client` 21 |
+| `demo` | `DEMO_MODE=1`, mod path | `public_demo` 27, `multi_tenant_integration` 57, `engine_integration` 98, `plan_integration` 33, `allocation_engine` 45, `load_index` 26, `letter_format` 14, `schema_engine` 53, `import_agihtugas` 27, `integration_client` 21 |
 | `tempatan` | salinan berasingan: `APP_ENV=local`, `REQUIRE_2FA=1`, subdomain `localhost:8092`, `PAYMENT_TEST_BASE`, `php tests/setup_test_install.php` | `security.php`, `errors` 10, `security_integration` 72, `integrity` 28, `platform` 96, `payment` 69, `accounts` 66, `domain` 16, `appearance` 39, `directory` 33, `updater_local` 13, `backup_roundtrip` 12, `api_security` 17, `multi_tenant` (subdomain) 33 |
 | `baharu` | DB kosong, tiada `.env` | `smoke_platform` 67 (pemasang web → platform → 2 sekolah → semua halaman) |
 
