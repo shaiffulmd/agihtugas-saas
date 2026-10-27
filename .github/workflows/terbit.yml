@@ -30,6 +30,9 @@ jobs:
           extensions: mbstring, gd, zip, sodium, pdo_mysql, dom, curl
           tools: composer
       - name: Pasang kebergantungan (tanpa dev)
+        # Token automatik GitHub Actions: muat turun pakej dari github.com tanpa had kadar tanpa nama (HTTP 429).
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
       - name: Semak sintaks PHP
         run: find app bin public_html lib -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
