@@ -217,7 +217,8 @@ def main():
     boxes = re.findall(r'<input type="checkbox" name="flag\[\]" value="(\d+)" form="workflow-return" id="tanda-\d+"( checked)?>', p)
     check(len(boxes) == 4 and 'id="workflow-return"' in p, f'Pengetua melihat kotak tanda bagi setiap guru ({len(boxes)})')
     over_ids = [b[0] for b in boxes if b[1]]
-    check(len(over_ids) == p.count('<span class="badge warn">Melebihi kapasiti</span>'), f'guru melebihi kapasiti ditanda secara automatik ({len(over_ids)})')
+    review = p.split('class="load-review"')[1].split('</table>')[0]
+    check(len(over_ids) == review.count('<span class="badge warn">Terbeban</span>'), f'guru terbeban (indeks beban) ditanda secara automatik ({len(over_ids)})')
     name_of = dict(re.findall(r'<label for="tanda-(\d+)">([^<]+)</label>', p))
     flagged = sorted(set(over_ids + [boxes[0][0]]))
     v = re.search(r'value="return"><input type="hidden" name="version" value="(\d+)"', p)

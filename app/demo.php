@@ -96,9 +96,9 @@ function demo_seed(string $type='SMK'): void {
         db()->commit();
     } catch(Throwable $ex) { if(db()->inTransaction()) db()->rollBack(); throw $ex; }
     // Versi #1 dimuktamadkan (surat & Tugas Saya terus boleh dilihat), kemudian dibuka oleh GB/Pengetua sebagai draf pindaan
-    // dengan guru melebihi kapasiti ditanda — demo boleh disunting dan menunjukkan notis "dikembalikan" kepada PK.
+    // dengan guru terbeban (indeks beban, sama seperti Dashboard & Analisis) ditanda — demo boleh disunting dan menunjukkan notis "dikembalikan" kepada PK.
     $who=fn(string $role)=>['id'=>(int)$uid[$role],'role'=>$role,'name'=>(string)query('SELECT name FROM users WHERE school_id='.sid().' AND id=?',[(int)$uid[$role]])->fetchColumn()];
-    $over=array_map(fn($t)=>(int)$t['id'],array_filter(teachers_with_load(),fn($t)=>$t['load']>$t['capacity']));
+    $over=array_keys(array_filter(load_index()['teachers'],fn($t)=>$t['label']==='terbeban'));
     foreach([['submit','pk',''],['approve','head',''],['finalize','head',''],['return','head','Pindaan sesi: kurangkan beban guru yang ditanda dan isi jawatan Kokurikulum yang masih kosong.']] as [$t,$role,$why]){
         db()->beginTransaction();
         try { workflow_transition($t,workflow_state()['version'],$who($role),$why,$t==='return'?$over:[]); db()->commit(); }

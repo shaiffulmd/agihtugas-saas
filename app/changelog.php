@@ -6,6 +6,10 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.11'=>['2026-10-28',[
+        'Semakan & Kelulusan kini menilai beban dengan indeks beban (sama seperti Dashboard dan Analisis Beban): notis, lajur Indeks beban dan tanda automatik ikut guru Terbeban. Melebihi kapasiti mata dipaparkan sebagai amaran tambahan. Sebelum ini Pengetua dan PK boleh melihat bilangan guru berbeban yang berbeza.',
+        'Demo: draf pindaan harian menanda guru terbeban mengikut indeks beban, selaras dengan bilangan di Dashboard.',
+    ]],
     '1.10'=>['2026-10-27',[
         'Cadangan guru ikut mata pelajaran: jawatan yang menyebut MP (cth. Ketua Panitia Matematik) dikesan daripada katalog Mata Pelajaran. Jawatan kosong di Agihan Tugas memaparkan "Cadangan" — guru yang mengajar MP itu dengan indeks terendah dan masih dalam kapasiti — dengan butang Lantik sekali klik.',
         'Borang Tetapkan lantikan: memilih jawatan MP menyusun guru yang mengajarnya di atas (★). Panel Urus beban menandakan jawatan kosong yang sepadan dengan MP guru.',
