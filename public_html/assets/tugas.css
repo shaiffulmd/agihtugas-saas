@@ -95,3 +95,6 @@ table.letter-head{width:100%;border-collapse:collapse;border-bottom:2px solid #2
 .inline-move{display:flex;gap:.5rem;align-items:center;min-width:280px}.inline-move select{flex:1;min-width:0}
 a.index-link{text-decoration:none}a.index-link:hover .badge{outline:2px solid color-mix(in srgb,var(--primary) 35%,transparent)}
 .move-release{margin-top:.35rem}.load-focus td{vertical-align:top}
+/* Guru ditanda: tanda selesai */
+.flag-list li{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:.3rem 0}.flag-list li.is-resolved>strong{opacity:.75}
+.flag-resolve{display:inline-flex;margin-left:auto}.flag-row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem}

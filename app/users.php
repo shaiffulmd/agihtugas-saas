@@ -75,7 +75,7 @@ const AUDIT_LABELS = [
     'position_create'=>'Tambah jawatan','position_update'=>'Kemas kini jawatan','position_delete'=>'Padam jawatan','position_bulk'=>'Tambah jawatan pukal','position_rule'=>'Syarat jawatan',
     'assign'=>'Lantik guru','unassign'=>'Lepaskan lantikan','allocation_rules'=>'Syarat agihan automatik','allocation_apply'=>'Simpan agihan automatik',
     'workflow_submit'=>'Hantar untuk semakan','workflow_approve'=>'Luluskan agihan','workflow_finalize'=>'Muktamadkan agihan','workflow_return'=>'Kembalikan kepada draf',
-    'school_profile'=>'Profil sekolah (surat)','letter_logo'=>'Logo surat','letter_logo_removed'=>'Buang logo surat','letter_header'=>'Gaya kepala surat','letter_format'=>'Format surat','subject_create'=>'Tambah mata pelajaran','subject_update'=>'Kemas kini mata pelajaran','subject_delete'=>'Padam mata pelajaran','subject_import'=>'Import senarai mata pelajaran','api_key_create'=>'Cipta kunci API','api_key_revoke'=>'Batal kunci API',
+    'school_profile'=>'Profil sekolah (surat)','letter_logo'=>'Logo surat','letter_logo_removed'=>'Buang logo surat','letter_header'=>'Gaya kepala surat','letter_format'=>'Format surat','flag_resolved'=>'Guru ditanda selesai dibaiki','flag_reopened'=>'Batal tanda selesai','subject_create'=>'Tambah mata pelajaran','subject_update'=>'Kemas kini mata pelajaran','subject_delete'=>'Padam mata pelajaran','subject_import'=>'Import senarai mata pelajaran','api_key_create'=>'Cipta kunci API','api_key_revoke'=>'Batal kunci API',
     'cli_create'=>'Cipta pentadbir (CLI)','cli_password'=>'Tukar kata laluan (CLI)','cli_2fa_reset'=>'Reset 2FA (CLI)',
 ];
 function audit_label(string $a): string { return AUDIT_LABELS[$a]??$a; }

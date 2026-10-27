@@ -20,23 +20,44 @@ function engine_delete_button(string $action,int $id,string $msg='Padam rekod in
 function search_box(string $table,string $placeholder): string { return '<div class="toolbar"><label class="search"><span class="sr-only">Cari</span><input type="search" data-search="'.e($table).'" placeholder="'.e($placeholder).'"></label></div>'; }
 
 /** Notis kepada perancang selepas draf dikembalikan: siapa, bila, sebab dan guru ditanda (beban semasa). */
-function return_notice(?array $ri): string {
+function return_notice(?array $ri,string $back=''): string {
     if(!$ri) return '';
-    $h='<section class="notice error return-notice" role="status"><div><strong>'.(($ri['from']??'')==='finalized'?'Draf pindaan dibuka':'Dikembalikan untuk semakan semula').'</strong> oleh '.e(($n=trim((string)($ri['by_name']??'')))!=='' && str_contains($n,role_label((string)($ri['role']??'')))?$n:trim($n.' ('.role_label((string)($ri['role']??'')).')')).' pada '.e(workflow_time($ri['at']??null)).'.';
+    $h='<section class="notice error return-notice" id="notis-pulang" role="status"><div><strong>'.(($ri['from']??'')==='finalized'?'Draf pindaan dibuka':'Dikembalikan untuk semakan semula').'</strong> oleh '.e(($n=trim((string)($ri['by_name']??'')))!=='' && str_contains($n,role_label((string)($ri['role']??'')))?$n:trim($n.' ('.role_label((string)($ri['role']??'')).')')).' pada '.e(workflow_time($ri['at']??null)).'.';
     if(($ri['reason']??'')!=='') $h.='<p class="return-reason">“'.e($ri['reason']).'”</p>';
     if($ri['flags']){
-        $by=[]; foreach(teachers_with_load() as $t) $by[(int)$t['id']]=$t;
-        $h.='<p>'.count($ri['flags']).' guru ditanda untuk disemak semula:</p><ul class="flag-list">';
-        foreach($ri['flags'] as $id) if(isset($by[$id])){ $t=$by[$id]; $h.='<li><strong>'.e($t['name']).'</strong> — '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · '.(int)$t['task_count'].' tugas'.($t['load']>$t['capacity']?' <span class="badge warn">Melebihi had</span>':' <span class="badge green">Dalam kapasiti</span>').'</li>'; }
-        $h.='</ul><p><a class="text-link" href="/?page=agihan&amp;tanda=1">Lihat lantikan guru ditanda →</a></p>';
+        $by=load_index()['teachers']; $plan=can_plan(); $done=count($ri['resolved']); $total=count($ri['flags']);
+        $h.='<p>'.$total.' guru ditanda untuk disemak semula'.($done?' · <strong>'.$done.' selesai dibaiki</strong>':'').':</p><ul class="flag-list">';
+        foreach($ri['flags'] as $id) if(isset($by[$id])){ $t=$by[$id]; $r=$ri['resolved'][$id]??null;
+            $h.='<li class="'.($r?'is-resolved':'').'"><strong>'.($plan?'<a href="/?page=agihan&amp;guru='.$id.'#beban-guru" title="Urus beban">'.e($t['name']).'</a>':e($t['name'])).'</strong> — '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · '.(int)$t['task_count'].' tugas '.index_badge($t);
+            if($r) $h.=' <span class="badge green">✓ Selesai dibaiki</span> <small class="muted">'.e(trim($r['by'].' · '.workflow_time($r['at']),' ·')).'</small>';
+            if($r && ($t['label']==='terbeban' || $t['load']>$t['capacity'])) $h.=' <small class="warning-text">beban masih '.($t['label']==='terbeban'?'Terbeban':'melebihi kapasiti').' — pastikan ini disengajakan</small>';
+            if($plan) $h.=flag_resolve_button($id,!$r,$back);
+            $h.='</li>'; }
+        $h.='</ul>';
+        if($done===$total) $h.='<p><strong>Semua guru ditanda telah dibaiki.</strong> <a class="text-link" href="/?page=kelulusan">Hantar semula untuk semakan →</a></p>';
+        else $h.='<p><a class="text-link" href="/?page=agihan&amp;tanda=1">Lihat lantikan guru yang belum selesai →</a></p>';
     }
-    return $h.'<p class="muted small-note">Notis ini hilang apabila draf dihantar semula untuk semakan.</p></div></section>';
+    return $h.'<p class="muted small-note">Selepas membaiki beban guru, tekan <strong>Tandakan selesai</strong>. '.e(head_title()).' akan nampak status ini apabila draf dihantar semula. Notis ini hilang selepas dihantar.</p></div></section>';
+}
+/** Kepada penyemak: draf ini dihantar semula selepas dikembalikan — guru ditanda dan sama ada ia telah ditandakan selesai. */
+function resubmit_notice(?array $ri): string {
+    if(!$ri || !$ri['flags']) return ''; $names=array_column(query('SELECT id,name FROM teachers WHERE school_id='.sid())->fetchAll(),'name','id'); $done=count($ri['resolved']);
+    $h='<section class="notice '.($done===count($ri['flags'])?'success':'info').' return-notice" role="status"><div><strong>Dihantar semula selepas dikembalikan</strong> ('.e(workflow_time($ri['at']??null)).'): '.$done.' daripada '.count($ri['flags']).' guru ditanda telah dibaiki.<ul class="flag-list">';
+    foreach($ri['flags'] as $id){ $r=$ri['resolved'][$id]??null; $h.='<li><strong>'.e($names[$id]??('#'.$id)).'</strong> '.($r?'<span class="badge green">✓ Selesai dibaiki</span> <small class="muted">'.e(trim($r['by'].' · '.workflow_time($r['at']),' ·')).'</small>':'<span class="badge warn">Belum ditandakan selesai</span>').'</li>'; }
+    return $h.'</ul><p class="muted small-note">Semak beban guru dalam jadual di bawah sebelum meluluskan.</p></div></section>';
+}
+/** Butang tandakan / batal selesai bagi guru ditanda. $back: halaman kembali ('' = Agihan, 'guru:ID' = panel Urus beban). */
+function flag_resolve_button(int $tid,bool $done,string $back): string {
+    $g=str_starts_with($back,'guru:')?'<input type="hidden" name="guru" value="'.(int)substr($back,5).'">':'<input type="hidden" name="back" value="'.e($back).'">';
+    return '<form method="post" class="inline-form flag-resolve">'.csrf_field().'<input type="hidden" name="action" value="tanda_selesai"><input type="hidden" name="teacher_id" value="'.$tid.'"><input type="hidden" name="done" value="'.($done?1:0).'">'.$g
+        .'<button class="'.($done?'btn sm primary':'text-link link-button').'" type="submit">'.($done?icon('check').'Tandakan selesai':'Batal tanda selesai').'</button></form>';
 }
 /** Jalur status aliran + kunci borang perancangan bila bukan Draf. Pulangkan true jika halaman dikunci. */
 function engine_open(string $page,array $user): bool {
     $wf=workflow_state(); $locked=$wf['status']!=='draft' && in_array($page,PLANNING_PAGES,true);
     $ri=$user['role']!=='teacher' && $wf['status']==='draft'?workflow_return_info():null;
-    if($user['role']!=='teacher') echo '<div class="workflow-banner no-print'.($ri?' returned':'').'"><span>Status agihan: <strong>'.e(WORKFLOW_LABELS[$wf['status']]).'</strong>'.($ri?' · dikembalikan oleh '.e(role_label((string)$ri['role'])).($ri['flags']?' — <strong>'.count($ri['flags']).' guru ditanda</strong>':''):'').'</span><a class="text-link" href="/?page='.($ri && $ri['flags'] && $page!=='agihan'?'agihan&amp;tanda=1">Lihat guru ditanda →':'kelulusan">Semakan &amp; kelulusan →').'</a></div>';
+    $open=$ri?count($ri['flags'])-count($ri['resolved']):0;
+    if($user['role']!=='teacher') echo '<div class="workflow-banner no-print'.($ri?' returned':'').'"><span>Status agihan: <strong>'.e(WORKFLOW_LABELS[$wf['status']]).'</strong>'.($ri?' · dikembalikan oleh '.e(role_label((string)$ri['role'])).($ri['flags']?($open?' — <strong>'.$open.' guru ditanda</strong>':' — <strong>semua guru ditanda selesai</strong>'):''):'').'</span><a class="text-link" href="/?page='.($open && $page!=='agihan'?'agihan&amp;tanda=1">Lihat guru ditanda →':'kelulusan">Semakan &amp; kelulusan →').'</a></div>';
     if($locked) echo '<div class="notice info" role="status">Agihan dikunci untuk semakan. Kembalikan kepada draf melalui Semakan &amp; Kelulusan sebelum menyunting.</div><fieldset disabled class="planning-lock">';
     return $locked;
 }
@@ -52,7 +73,7 @@ function engine_dashboard(): void {
 <div class="dashboard-grid"><section class="panel"><div class="panel-heading"><div><h3>Beban mengikut bidang</h3><p class="muted">Jumlah mata daripada jawatan yang telah diisi</p></div><span class="small-pill"><?= (int)$totalLoad ?> mata</span></div>
 <?php foreach(CATEGORIES as $i=>$cat): $w=array_sum(array_map(fn($p)=>$p['category']===$cat && $p['teacher_id']!==null?(int)$p['weight']:0,$positions)); ?><div class="category-row"><div><span class="category-dot c<?= $i ?>"></span><strong><?= e($cat) ?></strong><span><?= $w ?> <small>mata</small></span></div><progress class="c<?= $i ?>" value="<?= $w ?>" max="<?= max(1,(int)$totalLoad) ?>"></progress></div><?php endforeach; ?></section>
 <section class="panel"><div class="panel-heading"><div><h3>Perlu perhatian</h3><p class="muted">Semak sebelum menghantar untuk kelulusan</p></div></div>
-<?php if($ri=workflow_return_info()): ?><a class="attention-row" href="/?page=<?= $ri['flags']?'agihan&amp;tanda=1':'kelulusan' ?>"><span class="stat-icon warn"><?= icon('alert') ?></span><div><strong>Dikembalikan oleh <?= e(role_label((string)$ri['role'])) ?><?= $ri['flags']?' · '.count($ri['flags']).' guru ditanda':'' ?></strong><small><?= e(mb_strimwidth((string)$ri['reason'],0,90,'…')) ?></small></div></a><?php endif; ?>
+<?php if($ri=workflow_return_info()): $open=count($ri['flags'])-count($ri['resolved']); ?><a class="attention-row" href="/?page=<?= $open?'agihan&amp;tanda=1':'kelulusan' ?>"><span class="stat-icon warn"><?= icon('alert') ?></span><div><strong>Dikembalikan oleh <?= e(role_label((string)$ri['role'])) ?><?= $ri['flags']?($open?' · '.$open.' guru ditanda belum selesai':' · semua guru ditanda selesai — hantar semula'):'' ?></strong><small><?= e(mb_strimwidth((string)$ri['reason'],0,90,'…')) ?></small></div></a><?php endif; ?>
 <a class="attention-row" href="/?page=guru&amp;lebih=1"><span class="stat-icon warn"><?= icon('alert') ?></span><div><strong><?= count($over) ?> guru melebihi kapasiti</strong><small>Semak semula beban tugas yang diberikan.</small></div></a>
 <a class="attention-row" href="/?page=analisis"><span class="stat-icon<?= $heavy?' warn':'' ?>"><?= icon('chart') ?></span><div><strong><?= count($heavy) ?> guru terbeban (indeks &gt; <?= number_format($idx['settings']['high'],2) ?>)</strong><small><?= count($flagged) ?> guru dengan amaran. Lihat Analisis Beban.</small></div></a>
 <a class="attention-row" href="/?page=agihan&amp;kosong=1"><span class="stat-icon"><?= icon('clipboard') ?></span><div><strong><?= $total-$assigned ?> jawatan belum diisi</strong><small>Lengkapkan agihan atau cuba auto-agihan.</small></div></a></section></div>
@@ -116,7 +137,7 @@ function agihan_page(): void {
     // Calon disusun daripada indeks beban paling rendah; guru tidak dikira (pentadbir / cuti / bertukar) di hujung.
     $teachers=array_values($idx['teachers']); usort($teachers,fn($a,$b)=>[!$a['counted'],$a['index']??0,$a['load'],$a['name']]<=>[!$b['counted'],$b['index']??0,$b['load'],$b['name']]);
     $B=$idx['basis']; $S=$idx['settings'];
-    $ri=workflow_return_info(); $flag=$ri?array_fill_keys($ri['flags'],true):[]; $only=$flag && isset($_GET['tanda']); $focus=$idx['teachers'][(int)input('guru','get')]??null;
+    $ri=workflow_return_info(); $flag=workflow_flagged(); $only=$flag && isset($_GET['tanda']); $focus=$idx['teachers'][(int)input('guru','get')]??null;
     ?><div class="page-heading"><div><span class="eyebrow teal">PERANCANGAN SESI <?= e(setting('session_year')?:date('Y')) ?></span><h1>Agihan Tugas</h1><p class="muted">Pilih penyandang untuk setiap jawatan. Beban guru dikemas kini selepas disimpan.</p></div><?php if(feature_on('auto')): ?><a class="btn primary" href="/?page=auto"><?= icon('filter') ?>Agihan automatik</a><?php else: ?><a class="btn outline" href="/?page=auto"><?= icon('filter') ?>Agihan automatik · Pro</a><?php endif; ?></div>
 <?= return_notice($ri) ?>
 <?= $focus?teacher_load_panel($focus,$idx,$positions,$teachers):'' ?>
@@ -202,6 +223,8 @@ function teacher_load_panel(array $t,array $idx,array $positions,array $ranked):
     $id=(int)$t['id']; $num=fn(?float $v)=>$v===null?'—':number_format($v,2); $hidden='<input type="hidden" name="guru" value="'.$id.'">';
     $mine=array_values(array_filter($positions,fn($p)=>(int)$p['teacher_id']===$id)); $vacant=array_values(array_filter($positions,fn($p)=>$p['teacher_id']===null));
     $h='<section class="panel spaced load-focus" id="beban-guru"><div class="panel-heading"><div><span class="eyebrow teal">URUS BEBAN GURU</span><h3>'.e($t['name']).'</h3><p class="muted">'.(int)$t['task_count'].' tugas · '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · masa mengajar '.((int)$t['teaching_periods']?:'—').'</p></div><div class="button-group">'.index_badge($t).'<a class="btn sm outline" href="/?page=guru&amp;edit='.$id.'#editor">Sunting profil</a><a class="btn sm outline" href="/?page=agihan">Tutup ×</a></div></div>';
+    $ri=workflow_return_info(); if($ri && in_array($id,$ri['flags'],true)){ $r=$ri['resolved'][$id]??null;
+        $h.='<div class="padded-x flag-row"><span class="badge '.($r?'green">✓ Selesai dibaiki':'warn">Ditanda oleh '.e(role_label((string)$ri['role'])).' untuk semakan semula').'</span>'.flag_resolve_button($id,!$r,'guru:'.$id).'</div>'; }
     if($t['warnings']) $h.='<p class="padded-x warning-text">'.e(implode(' · ',array_map(fn($k)=>INDEX_WARNINGS[$k],$t['warnings']))).'</p>';
     $h.='<div class="table-wrap"><table><thead><tr><th>Jawatan dipegang</th><th>Skor</th><th>Pindahkan kepada guru lain / lepaskan</th></tr></thead><tbody>';
     foreach($mine as $p){ $ps=position_score($p); $after=index_after($t,-$ps,$idx);
@@ -277,7 +300,7 @@ function kelulusan_page(array $user): void {
     $over=array_filter($source['teachers'],fn($t)=>$loads[$t['id']]>$t['capacity']); $tasks=array_filter($source['positions'],fn($p)=>$p['teacher_id']!==null); $pub=workflow_published(); $keys=array_keys(WORKFLOW_LABELS);
     ?><div class="page-heading"><div><span class="eyebrow teal">KEPUTUSAN &amp; TANGGUNGJAWAB</span><h1>Semakan &amp; Kelulusan</h1><p class="muted">Semak agihan, rekod keputusan dan terbitkan lantikan rasmi sekolah.</p></div><span class="badge <?= $state['status']==='finalized'?'green':'warn' ?>"><?= e(WORKFLOW_LABELS[$state['status']]) ?></span></div>
 <ol class="workflow-progress"><?php foreach(WORKFLOW_LABELS as $k=>$l): ?><li class="<?= $state['status']===$k?'current':(array_search($k,$keys)<array_search($state['status'],$keys)?'done':'') ?>"><span><?= array_search($k,$keys)+1 ?></span><strong><?= e($l) ?></strong></li><?php endforeach; ?></ol>
-<?= $state['status']==='draft'?return_notice(workflow_return_info()):'' ?>
+<?= $state['status']==='draft'?return_notice(workflow_return_info(),'kelulusan'):resubmit_notice(workflow_return_info('submitted')) ?>
 <section class="panel"><div class="panel-heading"><div><h3><?= $state['status']==='draft'?'Draf agihan semasa':'Semakan versi #'.workflow_no((int)$state['revision_id']) ?></h3><p class="muted"><?= count($tasks) ?> lantikan · <?= count($source['positions'])-count($tasks) ?> jawatan kosong · Sesi <?= e($source['school']['year']) ?></p></div><?php if(can_plan($user) && $state['status']==='draft'): ?><a class="btn outline" href="/?page=agihan">Sunting draf</a><?php endif; ?></div>
 <div class="padded workflow-note"><?php if($state['status']==='draft'): ?><p>Agihan masih boleh disunting oleh Pentadbir dan PK. Hantar draf untuk mengunci data dan mendapatkan semakan <?= e(head_title()) ?>.</p><?php elseif($rev): ?><p>Dihantar oleh <strong><?= e($rev['submitter']) ?></strong> pada <?= e(workflow_time($rev['submitted_at'])) ?>. Data dikunci sehingga dikembalikan kepada draf.</p><?php if($rev['approved_at']): ?><p>Diluluskan oleh <?= e($rev['approver']) ?> pada <?= e(workflow_time($rev['approved_at'])) ?>.</p><?php endif; endif; ?>
 <p class="muted"><?= $pub?'Surat dan paparan guru menggunakan versi muktamad #'.(int)$pub['no'].'. Pindaan draf tidak mengubah dokumen yang telah diterbitkan.':'Belum ada versi muktamad. Surat lantikan dan tugas guru tersedia selepas pemuktamadan.' ?></p></div>

@@ -6,6 +6,11 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.6'=>['2026-10-27',[
+        'Guru ditanda oleh Guru Besar / Pengetua kini boleh ditandakan "selesai dibaiki" oleh PK atau Pentadbir — dari notis pemulangan (Agihan Tugas, Semakan & Kelulusan) atau panel Urus beban guru. Tanda boleh dibatalkan selagi draf belum dihantar.',
+        'Notis memaparkan indeks semasa setiap guru ditanda dan bilangan yang selesai; apabila semua selesai, pautan terus untuk menghantar semula.',
+        'Selepas dihantar semula, Guru Besar / Pengetua melihat senarai guru ditanda dengan status selesai (siapa & bila) di Semakan & Kelulusan sebelum meluluskan.',
+    ]],
     '1.5'=>['2026-10-27',[
         'Urus beban guru: butang "Urus beban" di Pengurusan Guru (dan klik indeks atau nama di Analisis Beban / Dashboard) membuka panel beban guru itu di Agihan Tugas.',
         'Dalam panel: pindahkan setiap jawatan kepada guru lain — calon disusun daripada indeks paling rendah dengan anggaran indeks sekarang → selepas — atau lepaskan sahaja; guru kurang beban boleh terus dilantik ke jawatan kosong. Selepas disimpan, halaman kembali ke panel guru yang sama.',

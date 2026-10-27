@@ -4,7 +4,7 @@ declare(strict_types=1);
  *  - Hantar: Pentadbir/PK, draf, ≥1 lantikan → revisi dengan snapshot JSON tetap + hash. Data perancangan dikunci.
  *  - Lulus / Muktamad: GB/Pengetua sahaja, bukan penghantar, hash snapshot mesti sama dengan data semasa.
  *  - Kembalikan: Pentadbir/GB/Pengetua dengan sebab (+ guru ditanda untuk disemak semula); dari Muktamad → draf pindaan
- *    (revisi muktamad kekal diterbitkan). Maklumat pemulangan (workflow_state.return_info) dipaparkan kepada PK sehingga dihantar semula.
+ *    (revisi muktamad kekal diterbitkan). Maklumat pemulangan (workflow_state.return_info) dipaparkan kepada PK sehingga dihantar semula; guru ditanda boleh ditandakan selesai, dan status itu dibawa kepada penyemak sehingga diluluskan.
  *  - Kunci optimistik: setiap peralihan memerlukan version semasa. Surat & "Tugas Saya" membaca revisi muktamad terkini. */
 
 const WORKFLOW_LABELS=['draft'=>'Draf','submitted'=>'Semakan','approved'=>'Lulus','finalized'=>'Muktamad'];
@@ -14,15 +14,28 @@ function workflow_state(): array {
     if(!$s){ school_engine_init(); $s=['status'=>'draft','revision_id'=>null,'version'=>1]; }
     return ['status'=>$s['status'],'revision_id'=>$s['revision_id']!==null?(int)$s['revision_id']:null,'version'=>(int)$s['version']];
 }
-/** Pemulangan terakhir yang masih aktif (draf belum dihantar semula): by_id, by_name, role, at, reason, flags[] — atau null. */
-function workflow_return_info(): ?array {
-    $raw=query('SELECT return_info FROM workflow_state WHERE school_id='.sid().' AND status="draft"')->fetchColumn();
+/** Maklumat pemulangan: by_id, by_name, role, at, reason, flags[], resolved{ID guru => {by, at}} — atau null.
+ * $status 'draft' = notis aktif kepada perancang; 'submitted' = dibawa semasa dihantar semula untuk dipaparkan kepada penyemak. */
+function workflow_return_info(string $status='draft'): ?array {
+    $raw=query('SELECT return_info FROM workflow_state WHERE school_id='.sid().' AND status=?',[$status])->fetchColumn();
     $i=is_string($raw) && $raw!==''?json_decode($raw,true):null;
     if(!is_array($i)) return null;
-    $i['flags']=array_values(array_map('intval',(array)($i['flags']??[]))); return $i;
+    $i['flags']=array_values(array_map('intval',(array)($i['flags']??[])));
+    $r=[]; foreach((array)($i['resolved']??[]) as $k=>$v) if(in_array((int)$k,$i['flags'],true) && is_array($v)) $r[(int)$k]=['by'=>(string)($v['by']??''),'at'=>(string)($v['at']??'')];
+    $i['resolved']=$r; return $i;
 }
-/** Guru ditanda (id => true) bagi pemulangan aktif — untuk sorotan di halaman perancangan. */
-function workflow_flagged(): array { $i=workflow_return_info(); return $i?array_fill_keys($i['flags'],true):[]; }
+/** Guru ditanda yang BELUM ditandakan selesai (id => true) — untuk sorotan di halaman perancangan. */
+function workflow_flagged(): array { $i=workflow_return_info(); return $i?array_fill_keys(array_values(array_diff($i['flags'],array_keys($i['resolved']))),true):[]; }
+/** Tandakan (atau batalkan) guru ditanda sebagai selesai dibaiki. Draf sahaja; pemanggil memiliki transaksi. */
+function workflow_flag_resolve(int $tid,bool $done,array $actor): void {
+    query('SELECT school_id FROM workflow_state WHERE school_id='.sid().' FOR UPDATE');
+    $i=workflow_return_info(); if(!$i || !in_array($tid,$i['flags'],true)) throw new WorkflowError('Guru ini tidak ditanda untuk semakan semula.',404);
+    $raw=json_decode((string)query('SELECT return_info FROM workflow_state WHERE school_id='.sid())->fetchColumn(),true);
+    $res=(array)($raw['resolved']??[]);
+    if($done) $res[(string)$tid]=['by'=>(string)($actor['name']??''),'at'=>date('Y-m-d H:i:s')]; else unset($res[(string)$tid]);
+    $raw['resolved']=(object)$res;
+    query('UPDATE workflow_state SET return_info=? WHERE school_id='.sid().' AND status="draft"',[json_encode($raw,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+}
 function workflow_require_draft(): void {
     if(workflow_state()['status']!=='draft') throw new WorkflowError('Agihan dikunci untuk semakan / kelulusan. Kembalikan kepada draf sebelum membuat pindaan.');
 }
@@ -49,6 +62,8 @@ function workflow_transition(string $action,int $expectedVersion,array $actor,st
         $source=workflow_source();
         query('INSERT INTO workflow_revisions (school_id,status,payload,source_hash,submitted_by) VALUES ('.sid().',"submitted",?,?,?)',[json_encode($source,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),workflow_hash($source),$uid]);
         $rid=(int)db()->lastInsertId(); $target='submitted';
+        // Bawa maklumat pemulangan (termasuk tanda selesai) supaya penyemak nampak guru ditanda telah dibaiki; bukan notis draf lagi.
+        $info=query('SELECT return_info FROM workflow_state WHERE school_id='.sid())->fetchColumn()?:null;
     } elseif(in_array($action,['approve','finalize'],true)){
         if($actor['role']!=='head') throw new WorkflowError('Hanya '.head_title().' boleh meluluskan atau memuktamadkan.',403);
         if($status!==($action==='approve'?'submitted':'approved')) throw new WorkflowError('Urutan status tidak sah.');

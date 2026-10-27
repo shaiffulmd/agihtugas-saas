@@ -225,7 +225,7 @@ def main():
                                       'reason': 'Kurangkan beban guru ditanda', 'flag[]': flagged + ['999999999', 'abc']})
     check('dikemas kini' in flash(p) and 'Dikembalikan untuk semakan semula' in p, 'Pengetua kembalikan draf dengan guru ditanda')
     s, p, _ = pk.req('/?page=kelulusan')
-    check('Kurangkan beban guru ditanda' in p and f'{len(flagged)} guru ditanda untuk disemak semula' in p and all(f'<li><strong>{name_of[i]}</strong>' in p for i in flagged), 'PK melihat sebab & senarai guru ditanda (ID asing diabaikan)')
+    check('Kurangkan beban guru ditanda' in p and f'{len(flagged)} guru ditanda untuk disemak semula' in p and all(f'#beban-guru" title="Urus beban">{name_of[i]}</a></strong>' in p for i in flagged) and p.count('name="action" value="tanda_selesai"') == len(flagged), 'PK melihat sebab, senarai guru ditanda & butang tanda selesai (ID asing diabaikan)')
     check('workflow-banner no-print returned' in p and f'{len(flagged)} guru ditanda</strong>' in p, 'jalur status: dikembalikan oleh Pengetua')
     s, p, _ = pk.req('/?page=agihan&tanda=1')
     rows = p.count('<tr class="row-flagged">')
