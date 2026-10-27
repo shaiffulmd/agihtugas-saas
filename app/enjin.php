@@ -320,6 +320,23 @@ function subjects_import(string $key,array $names): int {
     return $n;
 }
 
+/** Mata pelajaran yang disebut dalam nama jawatan (padanan terpanjang, sempadan perkataan), cth. "Ketua Panitia Matematik Tambahan" → Matematik Tambahan. $subjects: senarai nama. */
+function position_subject(string $position,array $subjects): ?string {
+    $best=null;
+    foreach($subjects as $s) if(mb_strlen($s)>mb_strlen((string)$best) && preg_match('/(?<![\p{L}\p{N}])'.preg_quote($s,'/').'(?![\p{L}\p{N}])/iu',$position)) $best=$s;
+    return $best;
+}
+/** Guru mengajar MP ini? Padanan tepat salah satu kepakaran (tanpa beza huruf), bukan sebahagian teks. */
+function teacher_teaches(array $t,string $subject): bool {
+    $s=mb_strtolower($subject); foreach(specialty_tokens((string)$t['specialty']) as $x) if(mb_strtolower($x)===$s) return true; return false;
+}
+/** Nama MP untuk pengesanan: katalog sekolah; jika kosong, kepakaran semua guru (supaya cadangan tetap berfungsi tanpa katalog). */
+function subject_names(): array {
+    $n=array_column(subjects_all(),'name'); if($n) return $n;
+    $u=[]; foreach(query('SELECT specialty FROM teachers WHERE school_id='.sid().' AND specialty<>""')->fetchAll(PDO::FETCH_COLUMN) as $sp) foreach(specialty_tokens((string)$sp) as $x) $u[mb_strtolower($x)]=$x;
+    return array_values($u);
+}
+
 /* ---------- Indeks beban ----------
  * Indeks = bahagian mengajar × (masa mengajar ÷ median sekolah) + baki × (skor tugas ÷ median sekolah); 1.00 = setara guru biasa.
  * Masa guru kelas peperiksaan didarab faktor peperiksaan. Hanya guru aktif yang tidak dikecualikan dikira (dan membentuk median).

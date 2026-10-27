@@ -27,6 +27,20 @@ function loadPreview() {
   hint.textContent = `Beban selepas lantikan: ${after} / ${cap} mata.` + (after > cap ? ' Melebihi kapasiti — semak kesesuaian sebelum menyimpan.' : ' Masih dalam kapasiti guru.') + idx;
   hint.classList.toggle('warning-text', after > cap || heavy);
 }
+// Jawatan yang menyebut mata pelajaran (cth. Ketua Panitia Matematik): guru yang mengajar MP itu disusun di atas dengan ★
+// (susunan asal = indeks terendah dahulu dikekalkan dalam setiap kumpulan).
+const teacherOpts = teacherSel ? [...teacherSel.options].slice(1) : [];
+teacherOpts.forEach(o => { o.dataset.label = o.textContent; });
+function rankBySubject() {
+  if (!posSel || !teacherSel) return;
+  const subj = (posSel.selectedOptions[0]?.dataset.subject || '').toLocaleLowerCase('ms');
+  const match = o => subj !== '' && (o.dataset.subjects || '').split('|').includes(subj);
+  const sorted = [...teacherOpts.filter(match), ...teacherOpts.filter(o => !match(o))];
+  sorted.forEach(o => { o.textContent = (match(o) ? '★ ' : '') + o.dataset.label; teacherSel.appendChild(o); });
+  const hint = document.getElementById('anggaran-beban'), n = teacherOpts.filter(match).length;
+  if (hint && !teacherSel.value) hint.textContent = subj ? (n ? `${n} guru mengajar ${posSel.selectedOptions[0].dataset.subject} — disusun di atas (★), indeks terendah dahulu.` : `Tiada guru dengan kepakaran ${posSel.selectedOptions[0].dataset.subject}. Calon disusun ikut indeks terendah.`) : 'Calon disusun daripada indeks beban paling rendah.';
+}
+posSel?.addEventListener('change', rankBySubject);
 posSel?.addEventListener('change', loadPreview); teacherSel?.addEventListener('change', loadPreview);
 document.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('click', () => {
   if (!posSel) return; posSel.value = btn.dataset.pick; posSel.dispatchEvent(new Event('change'));

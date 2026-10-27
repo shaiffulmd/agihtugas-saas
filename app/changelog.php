@@ -6,6 +6,11 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.10'=>['2026-10-27',[
+        'Cadangan guru ikut mata pelajaran: jawatan yang menyebut MP (cth. Ketua Panitia Matematik) dikesan daripada katalog Mata Pelajaran. Jawatan kosong di Agihan Tugas memaparkan "Cadangan" — guru yang mengajar MP itu dengan indeks terendah dan masih dalam kapasiti — dengan butang Lantik sekali klik.',
+        'Borang Tetapkan lantikan: memilih jawatan MP menyusun guru yang mengajarnya di atas (★). Panel Urus beban menandakan jawatan kosong yang sepadan dengan MP guru.',
+        'Agihan automatik mengutamakan guru yang mengajar MP jawatan (keutamaan, bukan syarat) dan mengisi jawatan MP dahulu supaya guru MP tidak habis digunakan jawatan lain.',
+    ]],
     '1.9'=>['2026-10-27',[
         'Prestasi: agihan automatik 5× lebih laju bagi sekolah besar (900+ jawatan: susun semula 337 → 65 ms) dengan keputusan yang sama persis.',
         'Halaman dimampatkan gzip dan aset statik disimpan oleh pelayar (public_html/.htaccess) — cth. senarai 900 jawatan 906 KB → 25 KB dipindahkan.',

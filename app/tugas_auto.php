@@ -82,7 +82,7 @@ function allocation_preview(string $mode): array {
     $state=allocation_state(); $rules=$state['rules'];
     $teachers=[]; foreach($state['teachers'] as $t) $teachers[$t['id']]=[...$t,'load'=>0,'task_count'=>0,'heavy'=>0,'categories'=>array_fill_keys(CATEGORIES,0)];
     $positions=array_column($state['positions'],null,'id'); $existing=array_column($state['assignments'],'teacher_id','position_id');
-    $mapping=[]; $reasons=[]; $warnings=[]; $pending=[];
+    $mapping=[]; $reasons=[]; $warnings=[]; $pending=[]; $snames=null;
     if($mode==='vacant') foreach($existing as $pid=>$tid){
         $p=$positions[$pid]; $rule=$state['position_rules'][$pid]??[];
         $issue=allocation_eligible($teachers[$tid],$p,$rule,$rules)??allocation_limits($teachers[$tid],$p,$rules);
@@ -93,21 +93,23 @@ function allocation_preview(string $mode): array {
         if(isset($mapping[$pid])) continue;
         $rule=$state['position_rules'][$pid]??[]; $eligible=[];
         foreach($teachers as $tid=>$t) if(allocation_eligible($t,$p,$rule,$rules)===null) $eligible[]=$tid;
-        $pending[]=['position'=>$p,'eligible'=>$eligible,'fixed'=>($rule['fixed_teacher_id']??null)!==null];
+        // MP yang disebut dalam nama jawatan (cth. Ketua Panitia Matematik) → guru yang mengajarnya diutamakan.
+        $subj=position_subject((string)$p['name'],$snames??=subject_names());
+        $pending[]=['position'=>$p,'eligible'=>$eligible,'fixed'=>($rule['fixed_teacher_id']??null)!==null,'subject'=>$subj,'teaches'=>$subj===null?[]:array_flip(array_filter($eligible,fn($tid)=>teacher_teaches($teachers[$tid],$subj)))];
     }
-    // Jawatan bercalon terhad dahulu; dalam kelebaran calon sama, jawatan lebih berat dahulu.
-    usort($pending,fn($a,$b)=>[(int)!$a['fixed'],count($a['eligible']),-$a['position']['weight'],$a['position']['id']]<=>[(int)!$b['fixed'],count($b['eligible']),-$b['position']['weight'],$b['position']['id']]);
+    // Penyandang tetap dahulu, kemudian jawatan MP yang ada guru sepadan (supaya guru MP tidak habis digunakan jawatan lain), jawatan bercalon terhad, jawatan lebih berat.
+    usort($pending,fn($a,$b)=>[(int)!$a['fixed'],(int)!$a['teaches'],count($a['eligible']),-$a['position']['weight'],$a['position']['id']]<=>[(int)!$b['fixed'],(int)!$b['teaches'],count($b['eligible']),-$b['position']['weight'],$b['position']['id']]);
     $unfilled=[];
     foreach($pending as $item){
         $p=$item['position']; $candidates=[]; $blocked=[];
         // Calon terbaik = kunci terkecil [nisbah beban selepas lantikan, bil. tugas, tugas bidang ini, ID] — carian minimum O(n), bukan isihan penuh.
         $bestKey=null;
         foreach($item['eligible'] as $tid){ $issue=allocation_limits($teachers[$tid],$p,$rules); if($issue){ $blocked[$issue]=true; continue; }
-            $t=$teachers[$tid]; $k=[($t['load']+$p['weight'])/$t['capacity'],$t['task_count'],$t['categories'][$p['category']],$tid];
+            $t=$teachers[$tid]; $k=[(int)!isset($item['teaches'][$tid]),($t['load']+$p['weight'])/$t['capacity'],$t['task_count'],$t['categories'][$p['category']],$tid];
             if($bestKey===null || $k<$bestKey){ $bestKey=$k; $candidates=[$tid]; } }
         if(!$candidates){ $reason=$item['eligible']?implode(', ',array_keys($blocked)):'Tiada guru yang memenuhi kelayakan / pengecualian'; $reasons[$p['id']]=$reason; $unfilled[]=['position_id'=>$p['id'],'position_name'=>$p['name'],'reason'=>$reason]; continue; }
         $tid=$candidates[0]; $mapping[$p['id']]=$tid; allocation_add($teachers[$tid],$p,$rules['heavy_threshold']);
-        $reasons[$p['id']]=$item['fixed']?'Penyandang tetap yang memenuhi syarat':'Nisbah beban selepas lantikan terendah antara calon yang layak';
+        $reasons[$p['id']]=$item['fixed']?'Penyandang tetap yang memenuhi syarat':(isset($item['teaches'][$tid])?'Mengajar '.$item['subject'].' · nisbah beban terendah antara guru '.$item['subject']:'Nisbah beban selepas lantikan terendah antara calon yang layak');
     }
     $rows=[]; $changes=0; $released=0;
     foreach($positions as $pid=>$p){
