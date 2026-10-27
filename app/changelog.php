@@ -8,6 +8,7 @@ declare(strict_types=1);
 const APP_CHANGELOG=[
     '1.13'=>['2026-10-28',[
         'Mata Pelajaran: klik bilangan guru untuk melihat senarai nama guru yang mengajar MP itu, bersama indeks beban dan pautan Urus beban (padanan tepat kepakaran; carian turut mencari nama guru).',
+        'Semakan & Kelulusan: butang tindakan utama (Hantar, Luluskan, Muktamadkan) kini di atas jadual beban guru supaya tidak terlepas pandang.',
     ]],
     '1.12'=>['2026-10-28',[
         'Agihan automatik kini memilih calon mengikut indeks beban selepas lantikan (masa mengajar + skor tugas), ukuran yang sama dengan Dashboard dan Analisis, menggantikan nisbah kapasiti mata. Guru yang dikecualikan daripada indeks dipertimbangkan paling akhir. Had kapasiti kekal sebagai syarat pilihan. Pada data demo, julat indeks selepas susun semula mengecil daripada 0.85–1.27 kepada 0.97–1.07.',
