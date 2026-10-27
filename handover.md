@@ -1,4 +1,4 @@
-# Serahan pembangun — UrusTugas SaaS 1.11
+# Serahan pembangun — UrusTugas SaaS 1.12
 
 Dokumen ini untuk pembangun yang menyambung kerja. Pengguna akhir: [README.md](README.md) dan [docs/PEMASANGAN.md](docs/PEMASANGAN.md). Sejarah naik taraf (Fasa 1–8, 26 Okt 2026): [docs/PELAN_SETARA_KOKU_MULTI.md](docs/PELAN_SETARA_KOKU_MULTI.md); nota analisis asal: [docs/NOTA_KOD.md](docs/NOTA_KOD.md).
 

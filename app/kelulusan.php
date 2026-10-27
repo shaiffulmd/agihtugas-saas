@@ -21,6 +21,8 @@ function workflow_return_info(string $status='draft'): ?array {
     $i=is_string($raw) && $raw!==''?json_decode($raw,true):null;
     if(!is_array($i)) return null;
     $i['flags']=array_values(array_map('intval',(array)($i['flags']??[])));
+    // Guru ditanda yang telah dipadam (cth. bertukar sekolah) tidak lagi perlu dibaiki — abaikan supaya "semua selesai" boleh dicapai.
+    if($i['flags']) $i['flags']=array_values(array_intersect($i['flags'],array_map('intval',query('SELECT id FROM teachers WHERE school_id='.sid().' AND id IN ('.implode(',',$i['flags']).')')->fetchAll(PDO::FETCH_COLUMN))));
     $r=[]; foreach((array)($i['resolved']??[]) as $k=>$v) if(in_array((int)$k,$i['flags'],true) && is_array($v)) $r[(int)$k]=['by'=>(string)($v['by']??''),'at'=>(string)($v['at']??'')];
     $i['resolved']=$r; return $i;
 }

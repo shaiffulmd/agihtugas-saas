@@ -58,6 +58,21 @@ function demo_maybe_reset(): void {
     finally { flock($fh,LOCK_UN); fclose($fh); }
 }
 
+/** Set semula manual oleh penguji (Pentadbir / PK demo): dihadkan sekali setiap DEMO_MANUAL_GAP saat bagi setiap sekolah. */
+const DEMO_MANUAL_GAP=600;
+function demo_manual_wait(): int { $l=demo_last_reset(); return $l===null?0:max(0,DEMO_MANUAL_GAP-(time()-(int)strtotime($l))); }
+function demo_can_reset(): bool { $u=current_user(); return demo_mode() && sid()>0 && $u && in_array($u['role'],['admin','pk'],true); }
+function handle_demo_reset_now(): never {
+    if(!demo_can_reset()) error_page(403);
+    if($w=demo_manual_wait()) throw new DomainException('Data demo baru sahaja dijana semula. Cuba lagi selepas '.max(1,(int)ceil($w/60)).' minit.');
+    $fh=@fopen(dirname(__DIR__).'/storage/demo-reset-'.(school()['code']??'platform').'.lck','c');
+    if(!$fh || !flock($fh,LOCK_EX|LOCK_NB)) throw new DomainException('Set semula demo sedang berjalan. Cuba sebentar lagi.');
+    // Akaun demo dicipta semula (ID baharu): tamatkan sesi DAHULU supaya audit data seed tidak merujuk ID pengguna yang telah dipadam.
+    $_SESSION=[]; current_user(true);
+    try { clearstatcache(); if(!demo_manual_wait()) demo_reset(); } finally { flock($fh,LOCK_UN); fclose($fh); }
+    session_regenerate_id(true); flash('Data demo telah dijana semula. Sila log masuk semula.'); redirect('/?page=login');
+}
+
 /** Kosongkan data sekolah semasa dan jana semula data demo. */
 function demo_reset(): void {
     if(!demo_env()) throw new RuntimeException('demo_reset() hanya dibenarkan apabila DEMO_MODE=1.');
@@ -117,5 +132,6 @@ function demo_login_panel(): void {
 function demo_banner(): string {
     if(!demo_mode()) return '';
     $last=demo_last_reset();
-    return '<div class="demo-banner" role="note"><strong>Mod demo</strong><span>Semua data adalah rekaan dan dijana semula setiap hari'.($last?' (terakhir: '.e(date('j/n/Y g:i a',strtotime($last))).')':'').'. Muat naik fail, e-mel dan perubahan akaun dimatikan.</span></div>';
+    $btn=demo_can_reset()?'<form method="post" class="demo-reset" data-confirm="Jana semula semua data demo sekolah ini? Perubahan semua penguji akan hilang dan anda perlu log masuk semula.">'.csrf_field().'<input type="hidden" name="action" value="demo_reset_now"><button class="btn sm outline" type="submit"'.(demo_manual_wait()?' disabled title="Boleh diset semula sekali setiap '.(DEMO_MANUAL_GAP/60).' minit"':'').'>Set semula demo sekarang</button></form>':'';
+    return '<div class="demo-banner" role="note"><strong>Mod demo</strong><span>Semua data adalah rekaan dan dijana semula setiap hari pada 12:00 tengah malam'.($last?' (terakhir: '.e(date('j/n/Y g:i a',strtotime($last))).')':'').(sid()>0?'. Draf contoh telah dikembalikan oleh '.e(head_title()).' dengan guru terbeban ditanda':'').'. Muat naik fail, e-mel dan perubahan akaun dimatikan.</span>'.$btn.'</div>';
 }

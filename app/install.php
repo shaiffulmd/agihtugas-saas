@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Pemasangan hanya dibenarkan sekali: selepas berjaya, storage/installed.lock ditulis dan
  * semua laluan pemasangan menolak untuk berjalan semula.
  */
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 const APP_RELEASE = '2026-10-28'; // Tarikh keluaran (dipaparkan di footer). Sejarah perubahan: app/changelog.php
 // Naikkan setiap kali skema pangkalan data berubah (jadual/lajur baharu), walaupun APP_VERSION kekal.
 const APP_SCHEMA = '0.1-m6'; // m6: roles (skor peranan) + positions.role_id; m5: subjects (katalog mata pelajaran); m4: indeks beban — teachers.teaching_periods/exam_class/status/index_exempt, positions.level/term; m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id

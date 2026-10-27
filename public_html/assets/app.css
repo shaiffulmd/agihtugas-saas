@@ -968,6 +968,7 @@ input::-ms-reveal,input::-ms-clear{display:none}
 
 /* ---------- Mod demo ---------- */
 .demo-banner{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .7rem;margin:0 0 1rem;padding:.6rem .9rem;border:1px dashed color-mix(in srgb,var(--primary) 55%,var(--line));border-radius:var(--r-sm);background:color-mix(in srgb,var(--primary) 7%,var(--surface));color:var(--ink);font-size:.82rem;line-height:1.45}
+.demo-banner .demo-reset{margin-left:auto}
 .demo-banner strong{display:inline-flex;align-items:center;padding:.1rem .55rem;border-radius:999px;background:var(--primary);color:#fff;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
 body.site>.demo-banner{margin:0;border-radius:0;border-width:0 0 1px;justify-content:center;text-align:center}
 .demo-accounts{margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid var(--line)}

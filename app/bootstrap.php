@@ -45,7 +45,8 @@ function audit(string $action,string $entity,?int $id=null,string $detail=''): v
     if(sid()<=0){ $pid=$_SESSION['pid']??null; audit_append(0,['admin_id'=>$pid,'admin_ref'=>$pid,'school_id'=>null,'school_ref'=>null,'action'=>mb_substr($action,0,60),'detail'=>mb_substr($entity.($id!==null?' #'.$id:'').($detail!==''?' · '.$detail:''),0,255),'ip_hash'=>audit_ip_hash()]); return; }
     $via=$_SESSION['imp']['pid']??null; audit_append(sid(),['user_id'=>$_SESSION['uid']??null,'via_platform'=>$via,'via_ref'=>$via,'action'=>$action,'entity'=>$entity,'entity_id'=>$id,'detail'=>$detail,'ip_hash'=>audit_ip_hash()]);
 }
-function current_user(): ?array { static $user=false; if($user===false) $user=isset($_SESSION['uid'])?query('SELECT id,name,email,role,totp_secret,auth_version,must_change,allowed_ips FROM users WHERE id=? AND school_id=? AND active=1',[$_SESSION['uid'],sid()])->fetch():null; if($user && (int)$user['auth_version']!==(int)($_SESSION['auth_version']??0)){ $_SESSION=[]; $user=null; } return $user?:null; }
+/** $refresh: buang cache (cth. selepas akaun dicipta semula oleh reset demo). */
+function current_user(bool $refresh=false): ?array { static $user=false; if($refresh) $user=false; if($user===false) $user=isset($_SESSION['uid'])?query('SELECT id,name,email,role,totp_secret,auth_version,must_change,allowed_ips FROM users WHERE id=? AND school_id=? AND active=1',[$_SESSION['uid'],sid()])->fetch():null; if($user && (int)$user['auth_version']!==(int)($_SESSION['auth_version']??0)){ $_SESSION=[]; $user=null; } return $user?:null; }
 function can_write(): bool { return in_array(current_user()['role']??'', ['admin','pk'],true); }
 function require_writer(): void { if(!can_write()) error_page(403,'Peranan anda hanya membenarkan paparan. Hubungi pentadbir jika anda perlu mengemas kini rekod.'); }
 function require_admin(): void { if((current_user()['role']??'')!=='admin') error_page(403,'Halaman ini untuk pentadbir sistem sahaja.'); }

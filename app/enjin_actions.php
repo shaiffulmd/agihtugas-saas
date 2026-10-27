@@ -25,8 +25,9 @@ function handle_engine_action(string $action): never {
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api'][$action]??'sekolah';
     db()->beginTransaction();
     try {
-        // Data yang masuk ke snapshot revisi dikunci selain Draf (API, kunci API & tetapan indeks tidak termasuk).
-        if(!in_array($action,['kelulusan','api_cipta','api_batal','indeks_tetapan'],true)) workflow_require_draft();
+        // Data perancangan dikunci selain Draf (kunci API tidak termasuk). Tetapan indeks turut dikunci supaya senarai guru terbeban
+        // yang dinilai Pengetua tidak berubah semasa semakan.
+        if(!in_array($action,['kelulusan','api_cipta','api_batal'],true)) workflow_require_draft();
         $id=(int)input('id'); $msg=''; $anchor='';
         switch($action){
             case 'peranan_save':

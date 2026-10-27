@@ -210,6 +210,10 @@ def main():
     s, p, _ = adm.post('settings', {'action': 'settings_save', 'school_name': 'Nama Baharu', 'app_name': 'UrusTugas', 'school_tagline': '', 'login_headline': 'a', 'login_text': '', 'banner_title': 'b', 'banner_text': '',
                                     'theme_preset': 'delima', 'theme_mode': 'light', 'twofa_policy': 'admin', 'school_type': 'SMK'})
     check('dikunci' in err(p), 'nama sekolah dikunci semasa semakan')
+    s, p, _ = pk.post('analisis', {'action': 'indeks_tetapan', 'teach_share': '60', 'high': '1.5', 'low': '0.7', 'exam_factor': '1', 'max_tasks': '8'})
+    check('dikunci' in err(p), 'tetapan indeks dikunci semasa semakan (penilaian Pengetua stabil)')
+    s, p, _ = pk.req('/?page=analisis')
+    check('name="action" value="indeks_tetapan"' not in p and 'Tetapan dikunci semasa agihan dalam semakan' in p, 'borang tetapan indeks diganti notis semasa semakan')
     print('5b. Tanda guru berbeban & kembalikan kepada PK')
     s, p, _ = pk.req('/?page=kelulusan')
     check('name="flag[]"' not in p, 'PK tidak melihat kotak tanda (bukan pelulus)')

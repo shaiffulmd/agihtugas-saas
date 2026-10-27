@@ -43,6 +43,12 @@ with_school($S,function(){
     $sub=workflow_return_info('submitted'); check($sub && count($sub['resolved'])===2 && $sub['reason']==='Kurangkan beban','penyemak nampak guru ditanda & tanda selesai');
     rejects(fn()=>tx(fn()=>workflow_flag_resolve($T[0],false,$admin)),'tanda selesai tidak boleh diubah selepas dihantar');
     tx(fn()=>workflow_transition('approve',$ver(),$head)); check(workflow_state()['status']==='approved' && workflow_return_info('submitted')===null,'diluluskan; maklumat pemulangan dikosongkan');
+
+    echo "Guru ditanda dipadam\n";
+    tx(fn()=>workflow_transition('return',$ver(),$head,'Semak semula',[$T[0],$T[1]]));
+    tx(function()use($T){ query('DELETE FROM assignments WHERE school_id='.sid().' AND teacher_id=?',[$T[1]]); teacher_delete($T[1]); });
+    check(workflow_return_info()['flags']===[$T[0]] && workflow_flagged()===[$T[0]=>true],'guru dipadam (cth. bertukar) tidak lagi dikira ditanda');
+    tx(fn()=>workflow_flag_resolve($T[0],true,$admin)); check(workflow_flagged()===[] && count(workflow_return_info()['resolved'])===1,'baki guru ditanda selesai → semua selesai boleh dicapai');
 });
 } finally { if($s=school_find('UJF9107')) school_delete($s); }
 echo "\n$checks semakan guru ditanda lulus.\n";

@@ -22,7 +22,16 @@ Draf tamat selepas 30 minit, sekali guna dan mesti dijana semula jika data atau 
 
 ## Kaedah enjin
 
-Enjin deterministik mendahulukan penyandang tetap, kemudian jawatan yang menyebut mata pelajaran (cth. "Ketua Panitia Matematik") dan ada guru yang mengajarnya, kemudian jawatan yang calonnya terhad, kemudian jawatan berat. Mata pelajaran dikesan daripada nama jawatan berdasarkan katalog Mata Pelajaran (padanan terpanjang); guru yang kepakarannya mengandungi MP itu diutamakan sebelum nisbah beban — ini keutamaan, bukan syarat (gunakan "Kepakaran diperlukan" di Pusat Syarat untuk mewajibkannya). Bagi setiap jawatan, guru yang memenuhi semua syarat ditapis dahulu. Calon dipilih mengikut nisbah `(mata semasa + pemberat jawatan) / kapasiti`; seri dipecahkan mengikut bilangan tugas, bilangan tugas bidang itu dan ID guru.
+Enjin deterministik mendahulukan penyandang tetap, kemudian jawatan yang menyebut mata pelajaran (cth. "Ketua Panitia Matematik") dan ada guru yang mengajarnya, kemudian jawatan yang calonnya terhad, kemudian jawatan berat. Mata pelajaran dikesan daripada nama jawatan berdasarkan katalog Mata Pelajaran (padanan terpanjang); guru yang kepakarannya mengandungi MP itu diutamakan sebelum nisbah beban — ini keutamaan, bukan syarat (gunakan "Kepakaran diperlukan" di Pusat Syarat untuk mewajibkannya). Bagi setiap jawatan, guru yang memenuhi semua syarat ditapis dahulu. Sejak 1.12 calon dipilih mengikut **indeks beban selepas lantikan** (ukuran yang sama dengan Dashboard, Analisis dan Kelulusan):
+
+`indeks = bahagian mengajar × (masa mengajar ÷ median masa) + (1 − bahagian) × (skor tugas ÷ purata skor jangkaan)`
+
+- Skor tugas = pemberat × tahap × tempoh. Masa kelas peperiksaan didarab dengan faktornya.
+- Purata skor jangkaan = jumlah skor semua jawatan ÷ guru yang dikira. Median sebenar hanya diketahui selepas semua jawatan diisi.
+- Guru yang dikecualikan daripada indeks (cth. pentadbir) dipertimbangkan paling akhir, mengikut nisbah `(mata + pemberat) / kapasiti`.
+- Seri dipecahkan mengikut nisbah kapasiti, bilangan tugas, bilangan tugas bidang itu dan ID guru.
+- Had kapasiti mata kekal sebagai syarat apabila "patuhi kapasiti" dihidupkan.
+- Jadual "Beban guru selepas cadangan" memaparkan indeks jangkaan setiap guru.
 
 Ini heuristik, bukan penyelesaian matematik optimum. Ia mungkin meninggalkan jawatan kosong walaupun susunan lain boleh mengisinya. Semak sebab dan laraskan syarat atau gunakan lantikan manual. Sistem tidak menilai pengalaman, jantina, umur, kesihatan, waktu mengajar atau sejarah sesi kerana maklumat itu belum dimodelkan. Kepakaran dipadankan sebagai teks tanpa membezakan huruf besar/kecil.
 

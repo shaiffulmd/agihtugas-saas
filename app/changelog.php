@@ -6,6 +6,14 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.12'=>['2026-10-28',[
+        'Agihan automatik kini memilih calon mengikut indeks beban selepas lantikan (masa mengajar + skor tugas), ukuran yang sama dengan Dashboard dan Analisis, menggantikan nisbah kapasiti mata. Guru yang dikecualikan daripada indeks dipertimbangkan paling akhir. Had kapasiti kekal sebagai syarat pilihan. Pada data demo, julat indeks selepas susun semula mengecil daripada 0.85–1.27 kepada 0.97–1.07.',
+        'Pratonton agihan automatik memaparkan indeks jangkaan setiap guru dan sebab pemilihan berasaskan indeks.',
+        'Guru ditanda Pengetua yang kemudiannya dipadam (cth. bertukar sekolah) tidak lagi kekal sebagai "belum selesai"; status "semua guru ditanda selesai" kini boleh dicapai.',
+        'Indeks beban kini ukuran utama di Senarai Guru dan Dashboard: lajur Indeks beban dipaparkan dahulu, kad "Guru terbeban" menggantikan "Melebihi kapasiti", dan lencana kapasiti hanya muncul apabila dilampaui ("Melebihi kapasiti mata").',
+        'Tetapan indeks beban dikunci semasa agihan dalam semakan / kelulusan supaya senarai guru terbeban yang dinilai Pengetua tidak berubah.',
+        'Demo: butang "Set semula demo sekarang" untuk Pentadbir dan PK demo (sekali setiap 10 minit). Jalur demo menerangkan masa reset harian dan draf contoh yang dikembalikan oleh Pengetua.',
+    ]],
     '1.11'=>['2026-10-28',[
         'Semakan & Kelulusan kini menilai beban dengan indeks beban (sama seperti Dashboard dan Analisis Beban): notis, lajur Indeks beban dan tanda automatik ikut guru Terbeban. Melebihi kapasiti mata dipaparkan sebagai amaran tambahan. Sebelum ini Pengetua dan PK boleh melihat bilangan guru berbeban yang berbeza.',
         'Demo: draf pindaan harian menanda guru terbeban mengikut indeks beban, selaras dengan bilangan di Dashboard.',

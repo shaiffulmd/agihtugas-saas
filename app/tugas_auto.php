@@ -52,8 +52,9 @@ function allocation_state(): array {
     $int=fn(array $rows,array $cols)=>array_map(function($r)use($cols){ foreach($cols as $c) if(isset($r[$c])) $r[$c]=(int)$r[$c]; return $r; },$rows);
     $wf=query('SELECT status,revision_id,version FROM workflow_state WHERE school_id='.sid())->fetch()?:[];
     return ['workflow'=>$wf,'school'=>school_profile(),
-        'teachers'=>$int(query('SELECT id,name,email,specialty,capacity,external_id,status FROM teachers WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','capacity']),
-        'positions'=>$int(query('SELECT id,name,category,weight FROM positions WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','weight']),
+        'teachers'=>$int(query('SELECT id,name,email,specialty,capacity,external_id,status,teaching_periods,exam_class,index_exempt FROM teachers WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','capacity','teaching_periods','exam_class','index_exempt']),
+        'positions'=>$int(query('SELECT id,name,category,weight,level,term FROM positions WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','weight']),
+        'index'=>index_settings(),
         'assignments'=>$int(query('SELECT position_id,teacher_id FROM assignments WHERE school_id='.sid().' ORDER BY position_id')->fetchAll(),['position_id','teacher_id']),
         'rules'=>allocation_rules(),'position_rules'=>allocation_position_rules()];
 }
@@ -74,14 +75,31 @@ function allocation_limits(array $t,array $p,array $rules): ?string {
     return null;
 }
 function allocation_add(array &$t,array $p,int $threshold): void {
-    $t['load']+=$p['weight']; $t['task_count']++; if($p['weight']>=$threshold) $t['heavy']++; $t['categories'][$p['category']]++;
+    $t['load']+=$p['weight']; $t['score']+=$p['score']; $t['task_count']++; if($p['weight']>=$threshold) $t['heavy']++; $t['categories'][$p['category']]++;
+}
+/** Skala indeks untuk agihan: [bahagian mengajar, pembahagi masa mengajar, pembahagi skor tugas].
+ *  Masa mengajar ÷ median guru dikira (sama seperti load_index()). Median skor tugas belum diketahui semasa agihan berjalan,
+ *  jadi skor dibahagi dengan purata skor JANGKAAN selepas semua jawatan diisi (jumlah skor jawatan ÷ guru dikira). */
+function allocation_index_scale(array $teachers,array $positions,array $s): array {
+    $T=[]; foreach($teachers as $t) if($t['counted']) $T[]=$t['teaching'];
+    $m=median($T); $dT=$m>0?$m:($T?array_sum($T)/count($T):0.0);
+    $dS=$T?array_sum(array_column($positions,'score'))/count($T):0.0;
+    return [$dT>0?($dS>0?$s['teach_share']:1.0):0.0,$dT,$dS];
+}
+/** Anggaran indeks beban guru jika jawatan $p ditambah (null bagi guru yang tidak dikira dalam indeks). */
+function allocation_index_after(array $t,array $p,array $scale): ?float {
+    [$share,$dT,$dS]=$scale; if(!$t['counted'] || ($dT<=0 && $dS<=0)) return null;
+    return $share*($dT>0?$t['teaching']/$dT:0.0)+(1-$share)*($dS>0?($t['score']+$p['score'])/$dS:0.0);
 }
 /** Jana pratonton (belum mengubah lantikan) dan simpan untuk apply. */
 function allocation_preview(string $mode): array {
     if(!in_array($mode,['vacant','rebalance'],true)) throw new AllocationError('Mod agihan tidak sah.');
     $state=allocation_state(); $rules=$state['rules'];
-    $teachers=[]; foreach($state['teachers'] as $t) $teachers[$t['id']]=[...$t,'load'=>0,'task_count'=>0,'heavy'=>0,'categories'=>array_fill_keys(CATEGORIES,0)];
-    $positions=array_column($state['positions'],null,'id'); $existing=array_column($state['assignments'],'teacher_id','position_id');
+    $S=$state['index'];
+    $teachers=[]; foreach($state['teachers'] as $t) $teachers[$t['id']]=[...$t,'load'=>0,'score'=>0.0,'task_count'=>0,'heavy'=>0,'categories'=>array_fill_keys(CATEGORIES,0),
+        'teaching'=>$t['teaching_periods']*($t['exam_class']?$S['exam_factor']:1),'counted'=>$t['status']==='aktif' && !$t['index_exempt']];
+    $positions=[]; foreach($state['positions'] as $p) $positions[$p['id']]=[...$p,'score'=>position_score($p)];
+    $scale=allocation_index_scale($teachers,$positions,$S); $existing=array_column($state['assignments'],'teacher_id','position_id');
     $mapping=[]; $reasons=[]; $warnings=[]; $pending=[]; $snames=null;
     if($mode==='vacant') foreach($existing as $pid=>$tid){
         $p=$positions[$pid]; $rule=$state['position_rules'][$pid]??[];
@@ -102,14 +120,17 @@ function allocation_preview(string $mode): array {
     $unfilled=[];
     foreach($pending as $item){
         $p=$item['position']; $candidates=[]; $blocked=[];
-        // Calon terbaik = kunci terkecil [nisbah beban selepas lantikan, bil. tugas, tugas bidang ini, ID] — carian minimum O(n), bukan isihan penuh.
-        $bestKey=null;
+        // Calon terbaik = kunci terkecil [dikecualikan daripada indeks, tidak mengajar MP jawatan, indeks beban selepas lantikan
+        // (nisbah kapasiti bagi guru dikecualikan), nisbah kapasiti, bil. tugas, tugas bidang ini, ID] — carian minimum O(n), bukan isihan penuh.
+        $bestKey=null; $bestIdx=null;
         foreach($item['eligible'] as $tid){ $issue=allocation_limits($teachers[$tid],$p,$rules); if($issue){ $blocked[$issue]=true; continue; }
-            $t=$teachers[$tid]; $k=[(int)!isset($item['teaches'][$tid]),($t['load']+$p['weight'])/$t['capacity'],$t['task_count'],$t['categories'][$p['category']],$tid];
-            if($bestKey===null || $k<$bestKey){ $bestKey=$k; $candidates=[$tid]; } }
+            $t=$teachers[$tid]; $ratio=($t['load']+$p['weight'])/$t['capacity']; $idx=allocation_index_after($t,$p,$scale);
+            $k=[(int)($idx===null),(int)!isset($item['teaches'][$tid]),round($idx??$ratio,4),$ratio,$t['task_count'],$t['categories'][$p['category']],$tid];
+            if($bestKey===null || $k<$bestKey){ $bestKey=$k; $bestIdx=$idx; $candidates=[$tid]; } }
         if(!$candidates){ $reason=$item['eligible']?implode(', ',array_keys($blocked)):'Tiada guru yang memenuhi kelayakan / pengecualian'; $reasons[$p['id']]=$reason; $unfilled[]=['position_id'=>$p['id'],'position_name'=>$p['name'],'reason'=>$reason]; continue; }
         $tid=$candidates[0]; $mapping[$p['id']]=$tid; allocation_add($teachers[$tid],$p,$rules['heavy_threshold']);
-        $reasons[$p['id']]=$item['fixed']?'Penyandang tetap yang memenuhi syarat':(isset($item['teaches'][$tid])?'Mengajar '.$item['subject'].' · nisbah beban terendah antara guru '.$item['subject']:'Nisbah beban selepas lantikan terendah antara calon yang layak');
+        $how=$bestIdx===null?'nisbah kapasiti terendah (guru dikecualikan daripada indeks)':'indeks beban selepas lantikan terendah ('.number_format($bestIdx,2).')';
+        $reasons[$p['id']]=$item['fixed']?'Penyandang tetap yang memenuhi syarat':(isset($item['teaches'][$tid])?'Mengajar '.$item['subject'].' · '.$how.' antara guru '.$item['subject']:ucfirst($how).' antara calon yang layak');
     }
     $rows=[]; $changes=0; $released=0;
     foreach($positions as $pid=>$p){
@@ -117,6 +138,7 @@ function allocation_preview(string $mode): array {
         if($before!==$after) $changes++; if($before!==null && $after===null) $released++;
         $rows[]=['position_id'=>$pid,'position_name'=>$p['name'],'category'=>$p['category'],'weight'=>$p['weight'],'before_teacher_id'=>$before,'before_teacher_name'=>$before?$teachers[$before]['name']:null,'teacher_id'=>$after,'teacher_name'=>$after?$teachers[$after]['name']:null,'reason'=>$reasons[$pid],'changed'=>$before!==$after];
     }
+    foreach($teachers as &$t){ $t['index']=($i=allocation_index_after($t,['score'=>0.0],$scale))===null?null:round($i,2); } unset($t);
     $plan=['mode'=>$mode,'rows'=>$rows,'unfilled'=>$unfilled,'warnings'=>$warnings,'teachers'=>array_values($teachers),'summary'=>['assigned'=>count($mapping),'unfilled'=>count($unfilled),'changed'=>$changes,'released'=>$released],'rules'=>$rules];
     $id=bin2hex(random_bytes(24));
     query('DELETE FROM allocation_plans WHERE school_id='.sid().' AND created_at < NOW() - INTERVAL 1 DAY');

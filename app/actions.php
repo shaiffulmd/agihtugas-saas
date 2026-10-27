@@ -73,6 +73,7 @@ function handle_action(string $page,string $action): void {
   flash('2FA dimatikan. Anda boleh mengaktifkannya semula pada bila-bila masa.'); redirect('/?page=security');
  }
  if(!empty(current_user()['must_change'])) throw new DomainException('Tukar kata laluan sementara anda dahulu.');
+ if($action==='demo_reset_now') handle_demo_reset_now();
  if(in_array($action,ENGINE_ACTIONS,true)) handle_engine_action($action);
  if(str_starts_with($action,'settings_')) handle_settings($action);
  if(str_starts_with($action,'system_') || str_starts_with($action,'backup_')) error_page(403,'Integriti fail dan sandaran diurus oleh pentadbir platform.'); // edisi multi

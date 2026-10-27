@@ -75,6 +75,18 @@ with_school($S,function(){
     check((int)$r['teaching_periods']===20 && $r['status']==='cuti','medan indeks yang tidak dihantar dikekalkan');
     $T=fixture([['Cuti',30,false,'cuti',false],['Aktif',30,false,'aktif',false]],[['P1',3,'sokongan','tahunan',null]]);
     $p=allocation_preview('rebalance'); check($p['rows'][0]['teacher_id']===$T[1],'agihan automatik tidak mencalonkan guru cuti');
+
+    echo "Agihan automatik ikut indeks beban\n";
+    // Kapasiti sama (nisbah kapasiti seri) — guru dengan masa mengajar rendah dipilih kerana indeksnya lebih rendah; pentadbir dikecualikan paling akhir.
+    $T=fixture([['Berat',30,false,'aktif',false],['Ringan',10,false,'aktif',false],['Pentadbir',0,false,'aktif',true]],[['P1',5,'sokongan','tahunan',null]]);
+    $p=allocation_preview('rebalance'); $r=$p['rows'][0];
+    check($r['teacher_id']===$T[1] && stripos($r['reason'],'indeks beban selepas lantikan')!==false,'jawatan kepada guru indeks terendah, bukan ID/nisbah kapasiti terendah');
+    $ix=array_column($p['teachers'],'index','id'); check($ix[$T[2]]===null && $ix[$T[1]]!==null && abs($ix[$T[1]]-1.1)<0.005,'pelan memaparkan indeks jangkaan: Ringan 0.6×10/20 + 0.4×5/2.5 = 1.10 (null bagi guru dikecualikan)');
+    $T=fixture([['A',30,true,'aktif',false],['B',30,false,'aktif',false],['C',28,false,'aktif',false]],[['P1',9,'utama','tahunan',null],['P2',9,'utama','tahunan',null],['P3',9,'utama','tahunan',null]]);
+    $p=allocation_preview('rebalance'); $got=array_count_values(array_column($p['rows'],'teacher_id'));
+    check(count($got)===3,'tiga jawatan sama berat diagih seorang satu (indeks diseimbangkan)');
+    $T=fixture([['Pentadbir',0,false,'aktif',true]],[['P1',5,'sokongan','tahunan',null]]);
+    $p=allocation_preview('rebalance'); check($p['rows'][0]['teacher_id']===$T[0] && str_contains($p['rows'][0]['reason'],'dikecualikan'),'guru dikecualikan masih boleh dilantik jika tiada calon lain');
 });
 } finally { if($s=school_find('UJI9103')) school_delete($s); }
 echo "\n$checks semakan indeks beban lulus.\n";
