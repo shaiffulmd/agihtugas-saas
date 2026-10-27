@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.9'=>['2026-10-27',[
+        'Prestasi: agihan automatik 5× lebih laju bagi sekolah besar (900+ jawatan: susun semula 337 → 65 ms) dengan keputusan yang sama persis.',
+        'Halaman dimampatkan gzip dan aset statik disimpan oleh pelayar (public_html/.htaccess) — cth. senarai 900 jawatan 906 KB → 25 KB dipindahkan.',
+        'Panel Urus beban lebih ringan: 25 calon pindahan dengan indeks terendah, dan "ambil tugas" hanya daripada guru yang lebih berat.',
+        'Kurang kerja berulang: indeks beban tidak dikira dua kali di Agihan Tugas, semakan modul hebahan tanpa query information_schema setiap permintaan, carian jadual lebih pantas.',
+    ]],
     '1.8'=>['2026-10-27',[
         'Jadual skor peranan (Jawatan & Pemberat): senarai standard daripada sistem asal — Ketua Panitia 5; Pengerusi, Guru Kelas, Timbalan Ketua Warden, Setiausaha Warden 4; Setiausaha, Penyelaras, Bendahari, Warden 3; penolong 2; AJK, Juruaudit, Guru Penasihat 1 — boleh disunting, ditambah dan dipadam.',
         'Borang jawatan: pilih peranan dan pemberat diisi ikut skor peranan. Menukar skor peranan mengemas kini semua jawatan peranan itu.',

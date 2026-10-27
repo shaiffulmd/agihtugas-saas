@@ -13,3 +13,14 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [L]
 </IfModule>
+# Mampatan gzip untuk HTML/CSS/JS/JSON/SVG (halaman besar seperti senarai jawatan mengecil ~90%). PDF & imej tidak dimampatkan.
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+# Aset statik disimpan 7 hari oleh pelayar. CSS/JS utama dirujuk dengan ?v=hash (asset()) jadi kemas kini terus berkuat kuasa;
+# fail tanpa versi (fonts.css, ralat.html) paling lama 7 hari.
+<IfModule mod_headers.c>
+<FilesMatch "\.(css|js|woff2|png|webp|jpg|svg|ico)$">
+Header set Cache-Control "public, max-age=604800"
+</FilesMatch>
+</IfModule>

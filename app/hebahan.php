@@ -13,7 +13,8 @@ const HEBAHAN_GAYA=[
 ];
 const HEBAHAN_MAX=20000;
 
-function hebahan_ready(): bool { static $ok=null; return $ok??=table_exists('staff_notices'); }
+/** Jadual hebahan wujud? Pemasangan sedia (fail kunci sepadan) sentiasa mempunyai skema penuh — elak query information_schema setiap permintaan. */
+function hebahan_ready(): bool { static $ok=null; return $ok??=((function_exists('app_status') && app_status()==='ready') || table_exists('staff_notices')); }
 /** Penerima hebahan: semua peranan sekolah selain pentadbir (PK, GB/Pengetua, guru). */
 const HEBAHAN_ROLES=['pk','head','teacher'];
 const BULAN_MS=[1=>'Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];

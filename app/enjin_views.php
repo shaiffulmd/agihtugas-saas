@@ -20,12 +20,12 @@ function engine_delete_button(string $action,int $id,string $msg='Padam rekod in
 function search_box(string $table,string $placeholder): string { return '<div class="toolbar"><label class="search"><span class="sr-only">Cari</span><input type="search" data-search="'.e($table).'" placeholder="'.e($placeholder).'"></label></div>'; }
 
 /** Notis kepada perancang selepas draf dikembalikan: siapa, bila, sebab dan guru ditanda (beban semasa). */
-function return_notice(?array $ri,string $back=''): string {
+function return_notice(?array $ri,string $back='',?array $idx=null): string {
     if(!$ri) return '';
     $h='<section class="notice error return-notice" id="notis-pulang" role="status"><div><strong>'.(($ri['from']??'')==='finalized'?'Draf pindaan dibuka':'Dikembalikan untuk semakan semula').'</strong> oleh '.e(($n=trim((string)($ri['by_name']??'')))!=='' && str_contains($n,role_label((string)($ri['role']??'')))?$n:trim($n.' ('.role_label((string)($ri['role']??'')).')')).' pada '.e(workflow_time($ri['at']??null)).'.';
     if(($ri['reason']??'')!=='') $h.='<p class="return-reason">“'.e($ri['reason']).'”</p>';
     if($ri['flags']){
-        $by=load_index()['teachers']; $plan=can_plan(); $done=count($ri['resolved']); $total=count($ri['flags']);
+        $by=($idx??load_index())['teachers']; $plan=can_plan(); $done=count($ri['resolved']); $total=count($ri['flags']);
         $h.='<p>'.$total.' guru ditanda untuk disemak semula'.($done?' · <strong>'.$done.' selesai dibaiki</strong>':'').':</p><ul class="flag-list">';
         foreach($ri['flags'] as $id) if(isset($by[$id])){ $t=$by[$id]; $r=$ri['resolved'][$id]??null;
             $h.='<li class="'.($r?'is-resolved':'').'"><strong>'.($plan?'<a href="/?page=agihan&amp;guru='.$id.'#beban-guru" title="Urus beban">'.e($t['name']).'</a>':e($t['name'])).'</strong> — '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · '.(int)$t['task_count'].' tugas '.index_badge($t);
@@ -163,7 +163,7 @@ function agihan_page(): void {
     $B=$idx['basis']; $S=$idx['settings'];
     $ri=workflow_return_info(); $flag=workflow_flagged(); $only=$flag && isset($_GET['tanda']); $focus=$idx['teachers'][(int)input('guru','get')]??null;
     ?><div class="page-heading"><div><span class="eyebrow teal">PERANCANGAN SESI <?= e(setting('session_year')?:date('Y')) ?></span><h1>Agihan Tugas</h1><p class="muted">Pilih penyandang untuk setiap jawatan. Beban guru dikemas kini selepas disimpan.</p></div><?php if(feature_on('auto')): ?><a class="btn primary" href="/?page=auto"><?= icon('filter') ?>Agihan automatik</a><?php else: ?><a class="btn outline" href="/?page=auto"><?= icon('filter') ?>Agihan automatik · Pro</a><?php endif; ?></div>
-<?= return_notice($ri) ?>
+<?= return_notice($ri,'',$idx) ?>
 <?= $focus?teacher_load_panel($focus,$idx,$positions,$teachers):'' ?>
 <section class="panel editor-panel"><div class="panel-heading"><div><h3>Tetapkan lantikan</h3><p class="muted">Memilih jawatan yang telah diisi akan memindahkannya kepada guru baharu.</p></div></div><form method="post" class="form-grid padded"><?= csrf_field() ?><input type="hidden" name="action" value="agih">
 <label class="field">Jawatan<select name="position_id" id="pilih-jawatan" required data-searchable="1"><option value="">Pilih jawatan</option><?php foreach($positions as $p): ?><option value="<?= (int)$p['id'] ?>" data-weight="<?= (int)$p['weight'] ?>" data-score="<?= position_score($p) ?>" data-current="<?= (int)$p['teacher_id'] ?>"><?= e($p['name']) ?> · <?= (int)$p['weight'] ?> mata<?= $p['teacher_id']?' (telah diisi)':'' ?></option><?php endforeach; ?></select></label>
@@ -251,9 +251,11 @@ function teacher_load_panel(array $t,array $idx,array $positions,array $ranked):
         $h.='<div class="padded-x flag-row"><span class="badge '.($r?'green">✓ Selesai dibaiki':'warn">Ditanda oleh '.e(role_label((string)$ri['role'])).' untuk semakan semula').'</span>'.flag_resolve_button($id,!$r,'guru:'.$id).'</div>'; }
     if($w=array_diff($t['warnings'],['terbeban','kurang'])) $h.='<p class="padded-x warning-text">'.e(implode(' · ',array_map(fn($k)=>INDEX_WARNINGS[$k],$w))).'</p>';
     $h.='<div class="table-wrap"><table><thead><tr><th>Jawatan dipegang</th><th>Skor</th><th>Pindahkan kepada guru lain / lepaskan</th></tr></thead><tbody>';
+    // Calon pindahan: 25 guru dikira dengan indeks terendah (sekolah besar: elak ribuan pilihan). Guru lain melalui "Tetapkan lantikan".
+    $cands=array_slice(array_values(array_filter($ranked,fn($c)=>(int)$c['id']!==$id && $c['counted'])),0,25);
     foreach($mine as $p){ $ps=position_score($p); $after=index_after($t,-$ps,$idx);
         $opts='<option value="">Pilih guru (indeks sekarang → selepas)</option>';
-        foreach($ranked as $c){ if((int)$c['id']===$id) continue; $na=index_after($c,$ps,$idx); $opts.='<option value="'.(int)$c['id'].'">'.e($c['name']).' · '.($c['index']!==null?$num($c['index']).' → '.$num($na):e(INDEX_LABELS[$c['label']][0])).' · '.(int)$c['load'].'+'.(int)$p['weight'].'/'.(int)$c['capacity'].' mata</option>'; }
+        foreach($cands as $c){ $na=index_after($c,$ps,$idx); $opts.='<option value="'.(int)$c['id'].'">'.e($c['name']).' · '.($c['index']!==null?$num($c['index']).' → '.$num($na):e(INDEX_LABELS[$c['label']][0])).' · '.(int)$c['load'].'+'.(int)$p['weight'].'/'.(int)$c['capacity'].' mata</option>'; }
         $h.='<tr><td><strong>'.e($p['name']).'</strong><small class="cell-sub">'.e($p['category']).($t['index']!==null?' · indeks '.e($t['name']).' jadi '.$num($after).' jika dipindahkan':'').'</small></td><td>'.rtrim(rtrim(number_format($ps,2),'0'),'.').'</td>'
             .'<td><form method="post" class="inline-move">'.csrf_field().'<input type="hidden" name="action" value="agih"><input type="hidden" name="position_id" value="'.(int)$p['id'].'">'.$hidden.'<select name="teacher_id" required aria-label="Guru baharu untuk '.e($p['name']).'">'.$opts.'</select><button class="btn sm primary" type="submit">⇄ Pindah</button></form>'
             .'<form method="post" class="delete-form move-release" data-confirm="Lepaskan '.e($p['name']).' daripada '.e($t['name']).'? Jawatan menjadi kosong.">'.csrf_field().'<input type="hidden" name="action" value="agih_lepas"><input type="hidden" name="id" value="'.(int)$p['assignment_id'].'">'.$hidden.'<button class="delete-btn" type="submit">Lepaskan sahaja (jadi kosong)</button></form></td></tr>';
@@ -261,16 +263,19 @@ function teacher_load_panel(array $t,array $idx,array $positions,array $ranked):
     if(!$mine) $h.='<tr><td colspan="3" class="muted">Tiada jawatan dipegang.</td></tr>';
     $h.='</tbody></table></div>';
     // Tambah tugas: jawatan kosong, atau ambil daripada guru lain (guru paling terbeban dahulu) — sesuai untuk guru kurang beban.
-    $by=$idx['teachers']; $others=array_values(array_filter($positions,fn($p)=>$p['teacher_id']!==null && (int)$p['teacher_id']!==$id));
+    $by=$idx['teachers']; $mine_i=$t['index']??-1;
+    // Ambil hanya daripada guru yang lebih berat (indeks lebih tinggi) — maksimum 150 pilihan, paling terbeban dahulu.
+    $others=array_values(array_filter($positions,fn($p)=>$p['teacher_id']!==null && (int)$p['teacher_id']!==$id && (($by[(int)$p['teacher_id']]['index']??-1)>$mine_i || $t['index']===null)));
     usort($others,fn($a,$b)=>[-($by[(int)$a['teacher_id']]['index']??-1),-position_score($a),$a['name']]<=>[-($by[(int)$b['teacher_id']]['index']??-1),-position_score($b),$b['name']]);
     $mineAfter=fn(array $p)=>$t['index']!==null?' · '.e($t['name']).' jadi '.$num(index_after($t,position_score($p),$idx)):'';
     $opts='<option value="">Pilih jawatan</option>';
     if($vacant){ $opts.='<optgroup label="Jawatan kosong ('.count($vacant).')">'; foreach($vacant as $p) $opts.='<option value="'.(int)$p['id'].'">'.e($p['name']).' · '.(int)$p['weight'].' mata'.$mineAfter($p).'</option>'; $opts.='</optgroup>'; }
-    if($others){ $opts.='<optgroup label="Ambil daripada guru lain (paling terbeban dahulu)">'; foreach($others as $p){ $o=$by[(int)$p['teacher_id']]??null; if(!$o) continue;
+    $others=array_slice($others,0,150);
+    if($others){ $opts.='<optgroup label="Ambil daripada guru lebih berat (paling terbeban dahulu)">'; foreach($others as $p){ $o=$by[(int)$p['teacher_id']]??null; if(!$o) continue;
         $opts.='<option value="'.(int)$p['id'].'">'.e($p['name']).' · daripada '.e($o['name']).($o['index']!==null?' ('.$num($o['index']).' → '.$num(index_after($o,-position_score($p),$idx)).')':'').$mineAfter($p).'</option>'; } $opts.='</optgroup>'; }
     $h.='<form method="post" class="form-grid padded add-task" id="tambah-tugas">'.csrf_field().'<input type="hidden" name="action" value="agih"><input type="hidden" name="teacher_id" value="'.$id.'">'.$hidden
         .'<label class="field">Tambah tugas kepada '.e($t['name']).'<select name="position_id" required data-searchable="1">'.$opts.'</select><small class="muted">Jawatan daripada guru lain akan dipindahkan kepada '.e($t['name']).'.</small></label><div class="form-actions align-end"><button class="btn primary" type="submit">'.icon('plus').'Tambah tugas</button></div></form>';
-    return $h.'<p class="muted small-note padded-x">Anggaran indeks menganggap median sekolah tidak berubah; indeks sebenar dikira semula selepas disimpan.</p></section>';
+    return $h.'<p class="muted small-note padded-x">Senarai calon pindahan memaparkan 25 guru dengan indeks terendah; guru lain boleh dipilih di "Tetapkan lantikan". Anggaran indeks menganggap median sekolah tidak berubah; indeks sebenar dikira semula selepas disimpan.</p></section>';
 }
 
 /* ---------- Pusat Syarat ---------- */

@@ -100,8 +100,11 @@ function allocation_preview(string $mode): array {
     $unfilled=[];
     foreach($pending as $item){
         $p=$item['position']; $candidates=[]; $blocked=[];
-        foreach($item['eligible'] as $tid){ $issue=allocation_limits($teachers[$tid],$p,$rules); if($issue){ $blocked[$issue]=true; continue; } $candidates[]=$tid; }
-        usort($candidates,fn($a,$b)=>[($teachers[$a]['load']+$p['weight'])/$teachers[$a]['capacity'],$teachers[$a]['task_count'],$teachers[$a]['categories'][$p['category']],$a]<=>[($teachers[$b]['load']+$p['weight'])/$teachers[$b]['capacity'],$teachers[$b]['task_count'],$teachers[$b]['categories'][$p['category']],$b]);
+        // Calon terbaik = kunci terkecil [nisbah beban selepas lantikan, bil. tugas, tugas bidang ini, ID] — carian minimum O(n), bukan isihan penuh.
+        $bestKey=null;
+        foreach($item['eligible'] as $tid){ $issue=allocation_limits($teachers[$tid],$p,$rules); if($issue){ $blocked[$issue]=true; continue; }
+            $t=$teachers[$tid]; $k=[($t['load']+$p['weight'])/$t['capacity'],$t['task_count'],$t['categories'][$p['category']],$tid];
+            if($bestKey===null || $k<$bestKey){ $bestKey=$k; $candidates=[$tid]; } }
         if(!$candidates){ $reason=$item['eligible']?implode(', ',array_keys($blocked)):'Tiada guru yang memenuhi kelayakan / pengecualian'; $reasons[$p['id']]=$reason; $unfilled[]=['position_id'=>$p['id'],'position_name'=>$p['name'],'reason'=>$reason]; continue; }
         $tid=$candidates[0]; $mapping[$p['id']]=$tid; allocation_add($teachers[$tid],$p,$rules['heavy_threshold']);
         $reasons[$p['id']]=$item['fixed']?'Penyandang tetap yang memenuhi syarat':'Nisbah beban selepas lantikan terendah antara calon yang layak';

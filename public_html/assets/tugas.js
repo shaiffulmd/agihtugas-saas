@@ -1,10 +1,15 @@
 // UrusTugas — tingkah laku modul agihan tugas (patuh CSP: fail berasingan, tiada skrip sebaris).
-document.querySelectorAll('[data-search]').forEach(input => input.addEventListener('input', () => {
+// Carian jadual: teks setiap baris dikira sekali (jadual besar beratus baris) dan penapisan ditangguhkan sedikit semasa menaip.
+document.querySelectorAll('[data-search]').forEach(input => {
   const table = document.getElementById(input.dataset.search); if (!table) return;
-  const q = input.value.trim().toLocaleLowerCase('ms'); let visible = 0;
-  table.querySelectorAll('tbody tr').forEach(row => { row.hidden = !row.textContent.toLocaleLowerCase('ms').includes(q); if (!row.hidden) visible++; });
-  const empty = table.parentElement.querySelector('.search-empty'); if (empty) empty.hidden = visible > 0;
-}));
+  let rows = null, timer = 0;
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => {
+    rows ??= [...table.querySelectorAll('tbody tr')].map(row => [row, row.textContent.toLocaleLowerCase('ms')]);
+    const q = input.value.trim().toLocaleLowerCase('ms'); let visible = 0;
+    rows.forEach(([row, text]) => { row.hidden = !text.includes(q); if (!row.hidden) visible++; });
+    const empty = table.parentElement.querySelector('.search-empty'); if (empty) empty.hidden = visible > 0;
+  }, 80); });
+});
 const posSel = document.getElementById('pilih-jawatan'), teacherSel = document.getElementById('pilih-guru');
 function loadPreview() {
   if (!posSel?.value || !teacherSel?.value) return;
