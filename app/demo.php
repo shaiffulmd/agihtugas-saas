@@ -78,6 +78,7 @@ function demo_seed(string $type='SMK'): void {
         school_engine_init();
         // Katalog mata pelajaran daripada senarai standard (KSSR + KP2027 untuk SK; KSSM + KP2027 untuk SMK).
         foreach($type==='SK'?['kssr','kp2027_sr']:['kssm','kp2027_sm'] as $k) try { subjects_import($k,array_merge(...array_values(SUBJECT_TEMPLATES[$k][3]))); } catch(EngineError) {}
+        roles_install_standard(); // jadual skor peranan standard; jawatan demo boleh dipadankan di Jawatan & Pemberat
         // Guru, jawatan & lantikan contoh (data seed UrusTugas asal): 12 guru, 24 jawatan, 20 lantikan, status Draf.
         $tid=[]; foreach(DEMO_TEACHERS as $i=>[$n,$spec,$cap,$per,$exam,$st]){ query('INSERT INTO teachers(school_id,name,email,specialty,capacity,teaching_periods,exam_class,status) VALUES ('.sid().',?,?,?,?,?,?,?)',[$n,'guru'.($i+1).'@sekolah.demo',$spec,$cap,$per,$exam,$st]); $tid[$i+1]=(int)db()->lastInsertId(); }
         $pid=[]; foreach(DEMO_POSITIONS as $i=>$r){ query('INSERT INTO positions(school_id,name,category,weight,level,term) VALUES ('.sid().',?,?,?,?,?)',[$r[0],$r[1],$r[2],$r[3]??'sokongan',$r[4]??'tahunan']); $pid[$i+1]=(int)db()->lastInsertId(); }

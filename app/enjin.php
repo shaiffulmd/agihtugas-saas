@@ -88,15 +88,18 @@ function teacher_delete(int $id): void {
 
 /* ---------- Jawatan ---------- */
 function positions_with_holder(?int $id=null): array {
-    return query('SELECT p.*,a.id AS assignment_id,a.teacher_id,t.name AS teacher_name FROM positions p LEFT JOIN assignments a ON a.position_id=p.id AND a.school_id=p.school_id LEFT JOIN teachers t ON t.id=a.teacher_id AND t.school_id=a.school_id WHERE p.school_id='.sid().($id!==null?' AND p.id='.(int)$id:'').' ORDER BY FIELD(p.category,"Pentadbiran","Kurikulum","HEM","Kokurikulum"),p.name,p.id')->fetchAll();
+    return query('SELECT p.*,a.id AS assignment_id,a.teacher_id,t.name AS teacher_name,r.name AS role_name FROM positions p LEFT JOIN assignments a ON a.position_id=p.id AND a.school_id=p.school_id LEFT JOIN teachers t ON t.id=a.teacher_id AND t.school_id=a.school_id LEFT JOIN roles r ON r.id=p.role_id AND r.school_id=p.school_id WHERE p.school_id='.sid().($id!==null?' AND p.id='.(int)$id:'').' ORDER BY FIELD(p.category,"Pentadbiran","Kurikulum","HEM","Kokurikulum"),p.name,p.id')->fetchAll();
 }
 function position_find(int $id): ?array { return query('SELECT * FROM positions WHERE id=? AND school_id='.sid(),[$id])->fetch()?:null; }
 function position_validate(array $data): array {
     $name=trim((string)($data['name']??'')); $cat=(string)($data['category']??''); $w=$data['weight']??null;
     if($name==='' || mb_strlen($name)>160) throw new EngineError('Nama jawatan diperlukan (maksimum 160 aksara).');
     if(!in_array($cat,CATEGORIES,true)) throw new EngineError('Bidang mesti Pentadbiran, Kurikulum, HEM atau Kokurikulum.');
+    // Peranan dipilih → pemberat ikut skor peranan (input pemberat diabaikan).
+    $role=null; if(array_key_exists('role_id',$data) && $data['role_id']!==null){ $role=is_int($data['role_id'])?role_find($data['role_id']):null; if(!$role) throw new EngineError('Peranan tidak ditemui.',404,'not_found'); $w=(int)$role['score']; }
     if(!is_int($w) || $w<1 || $w>10) throw new EngineError('Pemberat mesti integer 1–10.');
     $out=['name'=>$name,'category'=>$cat,'weight'=>$w];
+    if(array_key_exists('role_id',$data)) $out['role_id']=$role?(int)$role['id']:null;
     if(array_key_exists('level',$data)){ if(!isset(POSITION_LEVELS[$data['level']])) throw new EngineError('Tahap mesti utama, sokongan atau sampingan.'); $out['level']=$data['level']; }
     if(array_key_exists('term',$data)){ if(!isset(POSITION_TERMS[$data['term']])) throw new EngineError('Tempoh mesti tahunan, bermusim atau program.'); $out['term']=$data['term']; }
     return $out;
@@ -184,6 +187,59 @@ function bulk_source(string $field='csv',string $textField='bulk_text'): string 
         $text=(string)file_get_contents((string)$f['tmp_name']);
     }
     return $text;
+}
+
+/* ---------- Peranan & skor ----------
+ * Jadual skor peranan setiap sekolah. Jawatan yang memilih peranan mengambil pemberat = skor peranan; menukar skor mengemas kini semua jawatan peranan itu.
+ * Senarai standard daripada sistem asal (Sistem Agihan Tugas v4). */
+const ROLE_STANDARD=[['Pengerusi',4],['Timbalan Pengerusi',3],['Naib Pengerusi',3],['Penyelaras',3],['Timbalan Ketua Warden',4],['Setiausaha',3],['Guru Kelas',4],['Setiausaha Warden',4],
+    ['Ketua Panitia',5],['Bendahari',3],['Ketua Guru Penasihat',3],['Warden',3],['Ketua Guru Pengawas',3],['Penolong Setiausaha',2],['Penolong Bendahari',2],['Penolong Ketua Guru Penasihat',2],
+    ['AJK Jadual Waktu',2],['AJK',1],['Juruaudit',1],['Guru Penasihat',1]];
+function roles_all(): array {
+    return query('SELECT r.id,r.name,r.score,r.sort,(SELECT COUNT(*) FROM positions p WHERE p.school_id=r.school_id AND p.role_id=r.id) AS positions FROM roles r WHERE r.school_id='.sid().' ORDER BY r.sort,r.name')->fetchAll();
+}
+function role_find(int $id): ?array { return query('SELECT * FROM roles WHERE id=? AND school_id='.sid(),[$id])->fetch()?:null; }
+/** Cipta (id 0) atau kemas kini peranan. Skor berubah → pemberat jawatan peranan itu dikemas kini. Pulangkan [id, bilangan jawatan dikemas kini]. */
+function role_save(int $id,array $d): array {
+    $name=trim(preg_replace('/\s+/u',' ',(string)($d['name']??''))); $score=$d['score']??null;
+    if($name==='' || mb_strlen($name)>60) throw new EngineError('Nama peranan diperlukan (maksimum 60 aksara).');
+    if(!is_int($score) || $score<1 || $score>10) throw new EngineError('Skor peranan mesti integer 1–10.');
+    if($id && !role_find($id)) throw new EngineError('Peranan tidak ditemui.',404,'not_found');
+    if(query('SELECT 1 FROM roles WHERE school_id='.sid().' AND name=? AND id<>?',[$name,$id])->fetchColumn()) throw new EngineError('Peranan "'.$name.'" sudah ada.',409);
+    if(!$id){ query('INSERT INTO roles (school_id,name,score,sort) VALUES ('.sid().',?,?,(SELECT n FROM (SELECT COALESCE(MAX(sort),0)+1 AS n FROM roles WHERE school_id='.sid().') x))',[$name,$score]); return [(int)db()->lastInsertId(),0]; }
+    query('UPDATE roles SET name=?,score=? WHERE id=? AND school_id='.sid(),[$name,$score,$id]);
+    return [$id,query('UPDATE positions SET weight=? WHERE school_id='.sid().' AND role_id=? AND weight<>?',[$score,$id,$score])->rowCount()];
+}
+/** Padam peranan; jawatan berkaitan kekal dengan pemberat semasa (tanpa peranan). */
+function role_delete(int $id): array {
+    $r=role_find($id); if(!$r) throw new EngineError('Peranan tidak ditemui.',404,'not_found');
+    query('UPDATE positions SET role_id=NULL WHERE school_id='.sid().' AND role_id=?',[$id]); query('DELETE FROM roles WHERE id=? AND school_id='.sid(),[$id]); return $r;
+}
+/** Tambah peranan standard yang belum ada (nama tanpa beza huruf). Pulangkan bilangan ditambah. */
+function roles_install_standard(): int {
+    $have=array_flip(array_map('mb_strtolower',array_column(roles_all(),'name'))); $n=0;
+    foreach(ROLE_STANDARD as $i=>[$name,$score]) if(!isset($have[mb_strtolower($name)])){ query('INSERT INTO roles (school_id,name,score,sort) VALUES ('.sid().',?,?,?)',[$name,$score,$i+1]); $n++; }
+    return $n;
+}
+/** Peranan yang sepadan dengan nama jawatan: nama jawatan bermula dengan nama peranan (padanan terpanjang). */
+function role_match(string $position,array $roles): ?array {
+    $p=mb_strtolower(trim($position)); $best=null;
+    foreach($roles as $r){ $n=mb_strtolower($r['name']); if(($p===$n || str_starts_with($p,$n.' ')) && (!$best || mb_strlen($n)>mb_strlen($best['name']))) $best=$r; }
+    return $best;
+}
+/** Cadangan peranan bagi jawatan yang belum berperanan: [{position, role, weight_before, weight_after}]. */
+function roles_match_preview(): array {
+    $roles=roles_all(); $out=[]; if(!$roles) return [];
+    foreach(query('SELECT id,name,category,weight FROM positions WHERE school_id='.sid().' AND role_id IS NULL ORDER BY name')->fetchAll() as $p)
+        if($r=role_match($p['name'],$roles)) $out[]=['position'=>$p,'role'=>$r,'weight_before'=>(int)$p['weight'],'weight_after'=>(int)$r['score']];
+    return $out;
+}
+/** Guna cadangan bagi jawatan terpilih (dikira semula di pelayan). Pulangkan bilangan jawatan dikemas kini. */
+function roles_match_apply(array $ids): int {
+    $want=array_flip(array_map('intval',$ids)); $n=0;
+    foreach(roles_match_preview() as $m) if(isset($want[(int)$m['position']['id']])){ query('UPDATE positions SET role_id=?,weight=? WHERE id=? AND school_id='.sid(),[(int)$m['role']['id'],$m['weight_after'],(int)$m['position']['id']]); $n++; }
+    if(!$n) throw new EngineError('Tiada jawatan dipilih untuk dipadankan.');
+    return $n;
 }
 
 /* ---------- Mata pelajaran ----------

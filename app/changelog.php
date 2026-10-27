@@ -6,6 +6,14 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.8'=>['2026-10-27',[
+        'Jadual skor peranan (Jawatan & Pemberat): senarai standard daripada sistem asal — Ketua Panitia 5; Pengerusi, Guru Kelas, Timbalan Ketua Warden, Setiausaha Warden 4; Setiausaha, Penyelaras, Bendahari, Warden 3; penolong 2; AJK, Juruaudit, Guru Penasihat 1 — boleh disunting, ditambah dan dipadam.',
+        'Borang jawatan: pilih peranan dan pemberat diisi ikut skor peranan. Menukar skor peranan mengemas kini semua jawatan peranan itu.',
+        '"Padankan jawatan ikut nama": cadangan peranan bagi jawatan sedia ada (cth. "Ketua Panitia Sains" → Ketua Panitia) dengan pratonton perubahan pemberat sebelum disimpan.',
+    ]],
+    '1.7'=>['2026-10-27',[
+        'Panel Urus beban guru: butang "+ Tambah tugas" sentiasa tersedia. Pilih jawatan kosong, atau ambil satu jawatan daripada guru lain — guru paling terbeban disenarai dahulu, dengan anggaran indeks kedua-dua guru selepas pemindahan.',
+    ]],
     '1.6'=>['2026-10-27',[
         'Guru ditanda oleh Guru Besar / Pengetua kini boleh ditandakan "selesai dibaiki" oleh PK atau Pentadbir — dari notis pemulangan (Agihan Tugas, Semakan & Kelulusan) atau panel Urus beban guru. Tanda boleh dibatalkan selagi draf belum dihantar.',
         'Notis memaparkan indeks semasa setiap guru ditanda dan bilangan yang selesai; apabila semua selesai, pautan terus untuk menghantar semula.',

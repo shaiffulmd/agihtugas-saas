@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
+const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -21,7 +21,7 @@ function handle_engine_action(string $action): never {
     $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','api_cipta'=>'api',
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
+    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api'][$action]??'sekolah';
     db()->beginTransaction();
     try {
@@ -29,6 +29,14 @@ function handle_engine_action(string $action): never {
         if(!in_array($action,['kelulusan','api_cipta','api_batal','indeks_tetapan'],true)) workflow_require_draft();
         $id=(int)input('id'); $msg=''; $anchor='';
         switch($action){
+            case 'peranan_save':
+                [$rid,$n]=role_save($id,['name'=>input('name'),'score'=>post_int('score',1,10,'Skor')]); audit($id?'role_update':'role_create','roles',$rid,mb_substr(input('name'),0,60).' = '.input('score'));
+                $msg='Peranan disimpan.'.($n?' Pemberat '.$n.' jawatan dikemas kini mengikut skor baharu.':''); $anchor='#peranan'; break;
+            case 'peranan_delete': $r=role_delete($id); audit('role_delete','roles',$id,(string)$r['name']); $msg='Peranan "'.$r['name'].'" dipadam. Jawatan berkaitan mengekalkan pemberat semasa.'; $anchor='#peranan'; break;
+            case 'peranan_standard': $n=roles_install_standard(); audit('role_standard','roles',null,$n.' peranan'); $msg=$n?$n.' peranan standard ditambah.':'Semua peranan standard sudah ada.'; $anchor='#peranan'; break;
+            case 'peranan_padan':
+                $n=roles_match_apply(array_filter((array)($_POST['ids']??[]),'is_string')); audit('role_match','positions',null,$n.' jawatan');
+                $msg=$n.' jawatan dipadankan dengan peranan; pemberat kini ikut skor peranan.'; break;
             case 'tanda_selesai':
                 $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru'); $done=input('done')==='1'; workflow_flag_resolve($tid,$done,$me);
                 audit($done?'flag_resolved':'flag_reopened','teachers',$tid,(string)(teacher_find($tid)['name']??''));
@@ -55,7 +63,8 @@ function handle_engine_action(string $action): never {
                 free_guard('guru',count($rows)); foreach($rows as $r) query('INSERT INTO teachers (school_id,name,email,specialty,capacity,teaching_periods) VALUES ('.sid().',?,?,?,?,?)',[$r['name'],$r['email'],$r['specialty'],$r['capacity'],$r['teaching_periods']??0]);
                 unset($_SESSION['guru_pukal']); audit('teacher_bulk','teachers',null,count($rows).' guru'); $msg=count($rows).' guru ditambah secara pukal.'; break;
             case 'jawatan_save':
-                $pid=position_save($id,['name'=>input('name'),'category'=>input('category'),'weight'=>post_int('weight',1,10,'Pemberat'),'level'=>input('level')?:'sokongan','term'=>input('term')?:'tahunan']);
+                $rid=input('role_id')===''?null:post_int('role_id',1,PHP_INT_MAX,'Peranan');
+                $pid=position_save($id,['name'=>input('name'),'category'=>input('category'),'weight'=>$rid?1:post_int('weight',1,10,'Pemberat'),'level'=>input('level')?:'sokongan','term'=>input('term')?:'tahunan','role_id'=>$rid]);
                 audit($id?'position_update':'position_create','positions',$pid,mb_substr(input('name'),0,120)); $msg='Jawatan dan pemberat disimpan.'; break;
             case 'jawatan_delete': $p=position_find($id); position_delete($id); audit('position_delete','positions',$id,(string)($p['name']??'')); $msg='Rekod jawatan dipadam.'; break;
             case 'jawatan_bulk_preview':

@@ -6,10 +6,10 @@ declare(strict_types=1);
  * Pemasangan hanya dibenarkan sekali: selepas berjaya, storage/installed.lock ditulis dan
  * semua laluan pemasangan menolak untuk berjalan semula.
  */
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.8';
 const APP_RELEASE = '2026-10-27'; // Tarikh keluaran (dipaparkan di footer). Sejarah perubahan: app/changelog.php
 // Naikkan setiap kali skema pangkalan data berubah (jadual/lajur baharu), walaupun APP_VERSION kekal.
-const APP_SCHEMA = '0.1-m5'; // m5: subjects (katalog mata pelajaran); m4: indeks beban — teachers.teaching_periods/exam_class/status/index_exempt, positions.level/term; m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
+const APP_SCHEMA = '0.1-m6'; // m6: roles (skor peranan) + positions.role_id; m5: subjects (katalog mata pelajaran); m4: indeks beban — teachers.teaching_periods/exam_class/status/index_exempt, positions.level/term; m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
 
 function install_lock_path(): string { return dirname(__DIR__).'/storage/installed.lock'; }
 function table_exists(string $t): bool { return (bool)query('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?',[$t])->fetchColumn(); }
@@ -42,7 +42,7 @@ function app_status(): string {
 function needs_upgrade(): bool {
     // Pemasangan bermula dengan skema penuh (database/schema.sql). Tambah semakan di sini apabila skema berubah.
     return !table_exists('platform_settings') || !column_exists('audit_logs','detail') || !table_exists('audit_heads')
-        || !column_exists('users','teacher_id') || !column_exists('workflow_state','return_info') || !column_exists('teachers','teaching_periods') || !column_exists('positions','level') || array_filter(ENGINE_TABLES,fn($t)=>!table_exists($t))!==[];
+        || !column_exists('users','teacher_id') || !column_exists('workflow_state','return_info') || !column_exists('teachers','teaching_periods') || !column_exists('positions','level') || !column_exists('positions','role_id') || array_filter(ENGINE_TABLES,fn($t)=>!table_exists($t))!==[];
 }
 
 /** Semakan keperluan pelayan. Setiap item: [label, status ok|warn|fail, butiran]. */
@@ -100,7 +100,7 @@ function create_platform_admin(string $name,string $email,string $password): int
     return (int)db()->lastInsertId();
 }
 /** Jadual enjin agihan tugas mengikut susunan cipta (induk dahulu). Rujukan: database/schema.sql. */
-const ENGINE_TABLES=['teachers','subjects','positions','assignments','position_rules','allocation_config','allocation_plans','workflow_revisions','workflow_state','school_assets','api_keys'];
+const ENGINE_TABLES=['teachers','subjects','roles','positions','assignments','position_rules','allocation_config','allocation_plans','workflow_revisions','workflow_state','school_assets','api_keys'];
 /** DDL satu jadual daripada database/schema.sql (sumber tunggal untuk pemasangan baharu & naik taraf). */
 function schema_ddl(string $table): string {
     $sql=(string)preg_replace('/^--.*$/m','',(string)file_get_contents(dirname(__DIR__).'/database/schema.sql'));
@@ -124,6 +124,7 @@ function run_upgrade(): array {
         $made[]='teachers (indeks beban)';
     }
     if(!column_exists('positions','level')){ db()->exec("ALTER TABLE positions ADD COLUMN level ENUM('utama','sokongan','sampingan') NOT NULL DEFAULT 'sokongan' AFTER weight, ADD COLUMN term ENUM('tahunan','bermusim','program') NOT NULL DEFAULT 'tahunan' AFTER level"); $made[]='positions.level/term'; }
+    if(!column_exists('positions','role_id')){ db()->exec('ALTER TABLE positions ADD COLUMN role_id BIGINT UNSIGNED NULL AFTER term, ADD CONSTRAINT positions_role_fk FOREIGN KEY(school_id,role_id) REFERENCES roles(school_id,id)'); $made[]='positions.role_id'; }
     $n=db()->exec('INSERT IGNORE INTO workflow_state(school_id) SELECT id FROM schools');
     if($made) $done[]='Enjin agihan tugas: '.implode(', ',$made).' dicipta; keadaan aliran (draf) disediakan untuk '.(int)$n.' sekolah';
     write_install_lock('upgrade'); $done[]='Fail kunci pemasangan dikemas kini ke versi '.APP_VERSION;

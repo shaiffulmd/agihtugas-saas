@@ -63,15 +63,24 @@ CREATE TABLE subjects (
  UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_name (school_id,name),
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+-- Peranan standard & skor (Pengerusi 4, Ketua Panitia 5, Setiausaha 3, AJK 1 …). Jawatan yang memilih peranan mengambil pemberat = skor peranan.
+CREATE TABLE roles (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(60) NOT NULL, score TINYINT UNSIGNED NOT NULL, sort SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_name (school_id,name),
+ CONSTRAINT role_score CHECK (score BETWEEN 1 AND 10),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 -- Jawatan / tugas. Bidang tetap (CATEGORIES dalam kod). Pemberat beban 1–10. level × term melaraskan skor tugas dalam indeks beban (bukan mata kapasiti).
 CREATE TABLE positions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL,
  category ENUM('Pentadbiran','Kurikulum','HEM','Kokurikulum') NOT NULL, weight TINYINT UNSIGNED NOT NULL,
- level ENUM('utama','sokongan','sampingan') NOT NULL DEFAULT 'sokongan', term ENUM('tahunan','bermusim','program') NOT NULL DEFAULT 'tahunan',
+ level ENUM('utama','sokongan','sampingan') NOT NULL DEFAULT 'sokongan', term ENUM('tahunan','bermusim','program') NOT NULL DEFAULT 'tahunan', role_id BIGINT UNSIGNED NULL,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  UNIQUE KEY school_row (school_id,id), INDEX(school_id,category,name),
  CONSTRAINT position_weight CHECK (weight BETWEEN 1 AND 10),
- FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
+ CONSTRAINT positions_role_fk FOREIGN KEY(school_id,role_id) REFERENCES roles(school_id,id)
 ) ENGINE=InnoDB;
 -- Lantikan: satu jawatan = satu penyandang. Guru/jawatan yang dilantik tidak boleh dipadam (RESTRICT).
 CREATE TABLE assignments (

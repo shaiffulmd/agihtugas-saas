@@ -98,3 +98,6 @@ a.index-link{text-decoration:none}a.index-link:hover .badge{outline:2px solid co
 /* Guru ditanda: tanda selesai */
 .flag-list li{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:.3rem 0}.flag-list li.is-resolved>strong{opacity:.75}
 .flag-resolve{display:inline-flex;margin-left:auto}.flag-row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem}
+/* Jadual skor peranan */
+.roles-table input{min-height:34px;padding:.3rem .5rem}.roles-table .score-input{width:5.5rem}
+input[readonly]{background:color-mix(in srgb,var(--ink) 5%,var(--surface));color:var(--muted)}

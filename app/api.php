@@ -41,7 +41,7 @@ function api_teacher(int $id,?array $idx=null): array {
 }
 function api_position(int $id): array {
     $p=positions_with_holder($id)[0]??null; if(!$p) api_fail(404,'not_found','Rekod tidak ditemui.');
-    unset($p['school_id'],$p['teacher_name']); foreach(['id','weight','assignment_id','teacher_id'] as $k) $p[$k]=$p[$k]!==null?(int)$p[$k]:null; $p['score']=position_score($p); return $p;
+    unset($p['school_id'],$p['teacher_name']); foreach(['id','weight','assignment_id','teacher_id','role_id'] as $k) $p[$k]=$p[$k]!==null?(int)$p[$k]:null; $p['score']=position_score($p); return $p;
 }
 function api_assignment(int $id): array {
     $a=query('SELECT a.id,a.teacher_id,a.position_id,a.created_at,t.name AS teacher_name,p.name AS position_name,p.category,p.weight FROM assignments a JOIN teachers t ON t.id=a.teacher_id AND t.school_id=a.school_id JOIN positions p ON p.id=a.position_id AND p.school_id=a.school_id WHERE a.id=? AND a.school_id='.sid(),[$id])->fetch();

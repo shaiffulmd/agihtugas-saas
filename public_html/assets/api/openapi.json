@@ -4461,6 +4461,11 @@
           "score": {
             "type": "number",
             "description": "weight × tahap × tempoh (indeks beban)"
+          },
+          "role_id": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Peranan dalam jadual skor (pemberat = skor peranan); null = pemberat sendiri"
           }
         }
       },

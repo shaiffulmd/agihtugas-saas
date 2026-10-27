@@ -40,3 +40,6 @@ document.querySelectorAll('[data-subject-pick]').forEach(box => {
   }));
   input.addEventListener('input', () => { const have = new Set(tokens().map(x => x.toLocaleLowerCase('ms'))); checks.forEach(c => { c.checked = have.has(c.value.toLocaleLowerCase('ms')); }); });
 });
+// Jawatan: peranan dipilih → pemberat ikut skor peranan (baca sahaja).
+const roleSel = document.getElementById('pilih-peranan'), weightInp = document.getElementById('pemberat-jawatan');
+roleSel?.addEventListener('change', () => { const o = roleSel.selectedOptions[0]; if (o?.dataset.score) weightInp.value = o.dataset.score; weightInp.readOnly = !!roleSel.value; });
