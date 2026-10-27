@@ -10,9 +10,17 @@ function loadPreview() {
   if (!posSel?.value || !teacherSel?.value) return;
   const p = posSel.selectedOptions[0].dataset, t = teacherSel.selectedOptions[0].dataset;
   const after = Number(t.load) + (p.current === teacherSel.value ? 0 : Number(p.weight)), cap = Number(t.capacity);
-  const hint = document.getElementById('anggaran-beban');
-  hint.textContent = `Beban selepas lantikan: ${after} / ${cap} mata.` + (after > cap ? ' Melebihi kapasiti — semak kesesuaian sebelum menyimpan.' : ' Masih dalam kapasiti guru.');
-  hint.classList.toggle('warning-text', after > cap);
+  const hint = document.getElementById('anggaran-beban'), h = hint.dataset;
+  // Anggaran indeks: median sekolah dianggap tidak berubah (indeks sebenar dikira semula selepas disimpan).
+  let idx = '', heavy = false;
+  if (t.index !== '' && Number(h.divScore) > 0) {
+    const score = Number(t.score) + (p.current === teacherSel.value ? 0 : Number(p.score)), share = Number(h.share);
+    const next = share * Number(t.teachRatio) + (1 - share) * score / Number(h.divScore);
+    heavy = next > Number(h.high);
+    idx = ` Indeks beban: ${Number(t.index).toFixed(2)} → ${next.toFixed(2)} (${heavy ? 'Terbeban' : next < Number(h.low) ? 'Kurang beban' : 'Seimbang'}, anggaran).`;
+  }
+  hint.textContent = `Beban selepas lantikan: ${after} / ${cap} mata.` + (after > cap ? ' Melebihi kapasiti — semak kesesuaian sebelum menyimpan.' : ' Masih dalam kapasiti guru.') + idx;
+  hint.classList.toggle('warning-text', after > cap || heavy);
 }
 posSel?.addEventListener('change', loadPreview); teacherSel?.addEventListener('change', loadPreview);
 document.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('click', () => {

@@ -4200,6 +4200,28 @@
             "type": "string",
             "nullable": true,
             "maxLength": 160
+          },
+          "teaching_periods": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60,
+            "description": "Masa mengajar seminggu (0 = belum diisi)"
+          },
+          "exam_class": {
+            "type": "boolean",
+            "description": "Mengajar kelas peperiksaan"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aktif",
+              "cuti",
+              "bertukar"
+            ]
+          },
+          "index_exempt": {
+            "type": "boolean",
+            "description": "Pentadbir: tidak dikira dalam indeks beban"
           }
         }
       },
@@ -4225,6 +4247,24 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 10
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "utama",
+              "sokongan",
+              "sampingan"
+            ],
+            "default": "sokongan"
+          },
+          "term": {
+            "type": "string",
+            "enum": [
+              "tahunan",
+              "bermusim",
+              "program"
+            ],
+            "default": "tahunan"
           }
         }
       },
@@ -4304,6 +4344,75 @@
           },
           "over_capacity": {
             "type": "boolean"
+          },
+          "teaching_periods": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60,
+            "description": "Masa mengajar seminggu (0 = belum diisi)"
+          },
+          "exam_class": {
+            "type": "boolean",
+            "description": "Mengajar kelas peperiksaan"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aktif",
+              "cuti",
+              "bertukar"
+            ]
+          },
+          "index_exempt": {
+            "type": "boolean",
+            "description": "Pentadbir: tidak dikira dalam indeks beban"
+          },
+          "load_index": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "number",
+                "nullable": true
+              },
+              "label": {
+                "type": "string",
+                "enum": [
+                  "terbeban",
+                  "seimbang",
+                  "kurang",
+                  "belum",
+                  "dikecualikan",
+                  "tidak_aktif"
+                ]
+              },
+              "score": {
+                "type": "number"
+              },
+              "teaching": {
+                "type": "number"
+              },
+              "teaching_ratio": {
+                "type": "number",
+                "nullable": true
+              },
+              "task_ratio": {
+                "type": "number",
+                "nullable": true
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "terbeban",
+                    "kurang",
+                    "banyak",
+                    "tidak_aktif",
+                    "tiada_masa"
+                  ]
+                }
+              }
+            }
           }
         }
       },
@@ -4330,6 +4439,28 @@
           "teacher_id": {
             "type": "integer",
             "nullable": true
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "utama",
+              "sokongan",
+              "sampingan"
+            ],
+            "default": "sokongan"
+          },
+          "term": {
+            "type": "string",
+            "enum": [
+              "tahunan",
+              "bermusim",
+              "program"
+            ],
+            "default": "tahunan"
+          },
+          "score": {
+            "type": "number",
+            "description": "weight × tahap × tempoh (indeks beban)"
           }
         }
       },
@@ -4478,6 +4609,38 @@
                 "load": {
                   "type": "integer"
                 }
+              }
+            }
+          },
+          "load_index": {
+            "type": "object",
+            "properties": {
+              "overloaded": {
+                "type": "integer"
+              },
+              "balanced": {
+                "type": "integer"
+              },
+              "underloaded": {
+                "type": "integer"
+              },
+              "not_counted": {
+                "type": "integer"
+              },
+              "median_teaching": {
+                "type": "number"
+              },
+              "median_score": {
+                "type": "number"
+              },
+              "teaching_share": {
+                "type": "number"
+              },
+              "high": {
+                "type": "number"
+              },
+              "low": {
+                "type": "number"
               }
             }
           }

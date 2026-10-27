@@ -62,3 +62,7 @@ tr.row-flagged>td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--d
 .load-review td:first-child input{width:18px;height:18px;accent-color:var(--danger);cursor:pointer}.load-review label{cursor:pointer}
 tr.row-over>td{background:color-mix(in srgb,var(--danger) 4%,var(--surface))}
 .small-note{font-size:.82rem;margin:.2rem 0 .6rem}
+/* Indeks beban */
+.badge.info{background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary)}
+.index-cell{display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap}
+.index-steps{margin:.4rem 0 .8rem;padding-left:1.2rem;display:grid;gap:.4rem;font-size:.9rem}

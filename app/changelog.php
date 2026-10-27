@@ -6,6 +6,15 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.2'=>['2026-10-27',[
+        'Indeks Beban: setiap guru diberi satu nombor yang menggabungkan masa mengajar seminggu (60%) dan tugas jawatan (40%), dibandingkan dengan median guru di sekolah sendiri. 1.00 = setara guru biasa; lebih 1.30 Terbeban, bawah 0.70 Kurang beban.',
+        'Halaman baharu Analisis Beban (Pentadbir, PK, Guru Besar / Pengetua): bilangan guru terbeban / seimbang / kurang beban, senarai perlu perhatian, pecahan nisbah setiap guru dan tetapan indeks (bahagian mengajar, ambang, faktor kelas peperiksaan, had bilangan jawatan).',
+        'Profil guru: masa mengajar seminggu, kelas peperiksaan, status (Aktif / Cuti / Bertukar keluar) dan pengecualian pentadbir. Guru Cuti / Bertukar keluar tidak dicalonkan oleh agihan automatik.',
+        'Jawatan: tahap (Utama / Sokongan / Sampingan) dan tempoh (Sepanjang tahun / Bermusim / Program). Skor tugas = pemberat × tahap × tempoh; mata kapasiti sedia ada tidak berubah.',
+        'Amaran dalam bahasa biasa: Terbeban, Kurang beban, Banyak jawatan, Tidak aktif tetapi memegang lantikan, Masa mengajar belum diisi.',
+        'Agihan Tugas: calon disusun daripada indeks paling rendah, dengan anggaran indeks sekarang → jika dilantik.',
+        'API: guru memaparkan load_index dan menerima teaching_periods, exam_class, status, index_exempt; jawatan menerima level dan term serta memaparkan score; /summary menyertakan ringkasan load_index.',
+    ]],
     '1.1'=>['2026-10-26',[
         'API: GET /letters/{id} memulangkan kod 409 not_finalized (seperti /workflow/published dan dokumentasi) apabila belum ada versi muktamad, bukan workflow_locked.',
         'Guru Besar / Pengetua boleh menanda guru yang bebannya perlu disemak semula semasa mengembalikan draf (guru melebihi kapasiti ditanda secara automatik).',

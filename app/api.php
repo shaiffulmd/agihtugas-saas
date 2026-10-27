@@ -30,13 +30,18 @@ function api_method(string $m,array $allowed): void { if(!in_array($m,$allowed,t
 function api_audit(string $action,string $entity,?int $id,string $detail=''): void {
     $k=$GLOBALS['API_KEY']; audit($action,$entity,$id,mb_substr('API #'.$k['id'].' ('.$k['name'].')'.($detail!==''?': '.$detail:''),0,255));
 }
-function api_teacher(int $id): array {
+/** $idx = load_index() yang sudah dikira (senarai) — elak kira semula bagi setiap guru. */
+function api_teacher(int $id,?array $idx=null): array {
     $t=teachers_with_load($id)[0]??null; if(!$t) api_fail(404,'not_found','Rekod tidak ditemui.');
-    foreach(['id','capacity','load','task_count'] as $k) $t[$k]=(int)$t[$k]; unset($t['school_id']); $t['over_capacity']=$t['load']>$t['capacity']; return $t;
+    foreach(['id','capacity','load','task_count','teaching_periods'] as $k) $t[$k]=(int)$t[$k]; foreach(['exam_class','index_exempt'] as $k) $t[$k]=(bool)$t[$k];
+    unset($t['school_id']); $t['over_capacity']=$t['load']>$t['capacity'];
+    $x=($idx??load_index())['teachers'][$id];
+    $t['load_index']=['index'=>$x['index'],'label'=>$x['label'],'score'=>$x['score'],'teaching'=>$x['teaching'],'teaching_ratio'=>$x['teach_ratio'],'task_ratio'=>$x['task_ratio'],'warnings'=>$x['warnings']];
+    return $t;
 }
 function api_position(int $id): array {
     $p=positions_with_holder($id)[0]??null; if(!$p) api_fail(404,'not_found','Rekod tidak ditemui.');
-    unset($p['school_id'],$p['teacher_name']); foreach(['id','weight','assignment_id','teacher_id'] as $k) $p[$k]=$p[$k]!==null?(int)$p[$k]:null; return $p;
+    unset($p['school_id'],$p['teacher_name']); foreach(['id','weight','assignment_id','teacher_id'] as $k) $p[$k]=$p[$k]!==null?(int)$p[$k]:null; $p['score']=position_score($p); return $p;
 }
 function api_assignment(int $id): array {
     $a=query('SELECT a.id,a.teacher_id,a.position_id,a.created_at,t.name AS teacher_name,p.name AS position_name,p.category,p.weight FROM assignments a JOIN teachers t ON t.id=a.teacher_id AND t.school_id=a.school_id JOIN positions p ON p.id=a.position_id AND p.school_id=a.school_id WHERE a.id=? AND a.school_id='.sid(),[$id])->fetch();
@@ -51,6 +56,10 @@ function api_teacher_fields(array $body,array $prev=[]): array {
     $d=array_merge(['email'=>'','specialty'=>''],$prev,$body);
     $out=['name'=>api_str($d['name']??null,'name'),'email'=>api_str($d['email'],'email',190,false),'specialty'=>api_str($d['specialty'],'specialty',160,false),'capacity'=>api_int($d['capacity']??null,'capacity',1,100)];
     if(array_key_exists('external_id',$body)) $out['external_id']=$body['external_id']===null?null:api_str($body['external_id'],'external_id',160);
+    // Medan indeks beban: hanya yang dihantar (PATCH mengekalkan nilai lain).
+    if(array_key_exists('teaching_periods',$body)) $out['teaching_periods']=api_int($body['teaching_periods'],'teaching_periods',0,60);
+    foreach(['exam_class','index_exempt'] as $k) if(array_key_exists($k,$body)){ if(!is_bool($body[$k])) api_fail(422,'validation_error',"$k mesti boolean."); $out[$k]=$body[$k]; }
+    if(array_key_exists('status',$body)){ if(!is_string($body['status']) || !isset(TEACHER_STATUSES[$body['status']])) api_fail(422,'validation_error','status mesti aktif, cuti atau bertukar.'); $out['status']=$body['status']; }
     return $out;
 }
 
@@ -124,7 +133,7 @@ function api_route(string $method,string $path): never {
         api_respond(['created'=>count($ids),'ids'=>$ids],201);
     }
     if($path==='/api/v1/teachers/sync'){
-        api_method($method,['POST']); $body=api_body(['external_id','name','email','specialty','capacity']); $x=api_str($body['external_id']??null,'external_id',160);
+        api_method($method,['POST']); $body=api_body(['external_id','name','email','specialty','capacity','teaching_periods','exam_class','status','index_exempt']); $x=api_str($body['external_id']??null,'external_id',160);
         [$id,$new]=api_write(function()use($body,$x){
             $ex=query('SELECT * FROM teachers WHERE school_id='.sid().' AND external_id=?',[$x])->fetch();
             $v=api_teacher_fields($body,$ex?:['capacity'=>25]); $id=teacher_save($ex?(int)$ex['id']:0,$v);
@@ -137,7 +146,10 @@ function api_route(string $method,string $path): never {
     if($res==='summary' && !$id && !$child){
         api_method($method,['GET']); $t=teachers_with_load(); $c=engine_counts();
         $cat=array_map(fn($r)=>['category'=>$r['category'],'positions'=>(int)$r['positions'],'assigned'=>(int)$r['assigned'],'load'=>(int)$r['load']],query('SELECT p.category,COUNT(p.id) AS positions,COUNT(a.id) AS assigned,COALESCE(SUM(CASE WHEN a.id IS NOT NULL THEN p.weight ELSE 0 END),0) AS `load` FROM positions p LEFT JOIN assignments a ON a.position_id=p.id AND a.school_id=p.school_id WHERE p.school_id='.sid().' GROUP BY p.category')->fetchAll());
-        api_respond(['teachers'=>$c['teachers'],'positions'=>$c['positions'],'assigned'=>$c['assigned'],'vacant'=>$c['vacant'],'total_load'=>array_sum(array_map(fn($r)=>(int)$r['load'],$t)),'over_capacity'=>count(array_filter($t,fn($r)=>$r['load']>$r['capacity'])),'by_category'=>$cat]);
+        $idx=load_index(); $lab=array_count_values(array_column($idx['teachers'],'label'));
+        $li=['overloaded'=>$lab['terbeban']??0,'balanced'=>$lab['seimbang']??0,'underloaded'=>$lab['kurang']??0,'not_counted'=>($lab['dikecualikan']??0)+($lab['tidak_aktif']??0)+($lab['belum']??0),
+            'median_teaching'=>$idx['basis']['teaching'],'median_score'=>$idx['basis']['score'],'teaching_share'=>$idx['basis']['share'],'high'=>$idx['settings']['high'],'low'=>$idx['settings']['low']];
+        api_respond(['teachers'=>$c['teachers'],'positions'=>$c['positions'],'assigned'=>$c['assigned'],'vacant'=>$c['vacant'],'total_load'=>array_sum(array_map(fn($r)=>(int)$r['load'],$t)),'over_capacity'=>count(array_filter($t,fn($r)=>$r['load']>$r['capacity'])),'by_category'=>$cat,'load_index'=>$li]);
     }
     if($res==='letters' && $id && !$child){
         api_method($method,['GET']); $pub=workflow_published(); if(!$pub) api_fail(409,'not_finalized','Surat hanya tersedia selepas agihan dimuktamadkan.'); $doc=workflow_letter($id,$pub);
@@ -166,7 +178,8 @@ function api_route(string $method,string $path): never {
         if($res==='assignments') foreach(['teacher_id','position_id'] as $f) if(isset($_GET[$f])){ if(!is_string($_GET[$f]) || !ctype_digit($_GET[$f]) || (int)$_GET[$f]<1) api_fail(422,'validation_error',"$f tidak sah."); $where[]="r.$f=?"; $params[]=(int)$_GET[$f]; }
         $w=' WHERE '.implode(' AND ',$where); $total=(int)query("SELECT COUNT(*) FROM $res r$w",$params)->fetchColumn();
         $ids=query("SELECT r.id FROM $res r$w ORDER BY r.id LIMIT $per OFFSET ".(($page-1)*$per),$params)->fetchAll(PDO::FETCH_COLUMN);
-        api_respond(array_map(fn($n)=>$one((int)$n),$ids),200,['page'=>$page,'per_page'=>$per,'total'=>$total,'pages'=>(int)ceil($total/$per)]);
+        $idx=$res==='teachers' && $ids?load_index():null;
+        api_respond(array_map(fn($n)=>$idx?api_teacher((int)$n,$idx):$one((int)$n),$ids),200,['page'=>$page,'per_page'=>$per,'total'=>$total,'pages'=>(int)ceil($total/$per)]);
     }
     if($method==='DELETE'){
         api_write(function()use($res,$id){
@@ -175,7 +188,7 @@ function api_route(string $method,string $path): never {
         });
         api_respond(['id'=>$id,'deleted'=>true]);
     }
-    $fields=match($res){'teachers'=>['name','email','specialty','capacity','external_id'],'positions'=>['name','category','weight'],'assignments'=>['teacher_id','position_id']};
+    $fields=match($res){'teachers'=>['name','email','specialty','capacity','external_id','teaching_periods','exam_class','status','index_exempt'],'positions'=>['name','category','weight','level','term'],'assignments'=>['teacher_id','position_id']};
     $body=api_body($fields);
     $newId=api_write(function()use($res,$id,$body){
         if($res==='assignments'){
@@ -189,7 +202,9 @@ function api_route(string $method,string $path): never {
         }
         if($res==='teachers'){ $prev=$id?api_teacher($id):[]; $n=teacher_save((int)$id,api_teacher_fields($body,array_intersect_key($prev,array_flip(['name','email','specialty','capacity'])))); }
         else { $prev=$id?api_position($id):[]; $d=array_merge(array_intersect_key($prev,array_flip(['name','category','weight'])),$body);
-            $n=position_save((int)$id,['name'=>api_str($d['name']??null,'name'),'category'=>api_str($d['category']??null,'category'),'weight'=>api_int($d['weight']??null,'weight',1,10)]); }
+            $v=['name'=>api_str($d['name']??null,'name'),'category'=>api_str($d['category']??null,'category'),'weight'=>api_int($d['weight']??null,'weight',1,10)];
+            foreach(['level','term'] as $k) if(array_key_exists($k,$body)){ if(!is_string($body[$k])) api_fail(422,'validation_error',"$k mesti teks."); $v[$k]=$body[$k]; }
+            $n=position_save((int)$id,$v); }
         api_audit(($res==='teachers'?'teacher_':'position_').($id?'update':'create'),$res,$n); return $n;
     });
     if($method==='POST') header('Location: '.tenant_prefix().'/api/v1/'.$res.'/'.$newId);

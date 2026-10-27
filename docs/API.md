@@ -33,14 +33,16 @@ Badan POST/PATCH/PUT mesti objek JSON dengan Content-Type: application/json (mak
 
 Guru: `name` dan `capacity` (1–100) diperlukan ketika POST; `email` dan `specialty` pilihan. `external_id` pilihan dan unik, contoh `koku-multi:12:89`. POST /teachers/sync memerlukan external_id; guru baharu juga memerlukan name, dengan capacity lalai 25. Sync guru sedia ada mengekalkan medan yang tidak dihantar. Untuk memautkan rekod AgihTugas sedia ada, PATCH external_id dahulu supaya sync tidak mencipta rekod kedua. Hanya guru boleh dipautkan melalui external_id pada versi ini.
 
-Jawatan: `name`, `category` (Pentadbiran/Kurikulum/HEM/Kokurikulum), `weight` (1–10). Satu rekod jawatan ialah satu tempat lantikan.
+Jawatan: `name`, `category` (Pentadbiran/Kurikulum/HEM/Kokurikulum), `weight` (1–10). Satu rekod jawatan ialah satu tempat lantikan. Pilihan: `level` (`utama`/`sokongan`/`sampingan`, lalai sokongan) dan `term` (`tahunan`/`bermusim`/`program`, lalai tahunan). Respons menyertakan `score` = weight × tahap (1.5/1.0/0.5) × tempoh (1.0/0.6/0.3) yang digunakan dalam indeks beban; `weight` kekal sebagai mata kapasiti.
+
+Indeks beban (1.2): guru menerima medan pilihan `teaching_periods` (0–60 masa seminggu), `exam_class` (boolean), `status` (`aktif`/`cuti`/`bertukar`) dan `index_exempt` (boolean, pentadbir). PATCH dan sync mengekalkan medan yang tidak dihantar. Setiap objek guru menyertakan `load_index`: `index` (null jika tidak dikira), `label` (`terbeban`/`seimbang`/`kurang`/`belum`/`dikecualikan`/`tidak_aktif`), `score`, `teaching` (masa terlaras faktor peperiksaan), `teaching_ratio`, `task_ratio` dan `warnings` (`terbeban`, `kurang`, `banyak`, `tidak_aktif`, `tiada_masa`). Indeks = bahagian mengajar × teaching_ratio + baki × task_ratio, dengan nisbah dibandingkan dengan median guru aktif yang tidak dikecualikan (purata jika median 0). `/summary` menyertakan `load_index` (overloaded, balanced, underloaded, not_counted, median_teaching, median_score, teaching_share, high, low). Tetapan indeks diurus di UI (Analisis Beban), bukan API.
 
 Agihan: `teacher_id`, `position_id`. PATCH hanya boleh menukar teacher_id; position_id tidak boleh ditukar kepada jawatan lain.
 
 Senarai menyokong `page=1&per_page=50` (per_page maksimum 100), dengan `meta.total` dan `meta.pages`. teachers dan positions menyokong `q`; teachers menyokong `external_id`; positions menyokong `category`; assignments menyokong `teacher_id` dan `position_id`. Urutan senarai mengikut ID menaik.
 
 ```json
-{"data":{"id":13,"name":"Guru Contoh","capacity":25,"load":8,"task_count":1,"over_capacity":false},"request_id":"..."}
+{"data":{"id":13,"name":"Guru Contoh","capacity":25,"load":8,"task_count":1,"teaching_periods":28,"exam_class":false,"status":"aktif","index_exempt":false,"over_capacity":false,"load_index":{"index":0.94,"label":"seimbang","score":8,"teaching":28,"teaching_ratio":1,"task_ratio":0.85,"warnings":[]}},"request_id":"..."}
 ```
 
 Respons guru sebenar juga mengandungi email, specialty dan external_id. Respons berjaya: 200 atau 201 untuk ciptaan baharu. Penciptaan melalui POST CRUD menyertakan header Location. Semua respons menyertakan X-Request-ID. Ralat:

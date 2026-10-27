@@ -31,6 +31,8 @@ function setting_defaults(): array {
         'logo_mime'      => 'image/webp',
         'theme_version'  => '1',
         'twofa_policy'   => 'admin', 'school_type' => 'SMK',
+        // Indeks beban (Analisis Beban): bahagian mengajar %, ambang tinggi/rendah, faktor kelas peperiksaan, had bilangan jawatan.
+        'index_teach_share' => '60', 'index_high' => '1.30', 'index_low' => '0.70', 'index_exam_factor' => '1.0', 'index_max_tasks' => '8',
         // Surat lantikan (Profil Sekolah & Surat). Logo surat & Jata Negara = id aset dalam school_assets.
         'principal' => '', 'session_year' => '', 'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual', 'school_logo_id' => '', 'national_crest_id' => '',
         'reg_mode' => 'off', 'reg_domains' => '', 'login_captcha' => 'failures', 'ip_admin' => '', 'site_url' => '', 'mail_method' => 'platform', 'smtp_preset' => 'custom', 'mail_from' => '', 'mail_from_name' => '',

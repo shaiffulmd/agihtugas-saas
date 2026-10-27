@@ -36,12 +36,14 @@ CREATE TABLE IF NOT EXISTS health_log (
 
 -- ---------- Data sekolah ----------
 -- Guru (profil tugas, bukan akaun log masuk). external_id = ID sistem luar yang menyegerak melalui API (cth. "koku-multi:12:34"), unik dalam sekolah.
+-- Indeks beban: teaching_periods = masa mengajar seminggu (0 = belum diisi), exam_class = mengajar kelas peperiksaan, status cuti/bertukar & index_exempt (pentadbir) tidak dikira.
 CREATE TABLE teachers (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL, email VARCHAR(190) NOT NULL DEFAULT '',
  specialty VARCHAR(160) NOT NULL DEFAULT '', capacity TINYINT UNSIGNED NOT NULL, external_id VARCHAR(160) NULL,
+ teaching_periods TINYINT UNSIGNED NOT NULL DEFAULT 0, exam_class TINYINT NOT NULL DEFAULT 0, status ENUM('aktif','cuti','bertukar') NOT NULL DEFAULT 'aktif', index_exempt TINYINT NOT NULL DEFAULT 0,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_external (school_id,external_id), INDEX(school_id,name),
- CONSTRAINT teacher_capacity CHECK (capacity BETWEEN 1 AND 100),
+ CONSTRAINT teacher_capacity CHECK (capacity BETWEEN 1 AND 100), CONSTRAINT teacher_periods CHECK (teaching_periods<=60),
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 CREATE TABLE users (
@@ -54,10 +56,11 @@ CREATE TABLE users (
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
  CONSTRAINT users_teacher_fk FOREIGN KEY(school_id,teacher_id) REFERENCES teachers(school_id,id)
 ) ENGINE=InnoDB;
--- Jawatan / tugas. Bidang tetap (CATEGORIES dalam kod). Pemberat beban 1–10.
+-- Jawatan / tugas. Bidang tetap (CATEGORIES dalam kod). Pemberat beban 1–10. level × term melaraskan skor tugas dalam indeks beban (bukan mata kapasiti).
 CREATE TABLE positions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL,
  category ENUM('Pentadbiran','Kurikulum','HEM','Kokurikulum') NOT NULL, weight TINYINT UNSIGNED NOT NULL,
+ level ENUM('utama','sokongan','sampingan') NOT NULL DEFAULT 'sokongan', term ENUM('tahunan','bermusim','program') NOT NULL DEFAULT 'tahunan',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  UNIQUE KEY school_row (school_id,id), INDEX(school_id,category,name),
  CONSTRAINT position_weight CHECK (weight BETWEEN 1 AND 10),

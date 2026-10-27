@@ -5,6 +5,10 @@ declare(strict_types=1);
  * Ralat enjin ialah DomainException (dipaparkan sebagai notis borang) dengan kod status HTTP untuk API. */
 
 const CATEGORIES=['Pentadbiran','Kurikulum','HEM','Kokurikulum'];
+/** Tahap & tempoh jawatan: [label, faktor skor tugas]. Lalai sokongan × tahunan = 1.0, jadi skor = pemberat. */
+const POSITION_LEVELS=['utama'=>['Utama',1.5],'sokongan'=>['Sokongan',1.0],'sampingan'=>['Sampingan',0.5]];
+const POSITION_TERMS=['tahunan'=>['Sepanjang tahun',1.0],'bermusim'=>['Bermusim',0.6],'program'=>['Program',0.3]];
+const TEACHER_STATUSES=['aktif'=>'Aktif','cuti'=>'Cuti','bertukar'=>'Bertukar keluar'];
 
 /** Ralat enjin: mesej untuk pengguna + status HTTP + kod ralat API yang stabil (kontrak klien API v1). */
 class EngineError extends DomainException {
@@ -18,14 +22,14 @@ final class WorkflowError extends EngineError {
 }
 
 /* ---------- Peranan & halaman ---------- */
-const ENGINE_PAGES=['guru'=>'Pengurusan Guru','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
+const ENGINE_PAGES=['guru'=>'Pengurusan Guru','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','analisis'=>'Analisis Beban','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
     'kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
 /** Halaman enjin yang dibenarkan bagi peranan. */
 function engine_pages(string $role): array {
     return match($role){
-        'admin'=>['guru','jawatan','agihan','auto','syarat','pukal','kelulusan','surat','sekolah','api'],
-        'pk'=>['guru','jawatan','agihan','auto','syarat','pukal','kelulusan','surat'],
-        'head'=>['kelulusan','surat'],
+        'admin'=>['guru','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat','sekolah','api'],
+        'pk'=>['guru','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat'],
+        'head'=>['analisis','kelulusan','surat'],
         'teacher'=>['tugas_saya'],
         default=>[]};
 }
@@ -56,6 +60,10 @@ function teacher_validate(array $data): array {
     $cap=$data['capacity']??null; if(!is_int($cap) || $cap<1 || $cap>100) throw new EngineError('Kapasiti beban mesti integer 1–100 mata.');
     $out=['name'=>$name,'email'=>$email,'specialty'=>$spec,'capacity'=>$cap];
     if(array_key_exists('external_id',$data)){ $x=$data['external_id']; if($x!==null){ $x=trim((string)$x); if($x==='' || mb_strlen($x)>160) throw new EngineError('external_id mesti teks 1–160 aksara.'); } $out['external_id']=$x; }
+    // Medan indeks beban: pilihan — yang tidak dihantar dikekalkan (atau lalai DB untuk guru baharu).
+    if(array_key_exists('teaching_periods',$data)){ $n=$data['teaching_periods']; if(!is_int($n) || $n<0 || $n>60) throw new EngineError('Masa mengajar mesti integer 0–60 masa seminggu.'); $out['teaching_periods']=$n; }
+    foreach(['exam_class'=>'Kelas peperiksaan','index_exempt'=>'Pengecualian indeks'] as $k=>$label) if(array_key_exists($k,$data)){ if(!is_bool($data[$k])) throw new EngineError($label.' mesti benar/palsu.'); $out[$k]=(int)$data[$k]; }
+    if(array_key_exists('status',$data)){ if(!isset(TEACHER_STATUSES[$data['status']])) throw new EngineError('Status guru mesti aktif, cuti atau bertukar.'); $out['status']=$data['status']; }
     return $out;
 }
 /** Cipta (id 0) atau kemas kini guru. Pulangkan ID. */
@@ -88,14 +96,19 @@ function position_validate(array $data): array {
     if($name==='' || mb_strlen($name)>160) throw new EngineError('Nama jawatan diperlukan (maksimum 160 aksara).');
     if(!in_array($cat,CATEGORIES,true)) throw new EngineError('Bidang mesti Pentadbiran, Kurikulum, HEM atau Kokurikulum.');
     if(!is_int($w) || $w<1 || $w>10) throw new EngineError('Pemberat mesti integer 1–10.');
-    return ['name'=>$name,'category'=>$cat,'weight'=>$w];
+    $out=['name'=>$name,'category'=>$cat,'weight'=>$w];
+    if(array_key_exists('level',$data)){ if(!isset(POSITION_LEVELS[$data['level']])) throw new EngineError('Tahap mesti utama, sokongan atau sampingan.'); $out['level']=$data['level']; }
+    if(array_key_exists('term',$data)){ if(!isset(POSITION_TERMS[$data['term']])) throw new EngineError('Tempoh mesti tahunan, bermusim atau program.'); $out['term']=$data['term']; }
+    return $out;
 }
 function position_save(int $id,array $data): int {
-    $v=position_validate($data);
-    if($id){ if(!position_find($id)) throw new EngineError('Jawatan tidak ditemui.',404,'not_found'); query('UPDATE positions SET name=?,category=?,weight=? WHERE id=? AND school_id='.sid(),[...array_values($v),$id]); return $id; }
+    $v=position_validate($data); $cols=array_keys($v);
+    if($id){ if(!position_find($id)) throw new EngineError('Jawatan tidak ditemui.',404,'not_found'); query('UPDATE positions SET '.implode(',',array_map(fn($c)=>$c.'=?',$cols)).' WHERE id=? AND school_id='.sid(),[...array_values($v),$id]); return $id; }
     free_guard('jawatan',1);
-    query('INSERT INTO positions (school_id,name,category,weight) VALUES ('.sid().',?,?,?)',array_values($v)); return (int)db()->lastInsertId();
+    query('INSERT INTO positions (school_id,'.implode(',',$cols).') VALUES ('.sid().','.implode(',',array_fill(0,count($cols),'?')).')',array_values($v)); return (int)db()->lastInsertId();
 }
+/** Skor tugas dalam indeks beban = pemberat × faktor tahap × faktor tempoh. */
+function position_score(array $p): float { return round((int)$p['weight']*(POSITION_LEVELS[$p['level']??'sokongan'][1]??1.0)*(POSITION_TERMS[$p['term']??'tahunan'][1]??1.0),2); }
 function position_delete(int $id): void {
     if(!position_find($id)) throw new EngineError('Jawatan tidak ditemui.',404,'not_found');
     if(query('SELECT 1 FROM assignments WHERE school_id='.sid().' AND position_id=?',[$id])->fetchColumn()) throw new EngineError('Lepaskan agihan berkaitan dahulu sebelum memadam rekod ini.',409,'record_in_use');
@@ -119,13 +132,14 @@ function engine_counts(): array {
     return ['teachers'=>(int)$r['t'],'positions'=>(int)$r['p'],'assigned'=>(int)$r['a'],'vacant'=>(int)$r['p']-(int)$r['a']];
 }
 
-/* ---------- Guru pukal (CSV: name,email,specialty,capacity) ---------- */
+/* ---------- Guru pukal (CSV: name,email,specialty,capacity[,teaching_periods]) ---------- */
 function bulk_teachers_parse(string $text): array {
     if(strlen($text)>131072) throw new EngineError('Fail / teks pukal maksimum 128 KB.');
     $rows=[];
-    foreach(csv_rows($text,[['name','email','specialty','capacity']],3,4) as $i=>$r){
+    foreach(csv_rows($text,[['name','email','specialty','capacity','teaching_periods'],['name','email','specialty','capacity']],3,5) as $i=>$r){
         $cap=($r[3]??'')===''?'25':$r[3]; if(!ctype_digit($cap)) throw new EngineError('Baris '.($i+1).': kapasiti mesti nombor bulat.');
-        $rows[]=['name'=>$r[0],'email'=>$r[1],'specialty'=>$r[2],'capacity'=>(int)$cap];
+        $per=($r[4]??'')===''?'0':$r[4]; if(!ctype_digit($per)) throw new EngineError('Baris '.($i+1).': masa mengajar mesti nombor bulat.');
+        $rows[]=['name'=>$r[0],'email'=>$r[1],'specialty'=>$r[2],'capacity'=>(int)$cap,'teaching_periods'=>(int)$per];
     }
     return bulk_teachers_validate($rows);
 }
@@ -170,6 +184,60 @@ function bulk_source(string $field='csv',string $textField='bulk_text'): string 
         $text=(string)file_get_contents((string)$f['tmp_name']);
     }
     return $text;
+}
+
+/* ---------- Indeks beban ----------
+ * Indeks = bahagian mengajar × (masa mengajar ÷ median sekolah) + baki × (skor tugas ÷ median sekolah); 1.00 = setara guru biasa.
+ * Masa guru kelas peperiksaan didarab faktor peperiksaan. Hanya guru aktif yang tidak dikecualikan dikira (dan membentuk median).
+ * Median 0 (contohnya kurang separuh guru ada tugas) → purata digunakan supaya indeks tidak melonjak; jika semua masa mengajar 0, indeks ikut tugas sahaja. */
+const INDEX_LABELS=['terbeban'=>['Terbeban','warn'],'seimbang'=>['Seimbang','green'],'kurang'=>['Kurang beban','info'],'belum'=>['Belum dikira',''],'dikecualikan'=>['Dikecualikan',''],'tidak_aktif'=>['Tidak aktif','']];
+const INDEX_WARNINGS=['terbeban'=>'Terbeban','kurang'=>'Kurang beban','banyak'=>'Banyak jawatan','tidak_aktif'=>'Tidak aktif tetapi memegang lantikan','tiada_masa'=>'Masa mengajar belum diisi'];
+/** Tetapan indeks sekolah semasa (nilai rosak dalam settings → lalai). teach_share dalam pecahan 0–1. */
+function index_settings(): array {
+    $f=fn(string $k,float $min,float $max,float $def)=>is_numeric($v=setting($k)) && (float)$v>=$min && (float)$v<=$max?(float)$v:$def;
+    $s=['teach_share'=>$f('index_teach_share',0,100,60)/100,'high'=>$f('index_high',1,3,1.3),'low'=>$f('index_low',0.1,1,0.7),'exam_factor'=>$f('index_exam_factor',1,2,1),'max_tasks'=>(int)$f('index_max_tasks',1,50,8)];
+    if($s['low']>=$s['high']){ $s['low']=0.7; $s['high']=1.3; }
+    return $s;
+}
+/** Sahkan & simpan tetapan indeks. $d: teach_share (int %), high, low, exam_factor (nombor), max_tasks (int). */
+function index_settings_save(array $d): void {
+    $num=function(string $k,float $min,float $max,string $label)use($d): float { $v=$d[$k]??null; if(!is_numeric($v) || (float)$v<$min || (float)$v>$max) throw new EngineError($label.' mesti antara '.$min.' dan '.$max.'.'); return round((float)$v,2); };
+    $share=$num('teach_share',0,100,'Bahagian mengajar (%)'); $high=$num('high',1,3,'Ambang tinggi'); $low=$num('low',0.1,1,'Ambang rendah');
+    $exam=$num('exam_factor',1,2,'Faktor kelas peperiksaan'); $max=$num('max_tasks',1,50,'Had bilangan jawatan');
+    if($low>=$high) throw new EngineError('Ambang rendah mesti lebih kecil daripada ambang tinggi.');
+    engine_setting_set(['index_teach_share'=>(string)(int)$share,'index_high'=>number_format($high,2,'.',''),'index_low'=>number_format($low,2,'.',''),'index_exam_factor'=>number_format($exam,2,'.',''),'index_max_tasks'=>(string)(int)$max]);
+}
+function median(array $xs): float {
+    if(!$xs) return 0.0; sort($xs); $n=count($xs); $m=intdiv($n,2);
+    return $n%2?(float)$xs[$m]:($xs[$m-1]+$xs[$m])/2;
+}
+/** Indeks beban semua guru sekolah semasa: ['teachers'=>[id=>guru + score, teaching, teach_ratio, task_ratio, index, label, warnings], 'basis'=>…, 'settings'=>…]. */
+function load_index(): array {
+    $s=index_settings(); $score=[];
+    foreach(query('SELECT a.teacher_id,p.weight,p.level,p.term FROM assignments a JOIN positions p ON p.id=a.position_id AND p.school_id=a.school_id WHERE a.school_id='.sid())->fetchAll() as $r) $score[(int)$r['teacher_id']]=($score[(int)$r['teacher_id']]??0)+position_score($r);
+    $rows=[]; $T=[]; $S=[];
+    foreach(teachers_with_load() as $t){
+        $id=(int)$t['id']; $t['score']=round($score[$id]??0,2); $t['teaching']=round((int)$t['teaching_periods']*((int)$t['exam_class']?$s['exam_factor']:1),2);
+        $t['counted']=$t['status']==='aktif' && !(int)$t['index_exempt'];
+        if($t['counted']){ $T[]=$t['teaching']; $S[]=$t['score']; }
+        $rows[$id]=$t;
+    }
+    $div=function(array $xs): array { $m=median($xs); return $m>0?[$m,'median']:(($a=$xs?array_sum($xs)/count($xs):0)>0?[$a,'purata']:[0.0,'tiada']); };
+    [$dT,$bT]=$div($T); [$dS,$bS]=$div($S);
+    $share=$dT>0?($dS>0?$s['teach_share']:1.0):0.0; $ready=$dT>0 || $dS>0;
+    foreach($rows as $id=>&$t){
+        $tr=$dT>0?$t['teaching']/$dT:0.0; $kr=$dS>0?$t['score']/$dS:0.0;
+        $t['teach_ratio']=$dT>0?round($tr,2):null; $t['task_ratio']=$dS>0?round($kr,2):null;
+        $t['index']=$t['counted'] && $ready?round($share*$tr+(1-$share)*$kr,2):null;
+        $t['label']=!$t['counted']?($t['status']!=='aktif'?'tidak_aktif':'dikecualikan'):($t['index']===null?'belum':($t['index']>$s['high']?'terbeban':($t['index']<$s['low']?'kurang':'seimbang')));
+        $w=[]; if(in_array($t['label'],['terbeban','kurang'],true)) $w[]=$t['label'];
+        if((int)$t['task_count']>$s['max_tasks']) $w[]='banyak';
+        if($t['status']!=='aktif' && (int)$t['task_count']>0) $w[]='tidak_aktif';
+        if($t['counted'] && $dT>0 && !(int)$t['teaching_periods']) $w[]='tiada_masa';
+        $t['warnings']=$w;
+    }
+    unset($t);
+    return ['teachers'=>$rows,'settings'=>$s,'basis'=>['teaching'=>round($dT,2),'teaching_basis'=>$bT,'score'=>round($dS,2),'score_basis'=>$bS,'share'=>$share,'counted'=>count($T)]];
 }
 
 /* ---------- Kunci API ---------- */

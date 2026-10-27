@@ -29,6 +29,7 @@ demo)
   run env TEST_URL="$URL" SETUP_JSON="$TMP/ujian.json" python3 tests/engine_integration.py
   run env TEST_URL="$URL" SETUP_JSON="$TMP/ujian.json" python3 tests/plan_integration.py
   run php tests/allocation_engine.php
+  run php tests/load_index.php
   run php tests/schema_engine.php
   run php tests/import_agihtugas.php
   run php tests/integration_client.php DEM0001 "$URL/DEM0001" DEM0002
