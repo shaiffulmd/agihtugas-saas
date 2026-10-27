@@ -1,6 +1,6 @@
 # Bina zip keluaran setiap push ke main, terbitkan ke Release "terkini", kemudian maklumkan laman (webhook).
 # Laman memasang sendiri melalui app/updater.php — lihat docs/KEMASKINI-GITHUB.md.
-# Rahsia repo (Settings → Secrets and variables → Actions):
+# Rahsia (Settings → Environments → DEPLOY_SECRET, atau Repository secrets):
 #   DEPLOY_HOOKS  = senarai URL webhook dipisahkan ruang, cth. https://urustugas.my/kemaskini-hook
 #   DEPLOY_SECRET = sama dengan UPDATE_SECRET dalam .env setiap laman
 name: Bina & terbit
@@ -19,6 +19,8 @@ env:
 jobs:
   terbit:
     runs-on: ubuntu-latest
+    # Rahsia DEPLOY_HOOKS & DEPLOY_SECRET disimpan dalam Environment "DEPLOY_SECRET" (bukan Repository secrets).
+    environment: DEPLOY_SECRET
     env:
       HOOKS: ${{ secrets.DEPLOY_HOOKS }}
       SECRET: ${{ secrets.DEPLOY_SECRET }}
