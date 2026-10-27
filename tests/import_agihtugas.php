@@ -53,7 +53,7 @@ try {
         check($logo!=='' && hash('sha256',$bytes)===$logo && ($pub['data']['school']['branding']['school_logo']['id']??'')===$logo,'logo surat dibawa dengan id kandungan yang sama');
         check(!$one('SELECT COUNT(*) FROM api_keys WHERE school_id='.$id),'kunci API lama tidak dibawa');
         check((int)$one('SELECT COUNT(*) FROM audit_logs WHERE school_id='.$id.' AND action="import_history"')===5 && audit_verify($id)['ok'],'sejarah → log audit berantai (sah)');
-        check(str_contains((string)$one('SELECT submitted_at FROM workflow_revisions WHERE school_id='.$id),date('Y-m-d')),'masa revisi ditukar UTC → MYT');
+        check((string)$one('SELECT submitted_at FROM workflow_revisions WHERE school_id='.$id)==='2026-10-26 17:33:33','masa revisi ditukar UTC → MYT (fixture 09:33:33 UTC = 17:33:33)');
     });
     [$rc,$o]=imp(["--db=$db",'--code=UJI9301']); check($rc===1 && str_contains($o,'sudah wujud'),'import berulang kod sama ditolak');
     echo "Tanpa pentadbir aktif\n";
