@@ -31,6 +31,7 @@ demo)
   run php tests/allocation_engine.php
   run php tests/load_index.php
   run php tests/letter_format.php
+  run php tests/subjects.php
   run php tests/schema_engine.php
   run php tests/import_agihtugas.php
   run php tests/integration_client.php DEM0001 "$URL/DEM0001" DEM0002

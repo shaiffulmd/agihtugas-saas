@@ -83,3 +83,9 @@ table.letter-head{width:100%;border-collapse:collapse;border-bottom:2px solid #2
 .hd-school b,.hd-national b{left:14px;right:14px}.hd-school b:nth-of-type(1),.hd-national b:nth-of-type(1){top:19px}.hd-school b:nth-of-type(2),.hd-national b:nth-of-type(2){top:23px}
 .hd-school em,.hd-national em{display:none}.hd-school i,.hd-national i{left:23px;top:3px}.hd-school i{background:var(--primary)}.hd-national i{background:#b8860b}.hd-school:after,.hd-national:after{top:30px}
 .panel-heading.flush{padding:0 0 1rem;border:0}
+/* Mata pelajaran */
+.subject-pick{margin-top:.4rem;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.subject-pick summary{cursor:pointer;padding:.5rem .75rem;font-size:.85rem;color:var(--primary);font-weight:600}
+.subject-pick-body{max-height:300px;overflow:auto;padding:0 .75rem .75rem;display:grid;gap:.6rem}
+.subject-pick fieldset,.subject-template fieldset{border:0;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:.35rem .8rem}
+.subject-pick legend,.subject-template legend{font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:.3rem;grid-column:1/-1}
+.subject-template{display:grid;gap:1rem;margin:1rem 0}.tab-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0}

@@ -56,6 +56,13 @@ CREATE TABLE users (
  FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE,
  CONSTRAINT users_teacher_fk FOREIGN KEY(school_id,teacher_id) REFERENCES teachers(school_id,id)
 ) ENGINE=InnoDB;
+-- Katalog mata pelajaran sekolah (pilihan untuk kepakaran guru). Kepakaran guru kekal teks (nama dipisah koma); nama di sini tiada koma.
+CREATE TABLE subjects (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(100) NOT NULL, grp VARCHAR(60) NOT NULL DEFAULT '',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_name (school_id,name),
+ FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 -- Jawatan / tugas. Bidang tetap (CATEGORIES dalam kod). Pemberat beban 1–10. level × term melaraskan skor tugas dalam indeks beban (bukan mata kapasiti).
 CREATE TABLE positions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL,

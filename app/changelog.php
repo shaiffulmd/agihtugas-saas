@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.4'=>['2026-10-27',[
+        'Halaman baharu Mata Pelajaran (Pentadbir & PK): tambah, sunting dan padam mata pelajaran sekolah, dengan kumpulan dan bilangan guru bagi setiap mata pelajaran.',
+        'Senarai standard untuk diimport secara terpilih: KSSR (Semakan 2017), KSSM termasuk elektif menengah atas, Kurikulum Persekolahan 2027 sekolah rendah (senarai BPK) dan sekolah menengah (senarai awal — semak DSKP). Mata pelajaran yang sudah ada dilangkau.',
+        'Borang guru: pilih kepakaran daripada senarai mata pelajaran (teks bebas masih dibenarkan). Menukar nama mata pelajaran turut mengemas kini kepakaran guru berkaitan.',
+        'Pusat Syarat: cadangan nama mata pelajaran untuk "Kepakaran diperlukan".',
+    ]],
     '1.3'=>['2026-10-27',[
         'Format surat lantikan (Profil Sekolah & Surat): empat gaya kepala surat — Jata Negara + logo sekolah, Jata Negara + no. telefon/faks, logo sekolah di tengah, Jata Negara di tengah — dengan nama dan alamat sekolah.',
         'Pilihan bilangan surat: satu surat (semua jawatan) atau satu surat bagi setiap jawatan, bernombor dalam rujukan. Cetak & PDF semua surat sekaligus mengikut pilihan ini.',

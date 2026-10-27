@@ -3,8 +3,8 @@ require_once __DIR__.'/admin_views.php'; require_once __DIR__.'/icons.php'; requ
 const PAGE_SIZE=25;
 $role=(string)($user['role']??'');
 $nav=['Utama'=>in_array($role,['admin','pk'],true)?[['dashboard','home','Dashboard']]:[]];
-$ep=engine_pages($role); $navIcons=['guru'=>'users','jawatan'=>'book','agihan'=>'filter','analisis'=>'chart','auto'=>'activity','syarat'=>'sliders','pukal'=>'upload','kelulusan'=>'check','surat'=>'file','tugas_saya'=>'clipboard','sekolah'=>'school','api'=>'link'];
-foreach(['Perancangan'=>['guru','jawatan','agihan','analisis','auto','syarat'],'Kelulusan & surat'=>['kelulusan','surat','tugas_saya']] as $grp=>$keys){ $items=[]; foreach($keys as $k) if(in_array($k,$ep,true)) $items[]=[$k,$navIcons[$k],ENGINE_PAGES[$k].(page_pro_feature($k)?' · Pro':'')]; if($items) $nav[$grp]=$items; }
+$ep=engine_pages($role); $navIcons=['guru'=>'users','jawatan'=>'book','agihan'=>'filter','analisis'=>'chart','subjek'=>'cap','auto'=>'activity','syarat'=>'sliders','pukal'=>'upload','kelulusan'=>'check','surat'=>'file','tugas_saya'=>'clipboard','sekolah'=>'school','api'=>'link'];
+foreach(['Perancangan'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat'],'Kelulusan & surat'=>['kelulusan','surat','tugas_saya']] as $grp=>$keys){ $items=[]; foreach($keys as $k) if(in_array($k,$ep,true)) $items[]=[$k,$navIcons[$k],ENGINE_PAGES[$k].(page_pro_feature($k)?' · Pro':'')]; if($items) $nav[$grp]=$items; }
 if($role!=='admin') $nav['Utama'][]=['hebahan','info','Hebahan',function_exists('hebahan_unread_count')?hebahan_unread_count():0];
 if($role==='admin'){
  $nav['Utama'][]=['hebahan','info','Hebahan Guru'];
@@ -65,7 +65,7 @@ function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','M
 <?php if(in_array($user['role'],HEBAHAN_ROLES,true) && function_exists('hebahan_dashboard_panel')) hebahan_dashboard_panel(); ?>
 <?php if(can_plan($user)){ engine_open('dashboard',$user); engine_dashboard(); } ?>
 <?php elseif(isset(ENGINE_PAGES[$page])): $locked=engine_open($page,$user);
- if($pf=page_pro_feature($page)) pro_locked_panel($pf); else match($page){'guru'=>guru_page($error),'jawatan'=>jawatan_page($error),'pukal'=>pukal_page(),'agihan'=>agihan_page(),'analisis'=>analisis_page($user),'syarat'=>syarat_page(),'auto'=>auto_page(),'kelulusan'=>kelulusan_page($user),'surat'=>surat_page(),'tugas_saya'=>tugas_saya_page($user),'sekolah'=>sekolah_page(),'api'=>api_page()};
+ if($pf=page_pro_feature($page)) pro_locked_panel($pf); else match($page){'guru'=>guru_page($error),'jawatan'=>jawatan_page($error),'pukal'=>pukal_page(),'agihan'=>agihan_page(),'subjek'=>subjek_page($error),'analisis'=>analisis_page($user),'syarat'=>syarat_page(),'auto'=>auto_page(),'kelulusan'=>kelulusan_page($user),'surat'=>surat_page(),'tugas_saya'=>tugas_saya_page($user),'sekolah'=>sekolah_page(),'api'=>api_page()};
  if($locked) echo '</fieldset>'; ?>
 <?php elseif($page==='versi'): versi_page(); ?>
 <?php elseif($page==='hebahan'): hebahan_page(); ?>

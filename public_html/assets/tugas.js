@@ -29,3 +29,14 @@ document.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('cl
 }));
 const changeFilter = document.querySelector('[data-change-filter]');
 changeFilter?.addEventListener('change', () => document.querySelectorAll('#jadual-pratonton tbody tr').forEach(row => { row.hidden = changeFilter.checked && row.dataset.changed !== 'true'; }));
+// Pemilih mata pelajaran: tanda dalam senarai → kepakaran guru (teks dipisah koma). Teks bebas yang tiada dalam senarai dikekalkan.
+document.querySelectorAll('[data-subject-pick]').forEach(box => {
+  const input = document.getElementById(box.dataset.subjectPick); if (!input) return;
+  const checks = [...box.querySelectorAll('input[type=checkbox]')], known = new Set(checks.map(c => c.value.toLocaleLowerCase('ms')));
+  const tokens = () => input.value.split(',').map(x => x.trim()).filter(Boolean);
+  checks.forEach(c => c.addEventListener('change', () => {
+    const free = tokens().filter(x => !known.has(x.toLocaleLowerCase('ms')));
+    input.value = [...checks.filter(x => x.checked).map(x => x.value), ...free].join(', ');
+  }));
+  input.addEventListener('input', () => { const have = new Set(tokens().map(x => x.toLocaleLowerCase('ms'))); checks.forEach(c => { c.checked = have.has(c.value.toLocaleLowerCase('ms')); }); });
+});

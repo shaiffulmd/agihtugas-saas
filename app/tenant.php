@@ -121,7 +121,7 @@ function tenant_location(string $path): string {
 }
 
 /** Jadual data sekolah, anak dahulu (padam ikut susunan ini supaya kunci asing dipatuhi). */
-const SCHOOL_TABLES=['workflow_state','workflow_revisions','allocation_plans','allocation_config','position_rules','assignments','positions','api_keys','school_assets',
+const SCHOOL_TABLES=['workflow_state','workflow_revisions','allocation_plans','allocation_config','position_rules','assignments','positions','subjects','api_keys','school_assets',
     'support_messages','support_tickets','staff_notice_reads','staff_notice_targets','staff_notices',
     'user_avatars','auth_tokens','recovery_codes','audit_logs','audit_heads','ip_blocks','settings','users','teachers'];
 /** Padam SEMUA data sekolah semasa sahaja (sekolah lain tidak disentuh). */

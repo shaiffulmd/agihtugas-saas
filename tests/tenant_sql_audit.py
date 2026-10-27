@@ -7,7 +7,7 @@ import re,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 # Jadual data sekolah (school_id NOT NULL) — selaras dengan SCHOOL_TABLES dalam app/tenant.php.
-TABLES='teachers|positions|assignments|position_rules|allocation_config|allocation_plans|workflow_revisions|workflow_state|school_assets|api_keys|users|audit_logs|recovery_codes|settings|user_avatars|auth_tokens|staff_notices|staff_notice_targets|staff_notice_reads|support_tickets|support_messages'
+TABLES='teachers|subjects|positions|assignments|position_rules|allocation_config|allocation_plans|workflow_revisions|workflow_state|school_assets|api_keys|users|audit_logs|recovery_codes|settings|user_avatars|auth_tokens|staff_notices|staff_notice_targets|staff_notice_reads|support_tickets|support_messages'
 SQL=re.compile(r"(SELECT|INSERT|UPDATE|DELETE)\b[^;]*?\b(FROM|INTO|UPDATE|JOIN)\s+`?("+TABLES+r")\b",re.I)
 # (fail, petikan unik) yang telah disemak: tapisan school_id ditambah melalui $where/$w/$from atau subkueri berkorelasi pada baris induk yang ditapis.
 REVIEWED=[

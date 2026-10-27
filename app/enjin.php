@@ -22,18 +22,18 @@ final class WorkflowError extends EngineError {
 }
 
 /* ---------- Peranan & halaman ---------- */
-const ENGINE_PAGES=['guru'=>'Pengurusan Guru','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','analisis'=>'Analisis Beban','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
+const ENGINE_PAGES=['guru'=>'Pengurusan Guru','subjek'=>'Mata Pelajaran','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','analisis'=>'Analisis Beban','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
     'kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
 /** Halaman enjin yang dibenarkan bagi peranan. */
 function engine_pages(string $role): array {
     return match($role){
-        'admin'=>['guru','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat','sekolah','api'],
-        'pk'=>['guru','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat'],
+        'admin'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat','sekolah','api'],
+        'pk'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat'],
         'head'=>['analisis','kelulusan','surat'],
         'teacher'=>['tugas_saya'],
         default=>[]};
 }
-const PLANNING_PAGES=['guru','jawatan','agihan','auto','syarat','pukal','sekolah'];
+const PLANNING_PAGES=['guru','subjek','jawatan','agihan','auto','syarat','pukal','sekolah'];
 
 /** Pentadbir & PK merancang agihan (data enjin); GB/Pengetua melulus; guru melihat tugas muktamad sendiri. */
 function can_plan(?array $u=null): bool { $u??=current_user(); return in_array($u['role']??'',['admin','pk'],true); }
@@ -184,6 +184,84 @@ function bulk_source(string $field='csv',string $textField='bulk_text'): string 
         $text=(string)file_get_contents((string)$f['tmp_name']);
     }
     return $text;
+}
+
+/* ---------- Mata pelajaran ----------
+ * Katalog per sekolah untuk memilih kepakaran guru. Kepakaran guru disimpan sebagai teks "MP1, MP2" (serasi API, CSV & syarat auto-agihan).
+ * Templat di bawah ialah senarai rujukan KPM/BPK untuk diimport secara terpilih — sekolah boleh menambah, menyunting dan memadam sendiri. */
+const SUBJECT_TEMPLATES=[
+    'kssr'=>['KSSR (Semakan 2017) — sekolah rendah','Tahun 2–6 pada 2027; Tahun 1–6 sebelum 2027.','SK',[
+        'Bahasa'=>['Bahasa Melayu','Bahasa Inggeris','Bahasa Cina','Bahasa Tamil','Bahasa Arab','Bahasa Iban','Bahasa Kadazandusun','Bahasa Semai'],
+        'Teras'=>['Matematik','Sains','Sejarah','Reka Bentuk dan Teknologi','Teknologi Maklumat dan Komunikasi'],
+        'Agama & Moral'=>['Pendidikan Islam','Pendidikan Moral'],
+        'Kesenian & Kesihatan'=>['Pendidikan Jasmani','Pendidikan Kesihatan','Pendidikan Seni Visual','Pendidikan Muzik'],
+        'Program khas'=>['Pemulihan Khas','Pendidikan Khas']]],
+    'kp2027_sr'=>['Kurikulum Persekolahan 2027 — sekolah rendah','Bermula Tahun 1 pada 2027 (senarai BPK, 30 Ogos 2025).','SK',[
+        'Bahasa'=>['Bahasa Melayu','Bahasa Inggeris','Bahasa Cina','Bahasa Tamil','Bahasa Isyarat Malaysia'],
+        'Teras'=>['Matematik','Sains','Sejarah'],
+        'Pembelajaran bersepadu'=>['Alam dan Manusia: Pembelajaran Bersepadu','Eksplorasi Seni dan Dunia: Pembelajaran Bersepadu','Eksplorasi Sains dan Teknologi: Pembelajaran Bersepadu'],
+        'Agama & Moral'=>['Pendidikan Islam','Pendidikan Moral'],
+        'Kesenian & Kesihatan'=>['Pendidikan Jasmani']]],
+    'kssm'=>['KSSM — sekolah menengah','Tingkatan 2–5 pada 2027; Tingkatan 1–5 sebelum 2027. Termasuk elektif menengah atas.','SMK',[
+        'Bahasa'=>['Bahasa Melayu','Bahasa Inggeris','Bahasa Arab','Bahasa Cina','Bahasa Tamil','Bahasa Iban','Bahasa Kadazandusun','Bahasa Semai','Kesusasteraan Melayu Komunikatif','Literature in English','Kesusasteraan Cina','Kesusasteraan Tamil'],
+        'Teras'=>['Matematik','Sains','Sejarah','Geografi','Reka Bentuk dan Teknologi','Asas Sains Komputer'],
+        'Agama & Moral'=>['Pendidikan Islam','Pendidikan Moral'],
+        'Kesenian & Kesihatan'=>['Pendidikan Jasmani dan Kesihatan','Pendidikan Seni Visual','Pendidikan Muzik'],
+        'STEM (elektif)'=>['Matematik Tambahan','Fizik','Kimia','Biologi','Sains Tambahan','Sains Komputer','Reka Cipta','Grafik Komunikasi Teknikal','Sains Rumah Tangga','Sains Sukan','Pertanian'],
+        'Kemanusiaan & ikhtisas (elektif)'=>['Ekonomi','Perniagaan','Prinsip Perakaunan'],
+        'Pengajian Islam (elektif)'=>['Tasawwur Islam','Pendidikan Al-Quran dan Al-Sunnah','Pendidikan Syariah Islamiah','Usul Al-Din','Al-Syariah','Manahij Al-Ulum Al-Islamiah','Al-Adab Wa Al-Balaghah',"Al-Lughah Al-Arabiah Al-Mu'asirah",'Hifz Al-Quran','Maharat Al-Quran'],
+        'Program khas'=>['Pendidikan Khas']]],
+    'kp2027_sm'=>['Kurikulum Persekolahan 2027 — sekolah menengah (awal)','Bermula Tingkatan 1 pada 2027. Senarai awal: senarai penuh BPK belum diterbitkan — semak DSKP.','SMK',[
+        'Bahasa'=>['Bahasa Melayu','Bahasa Inggeris','Bahasa Isyarat Malaysia','Bahasa Arab Komunikasi'],
+        'Teras'=>['Matematik','Sains','Sejarah','Teknologi dan Digital'],
+        'Agama & Moral'=>['Pendidikan Islam','Pendidikan Moral'],
+        'Kesenian & Kesihatan'=>['Pendidikan Jasmani','Pendidikan Seni Visual','Pendidikan Muzik']]],
+];
+function subjects_all(): array { return query('SELECT id,name,grp FROM subjects WHERE school_id='.sid().' ORDER BY grp,name')->fetchAll(); }
+function subject_find(int $id): ?array { return query('SELECT * FROM subjects WHERE id=? AND school_id='.sid(),[$id])->fetch()?:null; }
+/** Kepakaran guru (teks) → senarai nama MP. */
+function specialty_tokens(string $s): array { return array_values(array_filter(array_map('trim',explode(',',$s)),fn($x)=>$x!=='')); }
+/** Bilangan guru yang memegang setiap MP: [nama huruf kecil => n]. */
+function subject_usage(): array {
+    $n=[]; foreach(query('SELECT specialty FROM teachers WHERE school_id='.sid().' AND specialty<>""')->fetchAll(PDO::FETCH_COLUMN) as $sp) foreach(array_unique(array_map('mb_strtolower',specialty_tokens((string)$sp))) as $k) $n[$k]=($n[$k]??0)+1;
+    return $n;
+}
+function subject_validate(array $d): array {
+    $name=trim(preg_replace('/\s+/u',' ',(string)($d['name']??''))); $grp=trim((string)($d['grp']??''));
+    if($name==='' || mb_strlen($name)>100) throw new EngineError('Nama mata pelajaran diperlukan (maksimum 100 aksara).');
+    if(str_contains($name,',')) throw new EngineError('Nama mata pelajaran tidak boleh mengandungi koma (koma memisahkan kepakaran guru).');
+    if(mb_strlen($grp)>60) throw new EngineError('Kumpulan maksimum 60 aksara.');
+    return ['name'=>$name,'grp'=>$grp];
+}
+/** Cipta (id 0) atau kemas kini MP. Menukar nama turut menukar kepakaran guru yang memegang nama lama. Pulangkan [id, bilangan guru dikemas kini]. */
+function subject_save(int $id,array $d): array {
+    $v=subject_validate($d); $old=null;
+    if($id && !($old=subject_find($id))) throw new EngineError('Mata pelajaran tidak ditemui.',404,'not_found');
+    if(query('SELECT 1 FROM subjects WHERE school_id='.sid().' AND name=? AND id<>?',[$v['name'],$id])->fetchColumn()) throw new EngineError('Mata pelajaran "'.$v['name'].'" sudah ada.',409);
+    if(!$id){ query('INSERT INTO subjects (school_id,name,grp) VALUES ('.sid().',?,?)',[$v['name'],$v['grp']]); return [(int)db()->lastInsertId(),0]; }
+    query('UPDATE subjects SET name=?,grp=? WHERE id=? AND school_id='.sid(),[$v['name'],$v['grp'],$id]); $n=0;
+    if($old['name']!==$v['name']) foreach(query('SELECT id,specialty FROM teachers WHERE school_id='.sid().' AND specialty LIKE ?',['%'.addcslashes($old['name'],'%_\\').'%'])->fetchAll() as $t){
+        $tok=specialty_tokens((string)$t['specialty']); $new=array_map(fn($x)=>mb_strtolower($x)===mb_strtolower($old['name'])?$v['name']:$x,$tok);
+        if($new===$tok) continue; $sp=implode(', ',array_unique($new));
+        if(mb_strlen($sp)>160) throw new EngineError('Kepakaran guru melebihi 160 aksara selepas nama ditukar. Pendekkan nama.');
+        query('UPDATE teachers SET specialty=? WHERE id=? AND school_id='.sid(),[$sp,(int)$t['id']]); $n++;
+    }
+    return [$id,$n];
+}
+/** Padam MP daripada katalog. Kepakaran guru tidak diubah (dipaparkan sebagai teks bebas). */
+function subject_delete(int $id): array {
+    $s=subject_find($id); if(!$s) throw new EngineError('Mata pelajaran tidak ditemui.',404,'not_found');
+    query('DELETE FROM subjects WHERE id=? AND school_id='.sid(),[$id]); return $s;
+}
+/** Import nama terpilih daripada templat. Nama yang sudah ada dilangkau. Pulangkan bilangan ditambah. */
+function subjects_import(string $key,array $names): int {
+    $tpl=SUBJECT_TEMPLATES[$key]??null; if(!$tpl) throw new EngineError('Senarai standard tidak sah.');
+    $want=array_flip(array_map('strval',$names)); $have=array_flip(array_map('mb_strtolower',array_column(subjects_all(),'name'))); $n=0;
+    foreach($tpl[3] as $grp=>$list) foreach($list as $name) if(isset($want[$name]) && !isset($have[mb_strtolower($name)])){
+        query('INSERT INTO subjects (school_id,name,grp) VALUES ('.sid().',?,?)',[$name,$grp]); $have[mb_strtolower($name)]=true; $n++;
+    }
+    if(!$n) throw new EngineError('Tiada mata pelajaran baharu dipilih (yang sudah ada dilangkau).');
+    return $n;
 }
 
 /* ---------- Indeks beban ----------

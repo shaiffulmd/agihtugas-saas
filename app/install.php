@@ -6,10 +6,10 @@ declare(strict_types=1);
  * Pemasangan hanya dibenarkan sekali: selepas berjaya, storage/installed.lock ditulis dan
  * semua laluan pemasangan menolak untuk berjalan semula.
  */
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 const APP_RELEASE = '2026-10-27'; // Tarikh keluaran (dipaparkan di footer). Sejarah perubahan: app/changelog.php
 // Naikkan setiap kali skema pangkalan data berubah (jadual/lajur baharu), walaupun APP_VERSION kekal.
-const APP_SCHEMA = '0.1-m4'; // m4: indeks beban — teachers.teaching_periods/exam_class/status/index_exempt, positions.level/term; m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
+const APP_SCHEMA = '0.1-m5'; // m5: subjects (katalog mata pelajaran); m4: indeks beban — teachers.teaching_periods/exam_class/status/index_exempt, positions.level/term; m3: workflow_state.return_info (guru ditanda semasa dikembalikan); m1: rangka platform daripada koku-multi (5fb9ba9) — users peranan UrusTugas, audit_logs.detail; m2: jadual enjin agihan tugas (school_id) + users.teacher_id
 
 function install_lock_path(): string { return dirname(__DIR__).'/storage/installed.lock'; }
 function table_exists(string $t): bool { return (bool)query('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?',[$t])->fetchColumn(); }
@@ -100,7 +100,7 @@ function create_platform_admin(string $name,string $email,string $password): int
     return (int)db()->lastInsertId();
 }
 /** Jadual enjin agihan tugas mengikut susunan cipta (induk dahulu). Rujukan: database/schema.sql. */
-const ENGINE_TABLES=['teachers','positions','assignments','position_rules','allocation_config','allocation_plans','workflow_revisions','workflow_state','school_assets','api_keys'];
+const ENGINE_TABLES=['teachers','subjects','positions','assignments','position_rules','allocation_config','allocation_plans','workflow_revisions','workflow_state','school_assets','api_keys'];
 /** DDL satu jadual daripada database/schema.sql (sumber tunggal untuk pemasangan baharu & naik taraf). */
 function schema_ddl(string $table): string {
     $sql=(string)preg_replace('/^--.*$/m','',(string)file_get_contents(dirname(__DIR__).'/database/schema.sql'));
