@@ -146,7 +146,7 @@ function platform_log(string $action,?int $school=null,string $detail='',?int $a
 /* ---------- Tetapan platform (platform_settings, kunci 'cfg_*') ---------- */
 const PSET_DEFAULTS=[
     'nama_platform'=>'UrusTugas','emel_notis'=>'',
-    'harga_pro_sen'=>'12000','percubaan_hari'=>'30',
+    'harga_pro_sen'=>'12000','percubaan_hari'=>'30','percubaan_cetak'=>'1','percubaan_pdf'=>'1','percubaan_pdf_had'=>'0','percubaan_tanda_air'=>'0',
     'free_aktif'=>'1','free_guru'=>'30','free_jawatan'=>'60','free_pengguna'=>'10','pro_ciri'=>'auto,surat_pukal,api,sejarah','free_tidak_aktif_bulan'=>'12','padam_hari'=>'90',
     'sokongan_simpan_hari'=>'90','daftar_buka'=>'0','daftar_kelulusan'=>'manual','daftar_domain'=>'','daftar_had_harian'=>'20',
     'mail_method'=>'mail','mail_from'=>'','mail_from_name'=>'','smtp_preset'=>'custom','smtp_host'=>'','smtp_port'=>'587','smtp_secure'=>'tls','smtp_user'=>'','smtp_pass'=>'',

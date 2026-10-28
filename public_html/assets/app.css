@@ -1577,6 +1577,7 @@ body:has(.hb-modal){overflow:hidden}
 .sch-note{margin:.5rem 0 1rem;font-size:.86rem}
 .sch-expiry{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:1rem;border-radius:12px;background:color-mix(in srgb,var(--dark) 3%,var(--surface))}
 .sch-expiry .field{flex:0 1 220px;margin:0}
+.sch-trial{margin-top:1rem;padding:1rem;border-radius:12px;background:color-mix(in srgb,var(--dark) 3%,var(--surface))}.sch-trial h4{margin:0 0 .3rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}.sch-trial .form-grid{margin-top:.6rem}
 .btn.danger-text{color:var(--danger)}
 .sch-pay{margin-top:1rem;border:1px solid var(--line);border-radius:12px}
 .sch-pay>summary{cursor:pointer;padding:.75rem 1rem;font-weight:700;color:var(--fg-dark)}

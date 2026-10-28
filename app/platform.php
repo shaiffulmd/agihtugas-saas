@@ -152,6 +152,7 @@ function platform_action(string $action): never {
         $dom=array_values(array_unique(array_filter(array_map(fn($d)=>strtolower(trim(ltrim(trim($d),'@'))),preg_split('/[\s,]+/',input('daftar_domain'))))));
         foreach($dom as $d) if(!preg_match('/^(?=.{3,190}$)([a-z0-9-]+\.)+[a-z]{2,}$/D',$d)) throw new DomainException('Domain e-mel tidak sah: '.$d);
         $kv=['nama_platform'=>$name,'emel_notis'=>$notis,'harga_pro_sen'=>(string)(int)round((float)$harga*100),'percubaan_hari'=>$int('percubaan_hari',0,365,'Tempoh percubaan'),
+            'percubaan_cetak'=>input('percubaan_cetak')==='1'?'1':'0','percubaan_pdf'=>input('percubaan_pdf')==='1'?'1':'0','percubaan_pdf_had'=>$int('percubaan_pdf_had',0,10000,'Had muat turun PDF percubaan'),'percubaan_tanda_air'=>input('percubaan_tanda_air')==='1'?'1':'0',
             'free_aktif'=>input('free_aktif')==='1'?'1':'0','free_guru'=>$int('free_guru',1,100000,'Had guru Free'),'free_jawatan'=>$int('free_jawatan',1,100000,'Had jawatan Free'),'free_pengguna'=>$int('free_pengguna',1,1000,'Had pengguna Free'),'pro_ciri'=>implode(',',array_values(array_intersect(array_keys(PRO_FEATURES),array_filter((array)($_POST['pro_ciri']??[]),'is_string')))),
             'free_tidak_aktif_bulan'=>$int('free_tidak_aktif_bulan',1,60,'Tempoh tidak aktif Free'),'padam_hari'=>$int('padam_hari',0,3650,'Padam data selepas'),
             'terma_teks'=>mb_substr(str_replace("\r\n","\n",trim(input('terma_teks'))),0,20000),'polisi_teks'=>mb_substr(str_replace("\r\n","\n",trim(input('polisi_teks'))),0,20000),
@@ -212,6 +213,16 @@ function platform_action(string $action): never {
         require_once __DIR__.'/mailer.php'; $e=null; $why=mb_substr(trim(input('reason')),0,300);
         send_mail((string)$s['pic_email'],(string)$s['pic_name'],'Pendaftaran sekolah tidak diluluskan',"Pendaftaran {$s['name']} ({$s['code']}) di ".platform_name()." tidak diluluskan.".($why!==''?"\n\nSebab: $why":'')."\n\nHubungi pentadbir platform untuk maklumat lanjut.",$e);
         school_delete($s); platform_log('school_rejected',null,$s['code'].($why!==''?': '.$why:'')); flash('Pendaftaran '.$s['code'].' ditolak dan dipadam.'); redirect('/platform/');
+    }
+    elseif($action==='p_trial_letter'){
+        if(input('mode')==='reset'){ with_school($s,fn()=>sys_set('percubaan_pdf_kira','0')); platform_log('school_trial_letter_reset',(int)$s['id'],$s['code']); flash('Kiraan muat turun PDF percubaan '.$s['code'].' diset semula.'); }
+        else {
+            $had=trim(input('had')); if(!preg_match('/^\d{1,5}$/',$had)) throw new DomainException('Had muat turun PDF mesti nombor 0–99999.');
+            $o=input('mode')==='sekolah'?json_encode(['cetak'=>input('cetak')==='1','pdf'=>input('pdf')==='1','had'=>(int)$had,'tanda'=>input('tanda')==='1']):'';
+            with_school($s,fn()=>sys_set('percubaan_surat',(string)$o)); platform_log('school_trial_letter',(int)$s['id'],$o===''?'ikut global':$o);
+            flash($o===''?'Surat percubaan '.$s['code'].' kini mengikut tetapan platform.':'Tetapan surat percubaan khusus disimpan untuk '.$s['code'].'.');
+        }
+        redirect('/platform/?p=sekolah&id='.(int)$s['id'].'#surat-percubaan');
     }
     elseif($action==='p_addon'){
         platform_addon_set($s,input('addon'),input('state')==='1'); flash(input('state')==='1'?'Addon diaktifkan untuk '.$s['code'].'.':'Addon dimatikan untuk '.$s['code'].'.');
@@ -357,6 +368,7 @@ function platform_page_school(array $s): void {
 <?php if($aktif): ?><form method="post" class="sch-expiry"><?= $hidden ?><input type="hidden" name="action" value="p_expiry">
 <label class="field">Tetapkan tarikh tamat Pro<input type="date" name="expires_on" value="<?= e((string)$s['expires_on']) ?>"></label>
 <div class="button-group"><button class="btn primary" name="mode" value="tarikh">Simpan tarikh</button><button class="btn outline" name="mode" value="tahun">+1 tahun</button><button class="btn outline danger-text" name="mode" value="free" data-confirm-simple="Tamatkan Pro sekarang?">Tamatkan Pro sekarang</button></div></form><?php endif; ?>
+<?php if($aktif) platform_trial_letter_panel($s,$hidden); ?>
 <?php if(function_exists('platform_payment_panel')) platform_payment_panel($s); ?></section>
 <?php if(function_exists('platform_addon_panel')) platform_addon_panel($s); ?>
 <section class="panel" id="pentadbir"><div class="panel-heading"><div><h3>Pentadbir sekolah</h3><p class="muted">Reset menjana kata laluan sementara dan mengosongkan 2FA (contoh: Pentadbir Utama hilang telefon).</p></div></div>
@@ -404,7 +416,7 @@ function platform_page_settings(): void {
     $s=pset_all(); $err=(string)($GLOBALS['P_ERROR']??'');
     if($err!=='' && input('action')==='p_settings_save'){ // simpan gagal: kekalkan apa yang ditaip (kecuali kata laluan) supaya tidak perlu diisi semula
         foreach($_POST as $k=>$val) if(is_string($val) && isset($s[$k]) && $k!=='smtp_pass') $s[$k]=$val;
-        foreach(['free_aktif','daftar_buka'] as $k) $s[$k]=input($k)==='1'?'1':'0';
+        foreach(['free_aktif','daftar_buka','percubaan_cetak','percubaan_pdf','percubaan_tanda_air'] as $k) $s[$k]=input($k)==='1'?'1':'0';
         $s['pro_ciri']=implode(',',array_filter((array)($_POST['pro_ciri']??[]),'is_string'));
         $h=str_replace(',','',trim(input('harga_pro'))); if(preg_match('/^\d{1,6}(\.\d{1,2})?$/',$h)) $s['harga_pro_sen']=(string)(int)round((float)$h*100);
     }
@@ -416,7 +428,12 @@ function platform_page_settings(): void {
 <label class="field">E-mel notis platform<input name="emel_notis" type="email" value="<?= $v('emel_notis') ?>" maxlength="190" placeholder="Untuk notis pendaftaran sekolah baharu"></label></div></section>
 <section class="panel padded spaced"><h3>Langganan Pro</h3><div class="form-grid">
 <label class="field">Harga Pro setahun (RM)<input name="harga_pro" value="<?= e(number_format((int)$s['harga_pro_sen']/100,2,'.','')) ?>" inputmode="decimal" required></label>
-<label class="field">Tempoh percubaan (hari)<input name="percubaan_hari" value="<?= $v('percubaan_hari') ?>" inputmode="numeric" required><small class="muted">Sekolah baharu mendapat Pro percuma selama tempoh ini.</small></label></div></section>
+<label class="field">Tempoh percubaan (hari)<input name="percubaan_hari" value="<?= $v('percubaan_hari') ?>" inputmode="numeric" required><small class="muted">Sekolah baharu mendapat Pro percuma selama tempoh ini.</small></label>
+<fieldset class="full pro-ciri"><legend>Surat lantikan semasa percubaan</legend><p class="muted small-note">Sekolah percubaan = Pro tanpa sebarang bayaran atau tajaan berjaya. Boleh diganti bagi setiap sekolah di halaman sekolah (Langganan).</p>
+<label class="check"><input type="checkbox" name="percubaan_cetak" value="1"<?= $chk('percubaan_cetak','1') ?>> <span><strong>Benarkan cetak surat</strong><small>Jika dimatikan, butang Cetak disembunyikan dan cetakan pelayar memaparkan notis.</small></span></label>
+<label class="check"><input type="checkbox" name="percubaan_pdf" value="1"<?= $chk('percubaan_pdf','1') ?>> <span><strong>Benarkan muat turun PDF</strong><small>Surat individu &amp; semua surat, termasuk Tugas Saya guru.</small></span></label>
+<label class="check"><input type="checkbox" name="percubaan_tanda_air" value="1"<?= $chk('percubaan_tanda_air','1') ?>> <span><strong>Tanda air "PERCUBAAN"</strong><small>Pada surat di skrin, cetakan dan PDF.</small></span></label>
+<label class="field">Had muat turun PDF (0 = tiada had)<input name="percubaan_pdf_had" value="<?= $v('percubaan_pdf_had') ?>" inputmode="numeric" required><small class="muted">Setiap PDF yang dijana dikira satu, sepanjang tempoh percubaan.</small></label></fieldset></div></section>
 <section class="panel padded spaced"><h3>Pakej Free</h3><p class="muted">Apabila Pro tamat, sekolah jatuh ke Free (data kekal) dengan had berikut. Jika dimatikan, laman sekolah ditutup selepas tamat dan data dipadam selepas tempoh di bawah.</p><div class="form-grid">
 <label class="check full"><input type="checkbox" name="free_aktif" value="1"<?= $chk('free_aktif','1') ?>> Tawarkan pakej Free</label>
 <label class="field">Had bilangan guru<input name="free_guru" value="<?= $v('free_guru') ?>" inputmode="numeric" required></label>
@@ -582,3 +599,17 @@ function platform_main(): never {
     if($p==='profil') p_shell($me,'profil',fn()=>platform_page_profile($me),$error);
     p_shell($me,'','platform_page_schools',$error);
 }
+
+/** Panel "Surat semasa percubaan" di halaman sekolah: ikut tetapan platform atau tetapan khusus sekolah, kiraan PDF & set semula. */
+function platform_trial_letter_panel(array $s,string $hidden): void {
+    [$o,$used]=trial_letter_school($s); $g=trial_letter_global(); $r=$o??$g; $trial=school_on_trial($s);
+    $desc=fn(array $x)=>implode(' · ',[$x['cetak']?'Cetak dibenarkan':'Cetak dimatikan',!$x['pdf']?'PDF dimatikan':($x['had']?'PDF had '.$x['had']:'PDF tanpa had'),$x['tanda']?'tanda air':'tiada tanda air']); ?>
+<div class="sch-trial" id="surat-percubaan"><h4>Surat semasa percubaan <?= $trial?'<span class="badge warn">Sekolah percubaan</span>':'<span class="badge">Tidak berkuat kuasa</span>' ?></h4>
+<p class="muted small-note"><?= $trial?'Berkuat kuasa sekarang':'Sekolah ini telah membayar / ditaja atau bukan Pro — tiada sekatan; tetapan di bawah hanya berkuat kuasa semasa percubaan' ?>. Muat turun PDF digunakan: <strong><?= (int)$used ?><?= $r['pdf'] && $r['had']?' / '.(int)$r['had']:'' ?></strong>.</p>
+<form method="post" class="form-grid"><?= $hidden ?><input type="hidden" name="action" value="p_trial_letter">
+<label class="field full">Tetapan<select name="mode"><option value="global"<?= $o?'':' selected' ?>>Ikut tetapan platform (<?= e($desc($g)) ?>)</option><option value="sekolah"<?= $o?' selected':'' ?>>Khusus untuk sekolah ini</option></select></label>
+<label class="check"><input type="checkbox" name="cetak" value="1"<?= $r['cetak']?' checked':'' ?>> Benarkan cetak</label><label class="check"><input type="checkbox" name="pdf" value="1"<?= $r['pdf']?' checked':'' ?>> Benarkan PDF</label>
+<label class="check"><input type="checkbox" name="tanda" value="1"<?= $r['tanda']?' checked':'' ?>> Tanda air "PERCUBAAN"</label><label class="field">Had PDF (0 = tiada had)<input name="had" value="<?= (int)$r['had'] ?>" inputmode="numeric"></label>
+<p class="full muted small-note">Kotak di atas hanya digunakan jika "Khusus untuk sekolah ini" dipilih.</p>
+<div class="full button-group"><button class="btn primary" type="submit">Simpan</button><?php if($used): ?><button class="btn outline" name="mode" value="reset" data-confirm-simple="Set semula kiraan muat turun PDF kepada 0?">Set semula kiraan (<?= (int)$used ?>)</button><?php endif; ?></div></form></div>
+<?php }

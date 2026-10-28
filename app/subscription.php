@@ -69,6 +69,54 @@ function pro_locked_panel(string $f): void {
         .($admin?'<a class="btn primary" href="/?page=langganan">Naik taraf ke Pro →</a>':'<p class="muted">Hubungi pentadbir sekolah untuk naik taraf.</p>').'</section>';
 }
 
+/* ---------- Surat semasa percubaan ----------
+ * Sekolah percubaan = Pro aktif tanpa sebarang bayaran / tajaan berjaya (sekolah demo dikecualikan).
+ * Tetapan global (Tetapan Platform: percubaan_cetak, percubaan_pdf, percubaan_pdf_had) boleh diganti per sekolah oleh
+ * pentadbir platform (tetapan sekolah sys_percubaan_surat, JSON). Kiraan muat turun PDF: sys_percubaan_pdf_kira. */
+function school_on_trial(?array $s=null): bool {
+    $s??=school(); if(!$s || school_plan($s)!=='pro') return false;
+    static $c=[]; $id=(int)$s['id'];
+    return $c[$id]??=!query('SELECT 1 FROM payments WHERE school_id=? AND status="berjaya" LIMIT 1',[$id])->fetchColumn()
+        && (string)query('SELECT value FROM settings WHERE school_id=? AND name="sys_demo"',[$id])->fetchColumn()!=='1';
+}
+/** Tetapan surat percubaan global: [cetak, pdf, had (0 = tiada had), tanda (tanda air "PERCUBAAN")]. */
+function trial_letter_global(): array { return ['cetak'=>pset('percubaan_cetak','1')==='1','pdf'=>pset('percubaan_pdf','1')==='1','had'=>max(0,(int)pset('percubaan_pdf_had','0')),'tanda'=>pset('percubaan_tanda_air','0')==='1']; }
+/** Ganti per sekolah (null = ikut tetapan global) & kiraan PDF bagi sekolah $s. */
+function trial_letter_school(array $s): array {
+    $read=fn()=>[json_decode(sys_get('percubaan_surat'),true),(int)sys_get('percubaan_pdf_kira')];
+    [$o,$used]=(int)$s['id']===sid()?$read():with_school($s,$read);
+    return [is_array($o)?['cetak'=>!empty($o['cetak']),'pdf'=>!empty($o['pdf']),'had'=>max(0,(int)($o['had']??0)),'tanda'=>!empty($o['tanda'])]:null,$used];
+}
+/** Peraturan surat berkuat kuasa bagi sekolah percubaan, atau null jika bukan percubaan (tiada sekatan).
+ *  [cetak, pdf, had, tanda, sumber: global|sekolah, guna, baki: null = tiada had]. */
+function trial_letter(?array $s=null): ?array {
+    $s??=school(); if(!$s || !school_on_trial($s)) return null;
+    [$o,$used]=trial_letter_school($s); $r=$o??trial_letter_global();
+    return $r+['sumber'=>$o?'sekolah':'global','guna'=>$used,'baki'=>!$r['pdf']?0:($r['had']?max(0,$r['had']-$used):null)];
+}
+/** Ambil satu muat turun PDF surat bagi sekolah semasa: null = dibenarkan (dikira secara atomik jika percubaan), atau mesej sebab ditolak. */
+function trial_pdf_take(): ?string {
+    $t=trial_letter(); if(!$t) return null;
+    $tail=(current_user()['role']??'')==='admin'?' Langgan Pro untuk muat turun tanpa had.':' Hubungi pentadbir sekolah.';
+    if(!$t['pdf']) return 'Muat turun PDF surat dimatikan semasa tempoh percubaan.'.$tail;
+    query('INSERT IGNORE INTO settings (school_id,name,value) VALUES ('.sid().',"sys_percubaan_pdf_kira","0")');
+    $ok=query('UPDATE settings SET value=CAST(value AS UNSIGNED)+1 WHERE school_id='.sid().' AND name="sys_percubaan_pdf_kira"'.($t['had']?' AND CAST(value AS UNSIGNED)<'.(int)$t['had']:''))->rowCount();
+    if(!$ok) return 'Had muat turun PDF semasa tempoh percubaan ('.$t['had'].') telah dicapai.'.$tail;
+    audit('letter_pdf_trial','settings',null,($t['guna']+1).($t['had']?'/'.$t['had']:''));
+    return null;
+}
+/** Sebelum menjana PDF surat (index.php): halaman 403 jika PDF dimatikan / had percubaan dicapai. */
+function trial_pdf_guard(): void { if(($m=trial_pdf_take())!==null) error_page(403,$m,['title'=>'Tempoh percubaan']); }
+/** Notis sekatan surat percubaan (halaman Surat Lantikan & Tugas Saya), atau '' jika tiada sekatan. */
+function trial_letter_notice(?array $t): string {
+    if(!$t || ($t['cetak'] && $t['pdf'] && !$t['had'] && !$t['tanda'])) return '';
+    $bits=[]; if(!$t['cetak']) $bits[]='cetak surat dimatikan';
+    $bits[]=!$t['pdf']?'muat turun PDF dimatikan':($t['had']?'muat turun PDF: '.$t['baki'].' daripada '.$t['had'].' berbaki':'muat turun PDF tanpa had');
+    if($t['tanda']) $bits[]='surat bertanda air "PERCUBAAN"';
+    $admin=(current_user()['role']??'')==='admin';
+    return '<section class="notice info no-print trial-letter" role="status"><span><strong>Tempoh percubaan:</strong> '.e(implode(' · ',$bits)).'. Paparan surat di skrin tidak terjejas.'.($admin?' <a class="text-link" href="/?page=langganan">Langgan Pro →</a>':'').'</span></section>';
+}
+
 /* ---------- Gerbang akses (index.php) ---------- */
 /** Laman sekolah ditutup apabila langganan tamat tanpa pakej Free. Pentadbir masih boleh mengurus langganan. */
 function subscription_gate(?array $user,string $page): void {

@@ -51,6 +51,7 @@ function letter_profile(): array {
  *  Senarai tugas, nama guru, nama sekolah, Pengetua, rujukan & logo kekal daripada snapshot versi muktamad. */
 function letter_live(array $doc): array {
     $doc['school']['letter']=letter_profile();
+    if(function_exists('trial_letter') && ($t=trial_letter()) && $t['tanda']) $doc['watermark']=true; // sekolah percubaan: tanda air "PERCUBAAN"
     $layout=setting('letter_header'); if(isset(LETTER_HEADERS[$layout])) $doc['school']['branding']['layout']=$layout;
     return $doc;
 }
@@ -124,7 +125,7 @@ function letter_head_html(array $s,array $L,callable $img): string {
 function letter_html(array $doc,callable $img): string {
     $t=$doc['teacher']; $s=$doc['school']; $title=(string)($s['principal_title']??head_title()); $L=($s['letter']??[])+LETTER_LEGACY; $new=isset($s['letter']);
     $one=count($doc['assignments'])===1; $part=isset($doc['part'])?' / '.(int)$doc['part']:'';
-    $h='<article class="letter">'.letter_head_html($s,$L,$img);
+    $h='<article class="letter'.(!empty($doc['watermark'])?' is-trial':'').'">'.letter_head_html($s,$L,$img);
     $h.='<div class="letter-meta">Ruj. Kami: '.e($s['reference']).' ('.(int)$t['id'].' / V'.(int)$doc['revision_no'].$part.')<br>Tarikh: '.e(letter_date($doc['finalized_at'])).'</div>';
     $h.='<p>'.($new?'Kepada,<br>':'').'<strong>'.e($t['name']).'</strong><br>'.e($s['school']).'</p><p>Tuan/Puan,</p>';
     $h.='<h3>'.($new && $one?'PELANTIKAN SEBAGAI '.e(mb_strtoupper((string)$doc['assignments'][0]['name'])).' BAGI SESI '.e($s['year']):'PELANTIKAN TUGAS DAN TANGGUNGJAWAB BAGI SESI '.e($s['year'])).'</h3>';
@@ -167,6 +168,7 @@ function letters_pdf(array $docs,string $fname): never {
     try {
         $pdf=new \Mpdf\Mpdf(['tempDir'=>$tmp,'format'=>'A4','margin_left'=>20,'margin_right'=>20,'margin_top'=>16,'margin_bottom'=>18,'default_font'=>'dejavusans','default_font_size'=>10.5]);
         $pdf->SetTitle('Surat lantikan'); $pdf->SetAuthor(school_name()); $pdf->imageVars=$images;
+        if(array_filter($docs,fn($d)=>!empty($d['watermark']))){ $pdf->SetWatermarkText('PERCUBAAN',0.09); $pdf->showWatermarkText=true; $pdf->watermark_font='dejavusans'; }
         $pdf->WriteHTML('body{font-family:dejavusans;color:#111;line-height:1.55}.letter-head{text-align:center;border-bottom:1.5px solid #222;padding-bottom:6px;margin-bottom:12px}table.letter-head{width:100%;border-collapse:collapse;text-align:left}.lh-l{width:28mm;vertical-align:middle}.lh-m{vertical-align:middle;text-align:center}.lh-r{width:44mm;text-align:right;vertical-align:middle;font-size:8.5pt;white-space:nowrap}.letter-emblem{height:22mm}.letter-school{font-size:13pt}.is-row .letter-school{font-size:11.5pt}.letter-addr{font-size:9pt}.letter-office{font-size:8.5pt;margin:2px 0;color:#444}h3{font-size:11pt;margin:14px 0 6px;text-decoration:underline}.letter-slogan{margin:12px 0}.letter-note{margin-top:20px;font-size:8pt;color:#666;font-style:italic}p{text-align:justify}.letter-meta{text-align:right;font-size:9.5pt;margin-bottom:10px}table.letter-table{width:100%;border-collapse:collapse;margin:8px 0}table.letter-table th,table.letter-table td{border:1px solid #888;padding:5px 7px;font-size:9.5pt;text-align:left}table.letter-table th{background:#eee}.letter-sign{margin-top:28px}',\Mpdf\HTMLParserMode::HEADER_CSS);
         $pdf->WriteHTML($html,\Mpdf\HTMLParserMode::HTML_BODY);
         $bytes=$pdf->Output('',\Mpdf\Output\Destination::STRING_RETURN);

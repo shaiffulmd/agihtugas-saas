@@ -150,6 +150,12 @@ try:
     st,b,_=p.post('/platform/?p=sekolah&id='+str(tid),{'action':'p_expiry','school_id':tid,'mode':'tarikh','expires_on':'2026-02-30'}); check('tidak sah' in b,'tarikh tamat tidak sah ditolak')
     p.post('/platform/?p=sekolah&id='+str(tid),{'action':'p_expiry','school_id':tid,'mode':'tahun'})
     check(run("echo school_plan(school_by_id("+str(tid)+")),'|',school_days_left(school_by_id("+str(tid)+"))>=364?'ok':'x';")=='pro|ok','platform +1 tahun → Pro semula')
+    st,b,_=p.post('/platform/?p=sekolah&id='+str(tid),{'action':'p_trial_letter','school_id':tid,'mode':'sekolah','pdf':'1','tanda':'1','had':'2'})
+    v=sql('SELECT value FROM settings WHERE school_id=? AND name="sys_percubaan_surat"',[tid],True)
+    check('Tetapan surat percubaan khusus disimpan' in b and 'id="surat-percubaan"' in b and v and '"cetak":false' in v[0]['value'] and '"had":2' in v[0]['value'] and '"tanda":true' in v[0]['value'],'platform: surat percubaan khusus sekolah (cetak dimatikan, had PDF 2, tanda air)')
+    st,b,_=p.post('/platform/?p=sekolah&id='+str(tid),{'action':'p_trial_letter','school_id':tid,'mode':'sekolah','pdf':'1','had':'abc'}); check('mesti nombor' in b,'platform: had PDF bukan nombor ditolak')
+    p.post('/platform/?p=sekolah&id='+str(tid),{'action':'p_trial_letter','school_id':tid,'mode':'global','had':'0'})
+    check(sql('SELECT value FROM settings WHERE school_id=? AND name="sys_percubaan_surat"',[tid],True)[0]['value']=='','platform: kembali ikut tetapan platform')
     check(s.req('/?page=guru')[0]==200,'Pro semula: akses penuh dipulihkan')
     # Kerja harian: amaran e-mel & arkib
     run("pset_set(['mail_method'=>'log','mail_from'=>'noreply@"+P+".test','padam_hari'=>'30']);")

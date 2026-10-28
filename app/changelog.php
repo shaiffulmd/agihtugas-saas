@@ -6,6 +6,10 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.14'=>['2026-10-28',[
+        'Platform: kawalan surat lantikan bagi sekolah percubaan (Pro tanpa bayaran / tajaan). Tetapan Platform → Langganan Pro: benarkan cetak, benarkan muat turun PDF, had muat turun PDF dan tanda air "PERCUBAAN". Boleh diganti bagi setiap sekolah di halaman sekolah, berserta kiraan muat turun dan butang set semula.',
+        'Sekolah percubaan: butang Cetak / PDF disembunyikan mengikut tetapan, cetakan pelayar memaparkan notis jika cetak dimatikan, muat turun PDF dikira secara atomik di pelayan, dan tanda air dipaparkan pada surat di skrin, cetakan dan PDF. Sekolah demo dan sekolah berbayar tidak terjejas.',
+    ]],
     '1.13'=>['2026-10-28',[
         'Mata Pelajaran: klik bilangan guru untuk melihat senarai nama guru yang mengajar MP itu, bersama indeks beban dan pautan Urus beban (padanan tepat kepakaran; carian turut mencari nama guru).',
         'Semakan & Kelulusan: butang tindakan utama (Hantar, Luluskan, Muktamadkan) kini di atas jadual beban guru supaya tidak terlepas pandang.',
