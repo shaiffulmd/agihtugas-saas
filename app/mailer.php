@@ -11,7 +11,7 @@ const SCHOOL_MAIL_METHODS=['platform'=>'E-mel platform (lalai)','smtp'=>'SMTP lu
 const SMTP_PRESETS=[
     'brevo'=>['Brevo (Sendinblue)','smtp-relay.brevo.com',587,'tls','Pengguna: e-mel log masuk Brevo (SMTP login) · Kata laluan: SMTP key (Brevo → SMTP & API). Sahkan domain/alamat pengirim di Brevo.'],
     'gmail'=>['Gmail / Google Workspace','smtp.gmail.com',587,'tls','Pengguna: alamat Gmail penuh · Kata laluan: App Password (perlu 2-Step Verification). Alamat pengirim mesti alamat akaun itu.'],
-    'icloud'=>['Apple iCloud Mail','smtp.mail.me.com',587,'tls','Pengguna: alamat iCloud penuh (@icloud.com) · Kata laluan: app-specific password (account.apple.com → Sign-In and Security).'],
+    'icloud'=>['Apple iCloud Mail','smtp.mail.me.com',587,'tls','Pengguna: alamat @icloud.com Apple ID anda — BUKAN alamat domain sendiri · Kata laluan: app-specific password (account.apple.com → Sign-In and Security) · E-mel pengirim boleh alamat domain sendiri yang ditambah di iCloud+ Custom Email Domain.'],
     'office365'=>['Microsoft 365 / Outlook','smtp.office365.com',587,'tls','Pengguna: alamat penuh · Kata laluan akaun / App Password. SMTP AUTH mesti dibenarkan untuk peti mel itu.'],
     'zoho'=>['Zoho Mail','smtp.zoho.com',587,'tls','Pengguna: alamat Zoho penuh · Kata laluan: App Password (akaun dengan 2FA).'],
     'ses'=>['Amazon SES (Singapura)','email-smtp.ap-southeast-1.amazonaws.com',587,'tls','Pengguna & kata laluan: SMTP credentials SES (bukan kunci IAM biasa). Sahkan domain pengirim di SES.'],
@@ -34,7 +34,18 @@ function mail_from_school(): bool {
     $m=setting('mail_method'); return ($m==='smtp' && setting('smtp_host')!=='') || ($m==='log' && env('APP_ENV')==='local');
 }
 function mcfg(string $k): string { return mail_from_school()?setting($k):pset($k); }
-function mail_smtp_pass(): string { $v=mcfg('smtp_pass'); if($v==='') return ''; return mail_from_school()?decrypt_value($v):pdecrypt($v); }
+/** Kata laluan SMTP (dipangkas: ruang / baris baharu yang tertampal bersama app password menyebabkan 535). */
+function mail_smtp_pass(): string { $v=mcfg('smtp_pass'); if($v==='') return ''; return trim(mail_from_school()?decrypt_value($v):pdecrypt($v)); }
+/** Petunjuk bagi ralat pengesahan SMTP (535) mengikut pembekal — ralat pelayan sahaja tidak menerangkan medan mana yang salah. */
+function smtp_auth_hint(string $host,string $user): string {
+    $host=strtolower($host); $user=strtolower(trim($user));
+    if(str_contains($host,'mail.me.com')) return preg_match('/@(icloud|me|mac)\.com$/',$user)
+        ?' iCloud: gunakan app-specific password (bukan kata laluan Apple ID) dan pastikan ia belum dibatalkan di account.apple.com.'
+        :' iCloud: nama pengguna SMTP mesti alamat @icloud.com Apple ID anda (cth. nama@icloud.com), bukan "'.$user.'". Alamat domain sendiri hanya untuk E-mel pengirim.';
+    if(str_contains($host,'gmail.com')) return ' Gmail: gunakan App Password (perlu 2-Step Verification), bukan kata laluan biasa.';
+    if(str_contains($host,'office365.com') || str_contains($host,'outlook.com')) return ' Microsoft 365: SMTP AUTH mesti dibenarkan untuk peti mel ini.';
+    return ' Semak nama pengguna dan kata laluan SMTP.';
+}
 function mail_method(): string { $m=mcfg('mail_method'); if($m==='log' && env('APP_ENV')==='local') return 'log'; return isset(MAIL_METHODS[$m])?$m:'mail'; }
 /** URL asas untuk pautan dalam e-mel. Diambil daripada tetapan (bukan header Host) supaya tidak boleh dipalsukan. */
 /** URL laman untuk pautan e-mel: tetapan site_url sekolah, atau URL sekolah daripada PLATFORM_DOMAIN (bukan pengepala Host pelawat). */
@@ -155,5 +166,5 @@ function smtp_send(string $from,string $to,string $data,?string &$error=null): b
         $cmd('MAIL FROM:<'.$from.'>',[250]); $cmd('RCPT TO:<'.$to.'>',[250,251]); $cmd('DATA',[354]);
         $data=preg_replace('/^\./m','..',str_replace(["\r\n","\r"],"\n",$data)); $data=str_replace("\n","\r\n",$data);
         $cmd($data."\r\n.",[250]); @fwrite($fp,"QUIT\r\n"); fclose($fp); return true;
-    } catch(Throwable $ex){ $error=$ex->getMessage(); @fclose($fp); return false; }
+    } catch(Throwable $ex){ $error=$ex->getMessage(); if(str_starts_with($error,'SMTP: 535')) $error.=smtp_auth_hint($host,(string)mcfg('smtp_user')); @fclose($fp); return false; }
 }

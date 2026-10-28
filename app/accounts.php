@@ -137,7 +137,7 @@ function handle_registration_admin(string $action): never {
             if($port<1 || $port>65535) throw new DomainException('Port SMTP tidak sah.');
             if(!in_array($sec,['tls','ssl','none'],true)) throw new DomainException('Penyulitan SMTP tidak sah.');
             $out+=['smtp_host'=>$host,'smtp_port'=>(string)$port,'smtp_secure'=>$sec,'smtp_user'=>mb_substr(trim(input('smtp_user')),0,190)];
-            if(input('smtp_pass')!=='') $out['smtp_pass']=encrypt_value(input('smtp_pass'));
+            if(trim(input('smtp_pass'))!=='') $out['smtp_pass']=encrypt_value(trim(input('smtp_pass')));
         }
         $fromOk=$method==='platform'?filter_var(pset('mail_from'),FILTER_VALIDATE_EMAIL)!==false:$from!=='';
         if($mode!=='off' && $mode!=='approval' && ($url==='' || !$fromOk)) throw new DomainException($method==='platform'?'Mod pengesahan e-mel memerlukan URL laman, dan e-mel platform mesti disediakan oleh pentadbir platform (atau pilih SMTP luar sendiri).':'Mod pengesahan e-mel memerlukan URL laman dan e-mel pengirim.');

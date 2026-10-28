@@ -36,6 +36,7 @@ demo)
   run php tests/roles.php
   run php tests/bulk_import.php
   run php tests/trial_letters.php
+  run php tests/smtp_auth.php
   run php tests/schema_engine.php
   run php tests/import_agihtugas.php
   run php tests/integration_client.php DEM0001 "$URL/DEM0001" DEM0002

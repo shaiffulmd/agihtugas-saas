@@ -166,7 +166,7 @@ function platform_action(string $action): never {
             $host=strtolower(trim(input('smtp_host'))); if(!preg_match('/^[a-z0-9.-]{3,190}$/',$host)) throw new DomainException('Hos SMTP tidak sah (cth. smtp-relay.brevo.com).');
             $sec=input('smtp_secure'); if(!in_array($sec,['tls','ssl','none'],true)) throw new DomainException('Penyulitan SMTP tidak sah.');
             $kv+=['smtp_preset'=>smtp_preset_valid(input('smtp_preset')),'smtp_host'=>$host,'smtp_port'=>$int('smtp_port',1,65535,'Port SMTP'),'smtp_secure'=>$sec,'smtp_user'=>mb_substr(trim(input('smtp_user')),0,190)];
-            if(input('smtp_pass')!=='') $kv['smtp_pass']=pencrypt(input('smtp_pass'));
+            if(trim(input('smtp_pass'))!=='') $kv['smtp_pass']=pencrypt(trim(input('smtp_pass')));
         }
         pset_set($kv); platform_log('settings_saved'); flash('Tetapan platform disimpan.'); redirect('/platform/?p=tetapan');
     }

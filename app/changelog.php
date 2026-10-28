@@ -8,6 +8,7 @@ declare(strict_types=1);
 const APP_CHANGELOG=[
     '1.14'=>['2026-10-28',[
         'Platform: kawalan surat lantikan bagi sekolah percubaan (Pro tanpa bayaran / tajaan). Tetapan Platform → Langganan Pro: benarkan cetak, benarkan muat turun PDF, had muat turun PDF dan tanda air "PERCUBAAN". Boleh diganti bagi setiap sekolah di halaman sekolah, berserta kiraan muat turun dan butang set semula.',
+        'E-mel SMTP: ralat pengesahan (535) kini disertakan petunjuk mengikut pembekal — cth. iCloud memerlukan alamat @icloud.com Apple ID sebagai nama pengguna, bukan alamat domain sendiri. Kata laluan SMTP dipangkas (ruang / baris baharu yang tertampal bersama app password tidak lagi menyebabkan kegagalan).',
         'Sekolah percubaan: butang Cetak / PDF disembunyikan mengikut tetapan, cetakan pelayar memaparkan notis jika cetak dimatikan, muat turun PDF dikira secara atomik di pelayan, dan tanda air dipaparkan pada surat di skrin, cetakan dan PDF. Sekolah demo dan sekolah berbayar tidak terjejas.',
     ]],
     '1.13'=>['2026-10-28',[
