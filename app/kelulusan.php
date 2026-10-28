@@ -72,8 +72,11 @@ function workflow_transition(string $action,int $expectedVersion,array $actor,st
         $r=query('SELECT submitted_by,source_hash,payload FROM workflow_revisions WHERE id=? AND school_id='.sid(),[$rid])->fetch();
         if(!$r) throw new WorkflowError('Revisi tidak ditemui.',404);
         if($uid===(int)$r['submitted_by']) throw new WorkflowError('Penghantar tidak boleh meluluskan agihan sendiri.',403);
-        // Revisi dihantar sebelum 1.3 tiada format surat (school.letter) dalam snapshot — bandingkan tanpa medan itu.
-        $now=workflow_source(); if(!isset(json_decode((string)$r['payload'],true)['school']['letter'])) unset($now['school']['letter']);
+        // Format surat (school.letter & gaya kepala) boleh diubah bila-bila masa dan digunakan serta-merta pada surat — bukan sebahagian keputusan.
+        // Ambil nilai daripada snapshot supaya perubahan format tidak dikira "data berubah". Revisi sebelum 1.3 tiada school.letter.
+        $now=workflow_source(); $old=json_decode((string)$r['payload'],true);
+        if(isset($old['school']['letter'])) $now['school']['letter']=$old['school']['letter']; else unset($now['school']['letter']);
+        if(isset($old['school']['branding']['layout'],$now['school']['branding'])) $now['school']['branding']['layout']=$old['school']['branding']['layout'];
         if(!hash_equals((string)$r['source_hash'],workflow_hash($now))) throw new WorkflowError('Data telah berubah sejak dihantar. Kembalikan kepada draf dan hantar semula.');
         $target=$action==='approve'?'approved':'finalized'; $col=$action==='approve'?'approved':'finalized';
         query('UPDATE workflow_revisions SET status=?,'.$col.'_by=?,'.$col.'_at=NOW() WHERE id=? AND school_id='.sid(),[$target,$uid,$rid]);
@@ -106,6 +109,7 @@ function workflow_letter(int $tid,?array $published=null): array {
     $teacher=null; foreach($r['data']['teachers'] as $t) if($t['id']===$tid) $teacher=$t;
     if(!$teacher) throw new WorkflowError('Guru tiada dalam agihan muktamad.',404);
     $tasks=array_values(array_filter($r['data']['positions'],fn($p)=>$p['teacher_id']===$tid));
-    return ['revision_id'=>$r['id'],'revision_no'=>$r['no']??workflow_no($r['id']),'school'=>$r['data']['school'],'teacher'=>$teacher,'assignments'=>$tasks,'finalized_at'=>$r['finalized_at']];
+    $doc=['revision_id'=>$r['id'],'revision_no'=>$r['no']??workflow_no($r['id']),'school'=>$r['data']['school'],'teacher'=>$teacher,'assignments'=>$tasks,'finalized_at'=>$r['finalized_at']];
+    return function_exists('letter_live')?letter_live($doc):$doc;
 }
 function workflow_time(?string $dt): string { return $dt?date('d/m/Y H:i',strtotime($dt)):'—'; }

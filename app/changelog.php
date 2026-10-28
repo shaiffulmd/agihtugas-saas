@@ -10,6 +10,7 @@ const APP_CHANGELOG=[
         'Mata Pelajaran: klik bilangan guru untuk melihat senarai nama guru yang mengajar MP itu, bersama indeks beban dan pautan Urus beban (padanan tepat kepakaran; carian turut mencari nama guru).',
         'Semakan & Kelulusan: butang tindakan utama (Hantar, Luluskan, Muktamadkan) kini di atas jadual beban guru supaya tidak terlepas pandang.',
         'Surat lantikan: garis penutup jadual tugas kini dipaparkan di skrin dan semasa dicetak.',
+        'Surat Lantikan: tetapan Format surat (bilangan surat, kepala surat, no. telefon & faks, tarikh berkuat kuasa, perenggan, slogan) kini di halaman Surat Lantikan dan digunakan serta-merta pada semua surat, termasuk versi muktamad, seperti sistem koku. Senarai tugas, nama guru dan Pengetua kekal mengikut versi muktamad. Format boleh diubah dalam apa jua status agihan.',
         'Guru & jawatan pukal: muat naik fail Excel (.xlsx) terus (helaian pertama) selain CSV; tajuk lajur Bahasa Melayu (Nama, Emel, Kepakaran, Kapasiti, Masa mengajar / Nama, Bidang, Pemberat, Bilangan) — tajuk Inggeris lama masih diterima. Templat Excel baharu disediakan.',
     ]],
     '1.12'=>['2026-10-28',[

@@ -215,6 +215,8 @@ def main():
     s, p, _ = adm.post('settings', {'action': 'settings_save', 'school_name': 'Nama Baharu', 'app_name': 'UrusTugas', 'school_tagline': '', 'login_headline': 'a', 'login_text': '', 'banner_title': 'b', 'banner_text': '',
                                     'theme_preset': 'delima', 'theme_mode': 'light', 'twofa_policy': 'admin', 'school_type': 'SMK'})
     check('dikunci' in err(p), 'nama sekolah dikunci semasa semakan')
+    s, p, _ = adm.post('surat', {'action': 'sekolah_surat', 'letter_header': 'dual_tel', 'letter_mode': 'satu', 'letter_effective': '', 'letter_para': 'Perenggan ujian.', 'letter_slogan': 'SLOGAN', 'school_tel': '09-123 4567', 'school_fax': ''})
+    check('Format surat disimpan' in flash(p) and 'id="format-surat"' in p, 'format surat boleh disimpan semasa semakan (halaman Surat Lantikan)')
     s, p, _ = pk.post('analisis', {'action': 'indeks_tetapan', 'teach_share': '60', 'high': '1.5', 'low': '0.7', 'exam_factor': '1', 'max_tasks': '8'})
     check('dikunci' in err(p), 'tetapan indeks dikunci semasa semakan (penilaian Pengetua stabil)')
     s, p, _ = pk.req('/?page=analisis')

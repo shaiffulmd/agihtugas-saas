@@ -22,12 +22,13 @@ function handle_engine_action(string $action): never {
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
     $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
-        'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api'][$action]??'sekolah';
+        'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
         // Data perancangan dikunci selain Draf (kunci API tidak termasuk). Tetapan indeks turut dikunci supaya senarai guru terbeban
         // yang dinilai Pengetua tidak berubah semasa semakan.
-        if(!in_array($action,['kelulusan','api_cipta','api_batal'],true)) workflow_require_draft();
+        // Format surat digunakan serta-merta pada surat (letter_live) dan tidak dibandingkan dalam hash revisi — boleh diubah dalam apa jua status.
+        if(!in_array($action,['kelulusan','api_cipta','api_batal','sekolah_surat'],true)) workflow_require_draft();
         $id=(int)input('id'); $msg=''; $anchor='';
         switch($action){
             case 'peranan_save':
@@ -100,10 +101,11 @@ function handle_engine_action(string $action): never {
             case 'kelulusan':
                 workflow_transition(input('transition'),post_int('version',1,PHP_INT_MAX,'Versi'),$me,input('reason'),array_map('intval',array_filter((array)($_POST['flag']??[]),'is_scalar'))); $msg='Status semakan dan kelulusan dikemas kini.'; break;
             case 'sekolah_profil':
-                $p=trim(input('principal')); $ref=trim(input('letter_reference')); $addr=trim(input('school_address')); $tel=trim(input('school_tel')); $fax=trim(input('school_fax'));
+                $p=trim(input('principal')); $ref=trim(input('letter_reference')); $addr=trim(input('school_address'));
                 if($p==='' || mb_strlen($p)>160 || $ref==='' || mb_strlen($ref)>160) throw new EngineError('Nama '.head_title().' dan rujukan surat diperlukan (maksimum 160 aksara).');
-                if(mb_strlen($addr)>300 || mb_strlen($tel)>40 || mb_strlen($fax)>40) throw new EngineError('Alamat maksimum 300 aksara; telefon dan faks maksimum 40 aksara.');
-                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref,'school_address'=>$addr,'school_tel'=>$tel,'school_fax'=>$fax]);
+                if(mb_strlen($addr)>300) throw new EngineError('Alamat maksimum 300 aksara.');
+                // Telefon & faks kepala surat kini disimpan bersama Format surat (halaman Surat Lantikan).
+                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref,'school_address'=>$addr]);
                 audit('school_profile','settings'); $msg='Profil sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo': engine_setting_set(['school_logo_id'=>branding_upload($_FILES['school_logo']??null)]); audit('letter_logo','settings'); $msg='Logo sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo_buang': engine_setting_set(['school_logo_id'=>'']); audit('letter_logo_removed','settings'); $msg='Logo dibuang daripada draf. Surat muktamad terdahulu tidak berubah.'; break;
@@ -111,8 +113,8 @@ function handle_engine_action(string $action): never {
                 $l=input('letter_header'); if(!isset(LETTER_HEADERS[$l])) throw new EngineError('Gaya kepala surat tidak sah.');
                 engine_setting_set(['letter_header'=>$l]); audit('letter_header','settings',null,$l); $msg='Gaya kepala surat disimpan.'; break;
             case 'sekolah_surat':
-                letter_settings_save(['letter_header'=>input('letter_header'),'letter_mode'=>input('letter_mode'),'letter_effective'=>input('letter_effective'),'letter_para'=>input('letter_para'),'letter_slogan'=>input('letter_slogan')]);
-                audit('letter_format','settings',null,input('letter_header').' · '.input('letter_mode')); $msg='Format surat disimpan. Berkuat kuasa untuk draf dan versi muktamad seterusnya.'; break;
+                letter_settings_save(['letter_header'=>input('letter_header'),'letter_mode'=>input('letter_mode'),'letter_effective'=>input('letter_effective'),'letter_para'=>input('letter_para'),'letter_slogan'=>input('letter_slogan'),'school_tel'=>input('school_tel'),'school_fax'=>input('school_fax')]);
+                audit('letter_format','settings',null,input('letter_header').' · '.input('letter_mode')); $msg='Format surat disimpan dan digunakan pada semua surat.'; $anchor='#format-surat'; break;
             case 'api_cipta':
                 [$kid,$token]=api_key_create(input('name'),input('scope')); audit('api_key_create','api_keys',$kid,input('scope'));
                 $_SESSION['api_token_baru']=['sid'=>sid(),'token'=>$token]; $msg='Kunci API dicipta. Salin sekarang — ia tidak akan dipaparkan lagi.'; break;

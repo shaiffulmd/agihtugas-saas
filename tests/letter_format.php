@@ -42,12 +42,29 @@ with_school($S,function()use($fmt,$img){
     check(str_contains($h,'5 Januari 2026') && str_contains($h,'JALAN UJIAN, 25200 KUANTAN') && str_contains($h,'Perenggan ujian.'),'tarikh berkuat kuasa, alamat & perenggan');
     check(substr_count($h,'class="letter-emblem"')===1 && str_contains($h,'alt="Jata Negara"') && str_contains($h,'is-row'),'kepala dual: Jata di kiri (tiada logo sekolah → ruang kanan kosong)');
 
+    echo "Format serta-merta pada surat muktamad\n";
+    tx(fn()=>letter_settings_save(['letter_header'=>'dual_tel','letter_mode'=>'satu','letter_effective'=>'','letter_para'=>'Perenggan baharu.','letter_slogan'=>'"MALAYSIA MADANI"','school_tel'=>'09-555 0000','school_fax'=>'']));
+    $live=letter_docs(workflow_published()); $h=letter_html($live[0],$img);
+    check(count($live)===1 && count($live[0]['assignments'])===2,'mod satu surat digunakan serta-merta pada versi muktamad (2 jawatan → 1 surat)');
+    check(str_contains($h,'NO. TEL : 09-555 0000') && !str_contains($h,'NO. FAKS') && str_contains($h,'Perenggan baharu.') && str_contains($h,'MALAYSIA MADANI') && !str_contains($h,'5 Januari 2026'),'kepala, telefon, perenggan, slogan & tarikh baharu pada surat muktamad');
+    check(str_contains($h,'Dr. Pengetua Ujian') && str_contains($h,'Setiausaha Peperiksaan'),'nama Pengetua & senarai tugas kekal daripada versi muktamad');
+    rejects(fn()=>letter_settings_save(['school_tel'=>str_repeat('9',41)]+$fmt),'telefon terlalu panjang ditolak');
+    tx(fn()=>letter_settings_save(['letter_mode'=>'jawatan','letter_effective'=>'2026-01-05','school_tel'=>'09-111 2222','school_fax'=>'09-111 3333']+$fmt)); $docs=letter_docs(workflow_published());
+
     echo "Gaya kepala & surat lama\n";
     $d=$docs[0]; $d['school']['branding']['layout']='dual_tel';
     check(str_contains(letter_html($d,$img),'NO. TEL : 09-111 2222') && str_contains(letter_html($d,$img),'NO. FAKS : 09-111 3333'),'kepala dual_tel memaparkan telefon & faks');
     $d['school']['branding']['layout']='school'; check(str_contains(letter_html($d,$img),'is-center'),'kepala logo sekolah di tengah');
     $old=$docs[0]; unset($old['school']['letter'],$old['part']); $old['assignments']=workflow_letter($t)['assignments']; $h=letter_html($old,$img);
     check(count(letter_split($old))===1 && str_contains($h,'PEJABAT PENGETUA') && str_contains($h,'BERKHIDMAT UNTUK NEGARA') && !str_contains($h,'Saya yang menjalankan amanah'),'snapshot lama: satu surat, kepala & teks asal');
+
+    echo "Format surat boleh diubah semasa semakan\n";
+    tx(fn()=>workflow_transition('return',workflow_state()['version'],$hd,'Pindaan format surat'));
+    tx(fn()=>workflow_transition('submit',workflow_state()['version'],$admin));
+    tx(fn()=>letter_settings_save(['letter_header'=>'school','letter_slogan'=>'"SLOGAN SEMASA SEMAKAN"','school_tel'=>'09-777 8888']+$fmt));
+    tx(fn()=>workflow_transition('approve',workflow_state()['version'],$hd)); check(workflow_state()['status']==='approved','perubahan format semasa semakan tidak dikira "data berubah"');
+    tx(fn()=>letter_settings_save(['letter_header'=>'national']+$fmt));
+    tx(fn()=>workflow_transition('finalize',workflow_state()['version'],$hd)); check(workflow_state()['status']==='finalized','perubahan format selepas lulus: masih boleh dimuktamadkan');
 
     echo "Keserasian revisi sebelum 1.3\n";
     tx(fn()=>workflow_transition('return',workflow_state()['version'],$hd,'Pindaan format surat'));

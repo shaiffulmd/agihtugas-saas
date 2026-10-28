@@ -41,13 +41,20 @@ function branding_profile(): array {
     $layout=setting('letter_header'); if(!isset(LETTER_HEADERS[$layout])) $layout='dual';
     return ['layout'=>$layout,'school_logo'=>branding_asset(setting('school_logo_id')),'national_crest'=>branding_asset(setting('national_crest_id')),'shared_crest_url'=>'/assets/shared/jata-negara.png'];
 }
-/** Format surat semasa (masuk ke snapshot revisi melalui school_profile()). */
+/** Format surat semasa (masuk ke snapshot revisi melalui school_profile(); turut digunakan serta-merta pada surat muktamad — lihat letter_live()). */
 function letter_profile(): array {
     $eff=setting('letter_effective');
     return ['mode'=>isset(LETTER_MODES[setting('letter_mode')])?setting('letter_mode'):'satu','effective'=>preg_match('/^\d{4}-\d{2}-\d{2}$/D',$eff)?$eff:'',
         'para'=>setting('letter_para'),'slogan'=>setting('letter_slogan'),'address'=>setting('school_address'),'tel'=>setting('school_tel'),'fax'=>setting('school_fax')];
 }
-/** Sahkan & simpan format surat. $d: letter_header, letter_mode, letter_effective (Y-m-d atau kosong), letter_para, letter_slogan. */
+/** Gunakan format surat semasa (kepala, bilangan surat, tarikh berkuat kuasa, perenggan, slogan, alamat, telefon/faks) pada surat muktamad.
+ *  Senarai tugas, nama guru, nama sekolah, Pengetua, rujukan & logo kekal daripada snapshot versi muktamad. */
+function letter_live(array $doc): array {
+    $doc['school']['letter']=letter_profile();
+    $layout=setting('letter_header'); if(isset(LETTER_HEADERS[$layout])) $doc['school']['branding']['layout']=$layout;
+    return $doc;
+}
+/** Sahkan & simpan format surat. $d: letter_header, letter_mode, letter_effective (Y-m-d atau kosong), letter_para, letter_slogan, [school_tel, school_fax]. */
 function letter_settings_save(array $d): void {
     $hd=(string)($d['letter_header']??''); $mode=(string)($d['letter_mode']??''); $eff=trim((string)($d['letter_effective']??''));
     $para=trim((string)($d['letter_para']??'')); $slogan=trim((string)($d['letter_slogan']??''));
@@ -56,7 +63,9 @@ function letter_settings_save(array $d): void {
     if($eff!=='' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$eff) || !checkdate((int)substr($eff,5,2),(int)substr($eff,8,2),(int)substr($eff,0,4)))) throw new EngineError('Tarikh berkuat kuasa tidak sah.');
     if(mb_strlen($para)>1500) throw new EngineError('Perenggan tanggungjawab maksimum 1,500 aksara.');
     if(mb_strlen($slogan)>200) throw new EngineError('Slogan maksimum 200 aksara.');
-    engine_setting_set(['letter_header'=>$hd,'letter_mode'=>$mode,'letter_effective'=>$eff,'letter_para'=>$para,'letter_slogan'=>$slogan]);
+    $kv=['letter_header'=>$hd,'letter_mode'=>$mode,'letter_effective'=>$eff,'letter_para'=>$para,'letter_slogan'=>$slogan];
+    foreach(['school_tel'=>'Telefon','school_fax'=>'Faks'] as $k=>$l) if(array_key_exists($k,$d)){ $v=trim((string)$d[$k]); if(mb_strlen($v)>40) throw new EngineError("$l maksimum 40 aksara."); $kv[$k]=$v; }
+    engine_setting_set($kv);
 }
 function branding_image_url(?array $asset): string { return $asset?'/?page=aset&id='.rawurlencode($asset['id']):''; }
 /** Logo surat: PNG/JPG/WebP ≤2 MB, ≤4096 px & 4 MP, diproses semula GD → PNG ≤640 px (lutsinar dikekalkan). */
