@@ -1751,6 +1751,7 @@ body:has(.hb-modal){overflow:hidden}
 .cve-bad{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
 .cve-bad .panel-heading h3{color:var(--danger)}
 .cve-steps{margin:0;font-size:.85rem}
+#cve-php .badge,#cve-db .badge{white-space:nowrap}
 #cve-php td,#cve-db td{white-space:normal;overflow-wrap:anywhere}
 #cve-php td:first-child,#cve-db td:first-child{min-width:200px}
 /* Portal AJK murid */

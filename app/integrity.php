@@ -181,19 +181,109 @@ function handle_system(string $action): never {
 
 /* Semakan CVE PHP: PHP2Shell (CVE-2026-109618 / CVE-2026-109619, RCE tanpa log masuk, dibaiki 21 Okt 2026).
  * Versi dibaiki mengikut siri; siri lebih baharu daripada senarai dianggap selamat, siri < 8.2 tiada sokongan.
- * Tetapan session.upload_progress & fatal_error_backtraces mengurangkan risiko tetapi bukan pengganti kemas kini. */
+ * Tetapan session.upload_progress & fatal_error_backtraces mengurangkan risiko tetapi bukan pengganti kemas kini.
+ * Ubuntu membaiki melalui backport tanpa menaikkan nombor upstream (PHP_VERSION kekal 8.5.4), jadi versi pakej dpkg turut dibanding. */
 const PHP_CVE_IDS='CVE-2026-109618 / CVE-2026-109619';
 const PHP_CVE_FIXED=['8.2'=>'8.2.35','8.3'=>'8.3.36','8.4'=>'8.4.27','8.5'=>'8.5.12'];
+/** Pakej Ubuntu yang mengandungi pembaikan (USN-8948-1): 26.04, 26.10, 24.04, 22.04. */
+const PHP_CVE_UBUNTU_FIXED=['8.5.4-0ubuntu1.5','8.5.9-0ubuntu2.1','8.3.6-0ubuntu0.24.04.13','8.1.2-1ubuntu2.28'];
 function php_cve_fixed_for(string $version): ?string { return PHP_CVE_FIXED[implode('.',array_slice(explode('.',$version),0,2))]??null; }
-function php_cve_vulnerable(string $version=PHP_VERSION): bool {
-    if(version_compare($version,'8.2.0','<')) return true;
-    $f=php_cve_fixed_for($version); if($f===null) return false; // siri lebih baharu daripada 8.5
-    return version_compare($version,$f,'<');
+
+/** Banding versi mengikut peraturan dpkg (epoch:upstream-revision). Pulangan <0, 0 atau >0. */
+function deb_version_compare(string $a,string $b): int {
+    $split=function(string $v): array {
+        $epoch=0; if(preg_match('/^(\d+):(.*)$/',$v,$m)){ $epoch=(int)$m[1]; $v=$m[2]; }
+        $p=strrpos($v,'-'); return $p===false?[$epoch,$v,'']:[$epoch,substr($v,0,$p),substr($v,$p+1)];
+    };
+    $order=function(string $c): int { if($c==='~') return -1; if($c===''||ctype_digit($c)) return 0; return ctype_alpha($c)?ord($c):ord($c)+256; };
+    $part=function(string $x,string $y) use($order): int {
+        $i=0; $j=0; $nx=strlen($x); $ny=strlen($y);
+        while($i<$nx||$j<$ny){
+            while(($i<$nx&&!ctype_digit($x[$i]))||($j<$ny&&!ctype_digit($y[$j]))){
+                $d=$order($i<$nx?$x[$i]:'')-$order($j<$ny?$y[$j]:''); if($d!==0) return $d;
+                ++$i; ++$j;
+            }
+            while($i<$nx&&$x[$i]==='0') ++$i;
+            while($j<$ny&&$y[$j]==='0') ++$j;
+            $first=0;
+            while($i<$nx&&$j<$ny&&ctype_digit($x[$i])&&ctype_digit($y[$j])){ if($first===0) $first=ord($x[$i])-ord($y[$j]); ++$i; ++$j; }
+            if($i<$nx&&ctype_digit($x[$i])) return 1;
+            if($j<$ny&&ctype_digit($y[$j])) return -1;
+            if($first!==0) return $first;
+        }
+        return 0;
+    };
+    [$ea,$ua,$ra]=$split($a); [$eb,$ub,$rb]=$split($b);
+    return $ea<=>$eb ?: ($part($ua,$ub) ?: $part($ra,$rb));
 }
-/** Baris semakan: [label, ok|warn|bad, butiran]. */
+/** Versi pakej terpasang daripada pangkalan data dpkg: rentetan versi, null jika tiada pakej, false jika fail tidak boleh dibaca (cth. open_basedir, bukan Debian/Ubuntu). */
+function dpkg_package_version(string $package,string $file='/var/lib/dpkg/status'): string|false|null {
+    $h=@fopen($file,'rb'); if($h===false) return false;
+    $name=''; $status=''; $version=''; $found=null;
+    while(true){
+        $line=fgets($h);
+        if($line===false||trim($line)===''){
+            if($name===$package && str_ends_with($status,' installed') && $version!==''){ $found=$version; break; }
+            if($line===false) break;
+            $name=$status=$version=''; continue;
+        }
+        if(str_starts_with($line,'Package: ')) $name=trim(substr($line,9));
+        elseif(str_starts_with($line,'Status: ')) $status=trim(substr($line,8));
+        elseif(str_starts_with($line,'Version: ')) $version=trim(substr($line,9));
+    }
+    fclose($h); return $found;
+}
+/** Nama pakej dpkg bagi PHP yang sedang berjalan (ikut SAPI, bukan php -v CLI). */
+function php_package_name(string $sapi=PHP_SAPI,string $version=PHP_VERSION): string {
+    $s=implode('.',array_slice(explode('.',$version),0,2));
+    return match($sapi){ 'fpm-fcgi'=>'php'.$s.'-fpm','apache2handler'=>'libapache2-mod-php'.$s,'cgi-fcgi'=>'php'.$s.'-cgi',default=>'php'.$s.'-cli' };
+}
+/** Benar jika binari proses ini telah diganti di cakera (pakej dikemas kini tetapi proses belum dimulakan semula). */
+function php_process_stale(): bool { $exe=@readlink('/proc/self/exe'); return is_string($exe) && str_ends_with($exe,' (deleted)'); }
+/** Nilai status CVE PHP: [ok|bad|unverified, versi upstream dibaiki atau null, butiran]. $pkg: rujuk dpkg_package_version(). */
+function php_cve_evaluate(string $version,string|false|null $pkg,bool $stale=false,string $name='pakej PHP'): array {
+    $base=preg_match('/^\d+\.\d+\.\d+/',$version,$m)?$m[0]:$version; $f=php_cve_fixed_for($base);
+    if($f===null && version_compare($base,'8.2.0','>=')) return ['ok',null,$base.' — siri lebih baharu daripada senarai pembaikan'];
+    if($f!==null && version_compare($base,$f,'>=')) return ['ok',$f,$base.' (dibaiki: '.$f.'+)'];
+    $upstream=$f?$base.' terdedah — naik taraf ke '.$f.' atau lebih baharu, kemudian mulakan semula PHP-FPM':$base.' tidak lagi disokong — naik taraf ke PHP 8.2.35+';
+    $known=array_values(array_filter(PHP_CVE_UBUNTU_FIXED,fn($x)=>str_starts_with($x,$base.'-')));
+    if($pkg===false) return $known?['unverified',$f,$base.' — versi pakej tidak dapat dibaca, jadi pembaikan backport Ubuntu tidak dapat disahkan. Di pelayan, jalankan: dpkg-query -W '.$name.' (dibaiki: '.$known[0].' atau lebih baharu pada Ubuntu)']:['bad',$f,$upstream];
+    if($pkg===null) return ['bad',$f,$upstream];
+    $pkg=(string)preg_replace('/^\d+:/','',$pkg);
+    if(!str_starts_with($pkg,$base.'-')) return ['bad',$f,'PHP yang berjalan ialah '.$base.' tetapi '.$name.' terpasang ialah '.$pkg.' — mulakan semula PHP-FPM, kemudian muat semula halaman ini'];
+    $prefix=strstr($pkg,'ubuntu',true); $fixed=null;
+    if($prefix!==false) foreach($known as $k) if(strstr($k,'ubuntu',true)===$prefix){ $fixed=$k; break; }
+    if($fixed===null) return ['bad',$f,$upstream];
+    if(deb_version_compare($pkg,$fixed)<0) return ['bad',$f,$name.' '.$pkg.' terdedah — kemas kini ke '.$fixed.' atau lebih baharu (sudo apt update && sudo apt upgrade), kemudian mulakan semula PHP-FPM'];
+    if($stale) return ['bad',$f,$name.' '.$pkg.' sudah dibaiki tetapi proses PHP masih menjalankan binari lama — mulakan semula PHP-FPM'];
+    return ['ok',$f,$name.' '.$pkg.' — dibaiki melalui backport Ubuntu (USN-8948-1, minimum '.$fixed.')'];
+}
+function php_cve_state(): array {
+    static $state=null; if($state!==null) return $state;
+    $base=preg_match('/^\d+\.\d+\.\d+/',PHP_VERSION,$m)?$m[0]:PHP_VERSION; $f=php_cve_fixed_for($base);
+    $name=php_package_name();
+    // dpkg hanya dibaca jika nombor upstream di bawah senarai.
+    $pkg=($f===null && version_compare($base,'8.2.0','>=')) || ($f!==null && version_compare($base,$f,'>='))?null:dpkg_package_version($name);
+    return $state=php_cve_evaluate(PHP_VERSION,$pkg,php_process_stale(),$name);
+}
+function php_cve_vulnerable(): bool { return php_cve_state()[0]==='bad'; }
+/** Lencana status baris semakan CVE. */
+function cve_row_badge(string $status): string {
+    return match($status){ 'ok'=>'<span class="badge green">OK</span>','bad'=>'<span class="badge danger">Terdedah</span>','unverified'=>'<span class="badge warn">Perlu semakan</span>',default=>'<span class="badge warn">Disyorkan</span>' };
+}
+/** Mesej banner CVE bagi halaman platform selain Maklumat Sistem. */
+function cve_banners(): array {
+    $out=[]; $php=php_cve_state()[0]; $db=db_cve_state();
+    if($php==='bad') $out[]='Keselamatan PHP: PHP '.PHP_VERSION.' terdedah kepada '.PHP_CVE_IDS.' (RCE tanpa log masuk). Kemas kini PHP dan mulakan semula PHP-FPM — lihat Maklumat Sistem.';
+    elseif($php==='unverified') $out[]='Keselamatan PHP: pembaikan '.PHP_CVE_IDS.' pada PHP '.PHP_VERSION.' tidak dapat disahkan secara automatik — semak versi pakej di Maklumat Sistem.';
+    if($db==='bad') $out[]='Keselamatan pangkalan data: versi MariaDB terdedah kepada CVE Oktober 2026 (CVSS sehingga 9.9). Kemas kini sebaik pembaikan tersedia — lihat Maklumat Sistem.';
+    elseif($db==='unverified') $out[]='Keselamatan pangkalan data: pakej MariaDB lebih baharu daripada yang disenaraikan; sahkan pembaikan CVE Oktober 2026 — lihat Maklumat Sistem.';
+    return $out;
+}
+/** Baris semakan: [label, ok|warn|bad|unverified, butiran]. */
 function php_cve_checks(): array {
-    $v=PHP_VERSION; $f=php_cve_fixed_for($v); $vul=php_cve_vulnerable($v); $on=fn(string $k)=>filter_var(ini_get($k),FILTER_VALIDATE_BOOLEAN);
-    $rows=[['Versi PHP dibaiki ('.PHP_CVE_IDS.')',$vul?'bad':'ok',$vul?($f?$v.' terdedah — naik taraf ke '.$f.' atau lebih baharu, kemudian mulakan semula PHP-FPM':$v.' tidak lagi disokong — naik taraf ke PHP 8.2.35+'):$v.($f?' (dibaiki: '.$f.'+)':'')]];
+    [$state,,$note]=php_cve_state(); $on=fn(string $k)=>filter_var(ini_get($k),FILTER_VALIDATE_BOOLEAN);
+    $rows=[['Versi PHP dibaiki ('.PHP_CVE_IDS.')',$state,$note]];
     $rows[]=['session.upload_progress.enabled',$on('session.upload_progress.enabled')?'warn':'ok',$on('session.upload_progress.enabled')?'Aktif — disyorkan 0 dalam php.ini / pool PHP-FPM (bukan .user.ini); sistem ini tidak menggunakannya':'Dimatikan'];
     if(PHP_VERSION_ID>=80500) $rows[]=['fatal_error_backtraces',$on('fatal_error_backtraces')?'warn':'ok',$on('fatal_error_backtraces')?'Aktif — disyorkan 0 dalam php.ini / pool PHP-FPM':'Dimatikan'];
     $sapi=PHP_SAPI; $rows[]=['SAPI PHP',$sapi==='apache2handler'?'warn':'ok',$sapi.($sapi==='apache2handler'?' — mod_php berisiko tertinggi; PHP-FPM disyorkan':'')];
@@ -206,25 +296,43 @@ function php_cve_checks(): array {
  * kelayakan DB aplikasi bocor. Dibaiki dalam 10.6.28 / 10.11.19 / 11.4.13 / 11.8.9 / 12.3.3 / 13.0.2. Tidak terpakai pada MySQL. */
 const DB_CVE_IDS='CVE MariaDB Okt 2026 (CVE-2026-92262, -85746, -85748, -107815 …)';
 const DB_CVE_FIXED=['10.6'=>'10.6.28','10.11'=>'10.11.19','11.4'=>'11.4.13','11.8'=>'11.8.9','12.3'=>'12.3.3','13.0'=>'13.0.2'];
-/** [enjin MariaDB|MySQL, versi x.y.z] daripada SELECT VERSION() (cth. "10.11.6-MariaDB-0+deb12u1", "5.5.5-10.6.19-MariaDB", "8.0.39"). */
+/** Backport Ubuntu yang disahkan membaiki CVE ini: upstream => revisi pakej. Tambah apabila Ubuntu menerbitkan USN (tiada setakat 5 Nov 2026). */
+const DB_CVE_UBUNTU_FIXED=[];
+/** Revisi Ubuntu terakhir yang diketahui belum dibaiki: upstream => revisi (11.8.6-5ubuntu0.1 = keluaran Julai 2026, Ubuntu 26.04). */
+const DB_CVE_UBUNTU_UNFIXED=['11.8.6'=>'5ubuntu0.1'];
+/** [enjin MariaDB|MySQL, versi x.y.z, rentetan asal, revisi pakej Ubuntu atau ''] daripada SELECT VERSION() (cth. "10.11.6-MariaDB-0+deb12u1", "11.8.6-MariaDB-5ubuntu0.1 from Ubuntu-log", "5.5.5-10.6.19-MariaDB", "8.0.39"). */
 function db_server_info(?string $raw=null): array {
     $raw??=(string)query('SELECT VERSION()')->fetchColumn();
-    if(stripos($raw,'mariadb')!==false){ preg_match('/(\d+\.\d+\.\d+)-MariaDB/i',$raw,$m); return ['MariaDB',$m[1]??'0.0.0',$raw]; }
-    preg_match('/^(\d+\.\d+\.\d+)/',$raw,$m); return ['MySQL',$m[1]??'0.0.0',$raw];
+    if(stripos($raw,'mariadb')!==false){
+        preg_match('/(\d+\.\d+\.\d+)-MariaDB/i',$raw,$m);
+        $rev=preg_match('/-MariaDB-([0-9A-Za-z.+~]*ubuntu[0-9A-Za-z.+~]*)/i',$raw,$r)?$r[1]:'';
+        return ['MariaDB',$m[1]??'0.0.0',$raw,$rev];
+    }
+    preg_match('/^(\d+\.\d+\.\d+)/',$raw,$m); return ['MySQL',$m[1]??'0.0.0',$raw,''];
 }
-/** Status versi: [ok|bad, versi dibaiki atau null, catatan]. */
-function db_cve_status(string $engine,string $version): array {
+/** Status versi: [ok|bad|unverified, versi dibaiki atau null, catatan]. */
+function db_cve_status(string $engine,string $version,string $ubuntuRev=''): array {
     if($engine!=='MariaDB') return ['ok',null,'CVE MariaDB Okt 2026 tidak terpakai pada MySQL; pastikan kemas kini Oracle Critical Patch Update terkini.'];
     $series=implode('.',array_slice(explode('.',$version),0,2)); $f=DB_CVE_FIXED[$series]??null;
-    if($f!==null) return version_compare($version,$f,'<')?['bad',$f,'terdedah — naik taraf ke '.$f.' atau lebih baharu']:['ok',$f,'dibaiki: '.$f.'+'];
+    if($f!==null && version_compare($version,$f,'>=')) return ['ok',$f,'dibaiki: '.$f.'+'];
+    if($f!==null && $ubuntuRev!==''){
+        $fixed=DB_CVE_UBUNTU_FIXED[$version]??null; $unfixed=DB_CVE_UBUNTU_UNFIXED[$version]??null;
+        if($fixed!==null && deb_version_compare($ubuntuRev,$fixed)>=0) return ['ok',$f,'dibaiki melalui backport Ubuntu (minimum '.$version.'-'.$fixed.')'];
+        if($unfixed!==null && deb_version_compare($ubuntuRev,$unfixed)>0) return ['unverified',$f,'pakej Ubuntu lebih baharu daripada yang disenaraikan — sahkan CVE Oktober 2026 dalam changelog pakej (apt changelog mariadb-server)'];
+        if($unfixed!==null) return ['bad',$f,'terdedah — pakej Ubuntu ini belum mengandungi pembaikan Oktober 2026 (setakat semakan 5 Nov 2026). Kemas kini sebaik terbit (sudo apt update && sudo apt upgrade), atau guna repo rasmi MariaDB untuk '.$f.'+'];
+    }
+    if($f!==null) return ['bad',$f,'terdedah — naik taraf ke '.$f.' atau lebih baharu'];
     if(version_compare($series,'13.0','>')) return ['ok',null,'siri lebih baharu daripada senarai pembaikan'];
     return ['bad',null,'siri '.$series.' tidak lagi menerima pembaikan keselamatan — naik taraf ke siri LTS (10.11.19+, 11.4.13+, 11.8.9+)'];
 }
-function db_cve_vulnerable(): bool { static $v=null; if($v!==null) return $v; try { [$e,$ver]=db_server_info(); return $v=db_cve_status($e,$ver)[0]==='bad'; } catch(Throwable){ return $v=false; } }
-/** Baris semakan pangkalan data: [label, ok|warn|bad, butiran]. */
+/** Status semasa pelayan DB: ok|bad|unverified (ok jika tidak dapat dibaca, supaya halaman tidak gagal). */
+function db_cve_state(): string { static $v=null; if($v!==null) return $v; try { [$e,$ver,,$rev]=db_server_info(); return $v=db_cve_status($e,$ver,$rev)[0]; } catch(Throwable){ return $v='ok'; } }
+function db_cve_vulnerable(): bool { return db_cve_state()==='bad'; }
+/** Baris semakan pangkalan data: [label, ok|warn|bad|unverified, butiran]. */
 function db_cve_checks(): array {
-    [$engine,$ver,$raw]=db_server_info(); [$st,,$note]=db_cve_status($engine,$ver);
-    $rows=[['Versi '.$engine.' dibaiki',$st,$raw.' — '.$note.($st==='bad' && preg_match('/deb|ubuntu|el\d|rhel|alma|rocky/i',$raw)?' (pakej distro: semak changelog pakej untuk backport pembaikan)':'')]];
+    [$engine,$ver,$raw,$rev]=db_server_info(); [$st,,$note]=db_cve_status($engine,$ver,$rev);
+    $known=$rev!=='' && isset(DB_CVE_UBUNTU_UNFIXED[$ver]);
+    $rows=[['Versi '.$engine.' dibaiki',$st,$raw.' — '.$note.($st==='bad' && !$known && preg_match('/deb|ubuntu|el\d|rhel|alma|rocky/i',$raw)?' (pakej distro: semak changelog pakej untuk backport pembaikan)':'')]];
     // Keistimewaan global pengguna DB aplikasi: FILE / SUPER / ALL ON *.* membesarkan kesan CVE (tulis fail, ubah akaun lain).
     $grants=[]; try { $grants=query('SHOW GRANTS FOR CURRENT_USER()')->fetchAll(PDO::FETCH_COLUMN); } catch(Throwable){}
     $global=implode(' ',array_filter($grants,fn($g)=>preg_match('/\bON \*\.\* TO\b/i',(string)$g)));

@@ -18,7 +18,8 @@ case "$G" in
 statik)
   for f in app/*.php bin/*.php public_html/*.php tests/*.php integrations/koku-multi/*.php; do php -l "$f" >/dev/null; done; echo "php -l: semua fail lulus"
   run python3 tests/tenant_sql_audit.py
-  run php tests/static_symbols.php ;;
+  run php tests/static_symbols.php
+  run php tests/cve_status.php ;;
 demo)
   : "${URL:?tetapkan URL}"
   php bin/school.php demo-reset --all >/dev/null
