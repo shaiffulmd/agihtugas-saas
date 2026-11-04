@@ -71,7 +71,7 @@ sql(){ "$CLI" ${DEF[@]+"${DEF[@]}"} -N -B -e "$1"; }
 vercmp_lt(){ [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; } # $1 < $2
 fixed_for(){ local s="$1" p; for p in $FIXED; do [ "${p%%:*}" = "$s" ] && { echo "${p#*:}"; return; }; done; echo ""; }
 
-FROZEN=0; TMPI=""; TMPPID=""; SOCKD=""; OUT=""; CRED=""
+FROZEN=0; TMPI=""; TMPPID=""; SOCKD=""; OUT=""; CRED=""; UPGRADING=0
 cleanup(){
   local rc=$?
   if [ -n "$TMPPID" ] && kill -0 "$TMPPID" 2>/dev/null; then kill "$TMPPID" 2>/dev/null || true; wait "$TMPPID" 2>/dev/null || true; fi
@@ -79,7 +79,10 @@ cleanup(){
   [ -n "$SOCKD" ] && rm -rf "$SOCKD"
   [ -n "$CRED" ] && rm -f "$CRED"
   if [ "$FROZEN" = 1 ]; then sql "SET GLOBAL read_only=OFF" 2>/dev/null && warn "read_only dimatikan semula (tulisan dibuka)." || warn "GAGAL mematikan read_only — jalankan: mariadb -e 'SET GLOBAL read_only=OFF'"; fi
-  [ $rc -ne 0 ] && log "${C_R}Skrip berhenti (kod $rc). Tiada pakej dinaik taraf melainkan dinyatakan di atas.${C_0}"
+  if [ $rc -ne 0 ]; then
+    if [ "$UPGRADING" = 1 ]; then log "${C_R}Skrip berhenti (kod $rc) SEMASA memasang pakej: sebahagian pakej mungkin sudah bertukar. Jangan jalankan semula skrip; semak dengan dpkg --audit dan apt-cache policy mariadb-server.${C_0}"
+    else log "${C_R}Skrip berhenti (kod $rc). Tiada pakej dinaik taraf melainkan dinyatakan di atas.${C_0}"; fi
+  fi
   exit $rc
 }
 trap cleanup EXIT
@@ -303,14 +306,22 @@ if [ "$PM" = apt ]; then
   done
   # Pin setiap pakej MariaDB kepada versi pilihan jika repo menyediakannya (pakej MariaDB bergantung pada versi yang sama tepat).
   PIN=""; for pk in $PKGS; do if apt-cache madison "$pk" 2>/dev/null | awk -F'|' '{gsub(/ /,"",$2); print $2}' | grep -qxF "$CANDFULL"; then PIN="$PIN $pk=$CANDFULL"; else PIN="$PIN $pk"; fi; done
+  APTOPTS=(-o Dpkg::Options::=--force-confold)
+  # Peralihan pakej distro → repo rasmi: pakej compat rasmi memiliki fail nama lama (mysql, mysqldump…) yang masih milik pakej distro,
+  # tanpa Replaces, jadi dpkg berhenti separuh jalan. Semua pakej pemilik diganti dalam transaksi yang sama.
+  INSTVER=$(dpkg-query -W -f='${Version}' mariadb-server 2>/dev/null || true)
+  case "$CANDFULL" in *+maria~*) case "$INSTVER" in *+maria~*) ;; *) APTOPTS+=(-o Dpkg::Options::=--force-overwrite); warn "Peralihan pakej distro → repo rasmi: dpkg --force-overwrite digunakan.";; esac;; esac
+  UPGRADING=1
   # shellcheck disable=SC2086
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::=--force-confold $PIN
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "${APTOPTS[@]}" $PIN
 else
   PKGS=$(rpm -qa --qf '%{NAME}\n' | grep -iE '^(mariadb|galera)' | sort -u)
   PIN=""; for pk in $PKGS; do case "$pk" in [Mm]ari[aA][Dd][Bb]-*|mariadb-*) PIN="$PIN $pk-$CANDFULL";; *) PIN="$PIN $pk";; esac; done
+  UPGRADING=1
   # shellcheck disable=SC2086
   $PM install -y $PIN || $PM upgrade -y $PKGS
 fi
+UPGRADING=0
 ok "Pakej dinaik taraf: $(echo $PIN)"
 
 # ---------------- 6. Semakan selepas ----------------
