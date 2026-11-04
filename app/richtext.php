@@ -35,7 +35,7 @@ function rich_walk(DOMNode $node,int $depth): string {
         if($tag==='a'){
             $href=preg_replace('/[\x00-\x20\x7f]+/','',(string)$c->getAttribute('href'));
             if(!preg_match('~^(https?://|mailto:)[^"<>]+$~i',$href)){ $h.=$inner; continue; }
-            $h.='<a href="'.e($href).'" rel="noopener nofollow" target="_blank">'.($inner!==''?$inner:e($href)).'</a>'; continue;
+            $h.='<a href="'.e($href).'" rel="noopener nofollow ugc" target="_blank">'.($inner!==''?$inner:e($href)).'</a>'; continue;
         }
         if(in_array($tag,['ul','ol'],true)) $inner=preg_replace('~^\s+|\s+$~','',$inner);
         // Blok di dalam <p> (cth. <p><ul>…) tidak sah: buka balutan <p> supaya struktur kekal kemas.

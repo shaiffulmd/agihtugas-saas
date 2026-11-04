@@ -34,7 +34,7 @@ function legal_html(string $t): string {
     return $h.($list?'</ul>':'');
 }
 function legal_page(string $which): never {
-    lp_head($which==='terma'?'Terma & Syarat':'Polisi Privasi'); ?>
+    lp_head($which==='terma'?'Terma & Syarat':'Polisi Privasi',false,['path'=>'/'.$which,'desc'=>($which==='terma'?'Terma & Syarat penggunaan ':'Polisi perkhidmatan dan privasi (PDPA 2010) ').platform_name().'.']); ?>
 <div class="main-content platform-dir"><div class="page-heading"><div><span class="eyebrow teal"><?= e(mb_strtoupper(platform_name())) ?></span><h1><?= $which==='terma'?'Terma &amp; Syarat':'Polisi Perkhidmatan &amp; Privasi' ?></h1><p class="muted">Versi <?= e(legal_version()) ?></p></div><div class="button-group"><a class="btn outline" href="/">← Direktori</a></div></div>
 <section class="panel padded legal-text"><?= legal_html(legal_text($which)) ?></section>
 <p class="muted"><a class="text-link" href="/terma">Terma &amp; Syarat</a> · <a class="text-link" href="/polisi">Polisi Privasi</a></p></div><?php lp_foot(); exit;

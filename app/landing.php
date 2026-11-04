@@ -6,8 +6,11 @@ declare(strict_types=1);
 require_once __DIR__.'/icons.php';
 
 function lp_brand(): string { return '<a class="lp-brand" href="/">'.plat_brand_mark().'<span>'.plat_brand_name('b').'<small>'.e(plat_tagline()).'</small></span></a>'; }
-function lp_head(string $title,bool $directory=false): void {
-    p_head($title,'<link rel="stylesheet" href="/?page=lp-css&amp;v='.e(lp_css_ver()).'">'.($directory?'<link rel="stylesheet" href="'.e(asset('directory.css')).'">':'')); ?>
+/** $seo: desc, path (kanonik), noindex, ld (JSON-LD). Tanpa 'path' → noindex (cth. /daftar/sah, /lapor-keselamatan). */
+function lp_head(string $title,bool $directory=false,array $seo=[]): void {
+    $can=isset($seo['path'])?seo_platform_abs($seo['path']):''; $img=lp_has_hero()?seo_platform_abs('/?page=lp-hero&v='.rawurlencode(pset('lp_hero_ver'))):(plat_logo_has()?seo_platform_abs(plat_logo_url()):'');
+    $meta=seo_meta(['title'=>$title.' · '.platform_name(),'desc'=>$seo['desc']??lp_text('teks'),'canonical'=>$can,'image'=>$img,'site'=>platform_name(),'noindex'=>!empty($seo['noindex']) || !isset($seo['path'])]).implode('',array_map('seo_json_ld',$seo['ld']??[]));
+    p_head($title,'<link rel="stylesheet" href="/?page=lp-css&amp;v='.e(lp_css_ver()).'">'.($directory?'<link rel="stylesheet" href="'.e(asset('directory.css')).'">':''),$meta); ?>
 <?= function_exists('icons_sprite')?icons_sprite():'' ?><header class="lp-nav"><div class="lp-wrap lp-nav-row"><?= lp_brand() ?>
 <nav class="lp-pautan" aria-label="Halaman awam"><a href="/direktori"<?= $directory?' aria-current="page"':'' ?>>Direktori</a><?php if($directory): ?><a href="#bantuan-direktori">Bantuan</a><?php else: ?><a href="/#ciri">Ciri</a><a href="/#pakej">Pakej</a><a href="/#keselamatan">Keselamatan</a><?php endif; ?><?php if(faq_items(true)): ?><a href="/faq">FAQ</a><?php endif; ?><?php if(registration_open()): ?><a class="lp-pill" href="/daftar"><?= icon('school') ?> Daftar sekolah</a><?php endif; ?></nav></div></header>
 <main class="lp-main"><?php
@@ -42,7 +45,11 @@ function platform_landing(): never {
     }
     $total=(int)query('SELECT COUNT(*) FROM schools WHERE status="aktif"')->fetchColumn();
     $free=pset('free_aktif')==='1'; $trial=(int)pset('percubaan_hari'); $price=ringgit(pay_price()); $daftar=registration_open(); $y=icon('check');
-    lp_head('Agihan tugas guru sekolah'); ?>
+    $org=seo_clean(['@type'=>'Organization','name'=>platform_name(),'url'=>seo_platform_abs('/'),'logo'=>plat_logo_has()?seo_platform_abs(plat_logo_url()):null,'email'=>pset('emel_notis')]);
+    $app=seo_clean(['@type'=>'SoftwareApplication','name'=>platform_name(),'applicationCategory'=>'BusinessApplication','operatingSystem'=>'Web','inLanguage'=>'ms','url'=>seo_platform_abs('/'),'description'=>lp_text('teks'),
+        'offers'=>array_values(array_filter([$free?['@type'=>'Offer','name'=>'Free','price'=>'0','priceCurrency'=>'MYR']:null,['@type'=>'Offer','name'=>'Pro','price'=>number_format(pay_price()/100,2,'.',''),'priceCurrency'=>'MYR']]))]);
+    // ?q=… memaparkan semula teks carian: noindex supaya pautan spam ke /?q=kata-kunci tidak menjadi halaman terindeks (SEO poisoning).
+    lp_head('Sistem agihan tugas guru sekolah',false,['path'=>'/','noindex'=>$q!=='','desc'=>lp_text('teks'),'ld'=>[$org,seo_clean(['@type'=>'WebSite','name'=>platform_name(),'url'=>seo_platform_abs('/'),'inLanguage'=>'ms']),$app]]); ?>
 <section class="lp-hero" id="cari"><div class="lp-wrap lp-hero-grid">
 <div class="lp-hero-kiri"><span class="hero-pill"><span class="dot"></span><?= e(lp_text('lencana')) ?> · <?= date('Y') ?></span>
 <h1><?= e(lp_text('t1')) ?><br><em><?= e(lp_text('t2')) ?></em></h1>

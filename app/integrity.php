@@ -11,6 +11,8 @@ declare(strict_types=1);
  */
 const INTEGRITY_SCRIPT = '/\.(php\d?|phtml|phar|pht|phps|inc|cgi|pl|py|sh|asp|aspx|jsp)$/i';
 const INTEGRITY_INTERVAL = 6*3600;
+/** Halaman HTML / .htaccess yang ditanam dalam folder aset atau sementara awam = tanda halaman doorway / spam SEO (SEO poisoning). */
+const INTEGRITY_DOORWAY = '/\.(s?html?|xhtml|shtm)$|^\.htaccess$/i';
 
 function integrity_root(): string { return realpath(dirname(__DIR__)) ?: dirname(__DIR__); }
 function integrity_file(): string { return integrity_root().'/storage/integrity.json'; }
@@ -41,7 +43,8 @@ function integrity_suspicious(): array {
         foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base,FilesystemIterator::SKIP_DOTS)) as $f){
             if(!$f->isFile()) continue;
             $name=$f->getFilename();
-            if(preg_match(INTEGRITY_SCRIPT,$name) || ($name==='.htaccess' && $dir==='storage' && stripos((string)@file_get_contents($f->getPathname(),false,null,0,4096),'php')!==false)) $out[]=integrity_rel($f->getPathname());
+            if(preg_match(INTEGRITY_SCRIPT,$name) || ($name==='.htaccess' && $dir==='storage' && stripos((string)@file_get_contents($f->getPathname(),false,null,0,4096),'php')!==false)
+                || (str_starts_with($dir,'public_html/') && preg_match(INTEGRITY_DOORWAY,$name))) $out[]=integrity_rel($f->getPathname());
         }
     }
     sort($out); return $out;

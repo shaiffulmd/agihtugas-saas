@@ -965,6 +965,7 @@ app/surat_lantikan.php
 app/enjin_actions.php
 app/enjin_views.php
 app/api.php
+app/seo.php
 public_html/assets/tugas.css
 public_html/assets/tugas.js
 public_html/assets/shared/

@@ -31,7 +31,7 @@ function error_page(int $code,string $detail='',array $opt=[]): never {
     if(!isset(ERROR_TEXT[$code])) $code=$code>=500?500:404;
     while(ob_get_level()>0) @ob_end_clean(); // buang separuh halaman yang mungkin telah dijana
     if(PHP_SAPI!=='cli' && function_exists('tenant_rewrite_html')) ob_start('tenant_rewrite_html'); // pautan /KOD dalam mod laluan
-    if(!headers_sent()){ http_response_code($code); header('Cache-Control: no-store'); if($code===503 || $code===429) header('Retry-After: '.($code===503?300:60)); }
+    if(!headers_sent()){ http_response_code($code); header('Cache-Control: no-store'); header('X-Robots-Tag: noindex'); /* ralat ≥400 tidak diindeks (elak 404 lembut terindeks) */ if($code===503 || $code===429) header('Retry-After: '.($code===503?300:60)); }
     [$title,$text,$icon]=ERROR_TEXT[$code]; $title=($opt['title']??null)?:$title; $text=$opt['text']??$text;
     if(error_wants_plain()){ if(!headers_sent()) header('Content-Type: application/json; charset=utf-8'); echo json_encode(['ralat'=>$code,'mesej'=>$detail!==''?$detail:$title],JSON_UNESCAPED_UNICODE); exit; }
     if(!headers_sent()) header('Content-Type: text/html; charset=utf-8');

@@ -57,6 +57,7 @@ function registration_submit(): array {
     $v['kod']=strtoupper(preg_replace('/\s+/','',$v['kod'])); $v['pic_emel']=strtolower($v['pic_emel']); $v['pic_telefon']=preg_replace('/[^0-9+]/','',$v['pic_telefon']);
     if(!school_code_valid($v['kod'])) throw new DomainException('Kod sekolah mesti kod KPM: 3 huruf + 4 digit (cth. CEA1234).');
     if($v['nama']==='' || mb_strlen($v['nama'])>150) throw new DomainException('Nama sekolah diperlukan.');
+    if(seo_has_link($v['nama'])) throw new DomainException('Nama sekolah tidak boleh mengandungi pautan atau alamat laman web.'); // dipaparkan di direktori awam (SEO poisoning)
     if(!in_array($v['negeri'],NEGERI,true)) throw new DomainException('Sila pilih negeri.');
     if($v['pic_nama']==='' || mb_strlen($v['pic_nama'])>120) throw new DomainException('Nama pegawai bertanggungjawab diperlukan.');
     if(strlen($v['pic_emel'])>190 || !filter_var($v['pic_emel'],FILTER_VALIDATE_EMAIL)) throw new DomainException('E-mel tidak sah.');
@@ -106,7 +107,7 @@ function registration_page(): never {
         catch(DomainException $ex){ $error=$ex->getMessage(); }
     }
     $v=fn($k)=>e($done?'':input($k));
-    lp_head('Daftar Sekolah'); ?>
+    lp_head('Daftar Sekolah',false,['path'=>'/daftar','noindex'=>$_SERVER['REQUEST_METHOD']==='POST','desc'=>'Daftar sekolah anda di '.platform_name().' — Pro percuma '.(int)pset('percubaan_hari').' hari untuk agihan tugas guru, auto-agihan, kelulusan dan surat lantikan.']); ?>
 <div class="main-content platform-dir"><div class="page-heading"><div><span class="eyebrow teal"><?= e(mb_strtoupper(platform_name())) ?></span><h1>Daftar sekolah</h1><p class="muted">Pro percuma selama <?= (int)pset('percubaan_hari') ?> hari selepas diluluskan. Satu pendaftaran bagi setiap sekolah (kod KPM).</p></div><div class="button-group"><a class="btn outline" href="/direktori">← Direktori sekolah</a></div></div>
 <?php if($error!=='') p_notice($error,'error'); if($resent) p_notice('Jika pendaftaran itu masih menunggu pengesahan, pautan baharu telah dihantar ke e-mel pegawai.','success'); ?>
 <?php if($done): [$st,$s]=$done; ?><section class="panel padded"><h3>Pendaftaran diterima</h3><p><?= $st==='emel'?'Semak e-mel <strong>'.e($s['pic_email']).'</strong> dan tekan pautan pengesahan dalam '.DAFTAR_SAH_JAM.' jam (semak juga folder Spam).':'Pendaftaran menunggu kelulusan pentadbir platform. Anda akan dimaklumkan melalui e-mel.' ?></p></section>

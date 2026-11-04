@@ -6,7 +6,9 @@ if((string)($_GET['page']??'')==='sandaran_oauth' || (string)($_GET['p']??'')===
 // API v1 sekolah (/KOD/api/… atau kod.domain/api/…): JSON tanpa sesi/kuki.
 elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/api(/|$)#',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))){ define('URUS_API',true); define('NO_SESSION',true); }
 elseif((string)($_GET['page']??'')==='bayar_kembali' || parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/bayar-callback') define('NO_SESSION',true);
-$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','enjin_actions'] as $f) require $app.$f.'.php';
+// robots.txt / sitemap.xml (platform, /KOD/ atau KOD.domain): tanpa sesi — perangkak tidak perlu kuki.
+elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/(robots\.txt|sitemap\.xml)$#D',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))) define('NO_SESSION',true);
+$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','enjin_actions','seo'] as $f) require $app.$f.'.php';
 // Webhook kemas kini daripada GitHub Actions (HMAC; sebelum semakan pemasangan supaya kemas kini skema juga boleh berjalan).
 if(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/kemaskini-hook'){ require_once dirname(__DIR__).'/app/updater.php'; upd_webhook(); }
 // Sistem belum dipasang / perlu naik taraf: jangan proses permintaan biasa.
@@ -29,6 +31,7 @@ ip_guard();
 if($reqPath==='/.well-known/security.txt'){ require_once dirname(__DIR__).'/app/subscription.php'; security_txt(); }
 // Tiada kod sekolah dalam URL/hos → direktori sekolah & panel platform (app/platform.php).
 if(!school()){ require dirname(__DIR__).'/app/platform.php'; platform_main(); }
+if($reqPath==='/robots.txt' || $reqPath==='/sitemap.xml') seo_school_file($reqPath); // app/seo.php
 require_once dirname(__DIR__).'/app/payment_pages.php'; require_once dirname(__DIR__).'/app/security_pages.php';
 if(input('page','get')==='bayar_kembali') pay_return_page(); // tanpa sesi: status disahkan melalui API gerbang
 emergency_guard(); // mod kecemasan platform: baca sahaja / tutup laman sekolah
@@ -79,4 +82,5 @@ if($user && !impersonating() && !empty($user['must_change']) && $page!=='securit
 // Dasar 2FA diketatkan selepas pengguna log masuk: wajib daftar sebelum meneruskan.
 if($user && !impersonating() && empty($user['must_change']) && !$user['totp_secret'] && twofa_required((string)$user['role']) && !in_array($page,['enroll','recovery'],true)) redirect('/?page=enroll');
 if($user && $page==='enroll' && $user['totp_secret']) redirect('/?page=security');
+header('X-Robots-Tag: noindex, nofollow'); // sistem dalaman & halaman log masuk sekolah: jangan diindeks
 require dirname(__DIR__).'/app/views.php';

@@ -273,8 +273,9 @@ function platform_action(string $action): never {
 if(!function_exists('notice')){ function notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; } }
 if(!function_exists('badge')){ function badge(mixed $text): string { return '<span class="badge '.(in_array($text,['Aktif','Selesai'],true)?'green':'').'">'.e($text).'</span>'; } }
 function p_notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
-function p_head(string $title,string $extraHead=''): void {
-    ?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title><?= e($title) ?> · <?= e(platform_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(asset('tugas.css')) ?>"><link rel="stylesheet" href="/?page=theme-css"><script src="<?= e(asset('app.js')) ?>" defer></script><?= function_exists('plat_logo_has') && plat_logo_has()?'<link rel="icon" type="image/png" href="'.e(plat_logo_url()).'">':'' ?><?= $extraHead ?></head><body><?php
+/** $seo = tag meta SEO (halaman awam, lihat lp_head); kosong = panel/log masuk → noindex. */
+function p_head(string $title,string $extraHead='',string $seo=''): void {
+    ?><!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><?= $seo!==''?$seo:'<meta name="robots" content="noindex">' ?><title><?= e($title) ?> · <?= e(platform_name()) ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"><link rel="stylesheet" href="<?= e(asset('tugas.css')) ?>"><link rel="stylesheet" href="/?page=theme-css"><script src="<?= e(asset('app.js')) ?>" defer></script><?= function_exists('plat_logo_has') && plat_logo_has()?'<link rel="icon" type="image/png" href="'.e(plat_logo_url()).'">':'' ?><?= $extraHead ?></head><body><?php
 }
 function p_auth(string $title,string $sub,callable $form,string $error): never {
     p_head($title); ?>
@@ -529,8 +530,11 @@ function platform_page_info(): void {
 
 /** Titik masuk konteks platform (dipanggil oleh public_html/index.php apabila tiada kod sekolah). */
 function platform_main(): never {
-    header('X-Robots-Tag: noindex');
     $path=(string)(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)?:'/');
+    // Halaman awam (/, /direktori, /faq, /terma, /polisi, /daftar) boleh diindeks — lihat lp_head(). Panel & titik akhir lain: noindex.
+    if(!in_array($path,['/','/index.php','/direktori','/direktori/','/faq','/faq/','/terma','/polisi','/daftar','/daftar/','/robots.txt','/sitemap.xml'],true)) header('X-Robots-Tag: noindex');
+    if($path==='/robots.txt') seo_platform_robots();
+    if($path==='/sitemap.xml') seo_platform_sitemap();
     if(input('page','get')==='theme-css') serve_theme_css();
     if(input('page','get')==='lp-css') lp_css_serve(); // rupa halaman awam (Rupa Halaman Utama)
     if(input('page','get')==='lp-hero') lp_hero_serve();

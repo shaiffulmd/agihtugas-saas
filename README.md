@@ -12,6 +12,7 @@ Versi semasa: **1.1** (sejarah perubahan dalam aplikasi: `/?page=versi`, sumber 
 - Peranan & aliran kelulusan: [docs/AKSES_KELULUSAN.md](docs/AKSES_KELULUSAN.md)
 - Auto-agihan, Pusat Syarat & jawatan pukal: [docs/AGIHAN_AUTO.md](docs/AGIHAN_AUTO.md)
 - API v1: [docs/API.md](docs/API.md) · Kemas kini GitHub: [docs/KEMASKINI-GITHUB.md](docs/KEMASKINI-GITHUB.md) · Laman demo: [docs/PANDUAN-DEMO.md](docs/PANDUAN-DEMO.md)
+- SEO & perlindungan SEO poisoning (robots.txt, sitemap.xml, kanonik, noindex): [docs/SEO.md](docs/SEO.md)
 - Serahan pembangun (seni bina, peraturan kod, ujian, keluaran): [handover.md](handover.md)
 
 ## Keperluan ringkas

@@ -64,6 +64,7 @@ function handle_hebahan(string $action): never {
     $title=trim(input('title')); if($title==='' || mb_strlen($title)>160) throw new DomainException('Tajuk perlu diisi (maksimum 160 aksara).');
     $body=sanitize_rich(input('body')); if(rich_length($body)===0) throw new DomainException('Isi hebahan perlu diisi.');
     if(mb_strlen($body)>HEBAHAN_MAX) throw new DomainException('Isi hebahan terlalu panjang.');
+    if(substr_count($body,'<a ')>SEO_MAX_LINKS || seo_too_many_links($title.' '.rich_plain($body))) throw new DomainException('Hebahan mengandungi terlalu banyak pautan (maksimum '.SEO_MAX_LINKS.').');
     $style=hebahan_gaya(input('style'));
     $aud=input('audience')==='pilih'?'pilih':'semua';
     $valid=array_column(hebahan_recipients(),'id');

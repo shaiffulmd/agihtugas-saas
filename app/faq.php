@@ -134,7 +134,8 @@ function faq_landing_section(): void {
 /** /faq — halaman awam penuh. */
 function faq_page(): never {
     $rows=faq_items(true); $email=pset('emel_notis');
-    lp_head(faq_title()); ?>
+    $ld=['@type'=>'FAQPage','mainEntity'=>array_map(fn($r)=>['@type'=>'Question','name'=>$r['q'],'acceptedAnswer'=>['@type'=>'Answer','text'=>$r['a']]],$rows)];
+    lp_head(faq_title(),false,['path'=>'/faq','noindex'=>!$rows,'desc'=>'Jawapan kepada soalan lazim tentang '.platform_name().': pendaftaran sekolah, pakej, agihan tugas, kelulusan, keselamatan data dan sokongan.','ld'=>$rows?[$ld]:[]]); ?>
 <section class="lp-seksyen"><div class="lp-wrap lp-faq">
 <div class="lp-kepala"><span class="eyebrow teal">Bantuan</span><h1 class="faq-h1"><?= e(faq_title()) ?></h1><p>Jawapan kepada soalan yang kerap ditanya tentang <?= e(platform_name()) ?>.</p></div>
 <?php if(!$rows): ?><p class="lp-tengah muted">Belum ada soalan lazim.</p><?php else: ?><?= faq_list_html($rows) ?><?php endif; ?>

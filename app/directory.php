@@ -79,10 +79,13 @@ function platform_search_directory(): never {
     $state=mb_substr(trim(input('negeri','get')),0,40);
     $states=array_column(query('SELECT DISTINCT state FROM schools WHERE status=? AND state<>? ORDER BY state',['aktif',''])->fetchAll(),'state');
     // Preserve an unknown filter as an explicit zero-result state, rather than silently broadening it.
-    if($state!=='' && !in_array($state,$states,true)){ $states[]=$state; sort($states); }
+    $stateOk=$state==='' || in_array($state,$states,true); if(!$stateOk){ $states[]=$state; sort($states); }
     $result=directory_results($q,$state,(int)input('halaman','get'));
     extract($result,EXTR_SKIP);
-    lp_head('Direktori sekolah',true); ?>
+    // Hanya senarai bersih (tanpa carian, negeri yang wujud, ada hasil) diindeks; ?q=… memaparkan semula teks pengguna → noindex (halaman carian spam).
+    $canQ=array_filter(['negeri'=>$state,'halaman'=>$page>1?$page:null]);
+    lp_head($state!==''?'Direktori sekolah · '.$state:'Direktori sekolah',true,['path'=>'/direktori'.($canQ?'?'.http_build_query($canQ,'','&',PHP_QUERY_RFC3986):''),'noindex'=>$q!=='' || !$total || !$stateOk,
+        'desc'=>'Direktori sekolah yang menggunakan '.platform_name().($state!==''?' di '.$state:'').': cari mengikut nama atau kod sekolah KPM dan terus ke laman agihan tugas guru sekolah.']); ?>
 <div class="directory dir-<?= e($layout) ?> dir-tajuk-<?= e(directory_title_size()) ?>">
 <section class="dir-intro"><div class="lp-wrap">
 <span class="eyebrow">DIREKTORI SEKOLAH</span>

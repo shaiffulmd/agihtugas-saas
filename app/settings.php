@@ -135,6 +135,7 @@ function handle_settings(string $action): never {
         if(mb_strlen($v)>$max) throw new DomainException('Medan "'.setting_label($k).'" melebihi '.$max.' aksara.');
         if(preg_match('/[\x00-\x09\x0B-\x1F\x7F]/u',$v)) throw new DomainException('Aksara kawalan tidak dibenarkan.');
         if(substr_count($v,"\n")>3) throw new DomainException('Maksimum 4 baris bagi "'.setting_label($k).'".');
+        if($k==='school_name' ? seo_has_link($v) : seo_too_many_links($v)) throw new DomainException('Medan "'.setting_label($k).'" mengandungi pautan yang tidak dibenarkan.');
         $out[$k]=$v;
     }
     $preset=input('theme_preset');
