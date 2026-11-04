@@ -211,8 +211,18 @@ for db in $DBS; do
   done
 done
 DUMPOPTS=(--single-transaction --quick --routines --events --triggers --hex-blob --default-character-set=utf8mb4 --add-drop-database)
-# --system=users (MariaDB 10.2+) menyimpan pengguna & grant sebagai CREATE USER/GRANT (mudah dipulih merentas versi).
-"$DUMP" ${DEF[@]+"${DEF[@]}"} --system=users >"$OUT/pengguna-grant.sql" 2>"$OUT/dump-pengguna.err" || warn "Dump pengguna & grant gagal (lihat dump-pengguna.err); pangkalan data mysql tetap dalam dump penuh."
+# Pengguna & grant sebagai CREATE USER/GRANT (mudah dipulih merentas versi). Bukan mariadb-dump --system=users: pada 11.8 ia boleh gagal
+# dengan "Illegal mix of collations" apabila membaca paparan mysql.user. Peranan (role) tiada SHOW CREATE USER; ia kekal dalam dump penuh.
+sql_raw(){ "$CLI" ${DEF[@]+"${DEF[@]}"} -N -B -r -e "$1"; }
+dump_users(){
+  local u
+  while IFS= read -r u; do
+    sql_raw "SHOW CREATE USER $u" | sed -e 's/^CREATE USER /CREATE USER IF NOT EXISTS /' -e 's/$/;/' || echo "SHOW CREATE USER gagal: $u" >&2
+    sql_raw "SHOW GRANTS FOR $u" | sed 's/$/;/' || echo "SHOW GRANTS gagal: $u" >&2
+  done < <(sql_raw "SELECT CONCAT(QUOTE(User),'@',QUOTE(Host)) FROM mysql.global_priv ORDER BY User,Host")
+}
+dump_users >"$OUT/pengguna-grant.sql" 2>"$OUT/dump-pengguna.err" || true
+[ ! -s "$OUT/dump-pengguna.err" ] || warn "Sebahagian pengguna/peranan tidak dapat dieksport (lihat dump-pengguna.err); semuanya tetap dalam dump penuh."
 # shellcheck disable=SC2086
 "$DUMP" ${DEF[@]+"${DEF[@]}"} "${DUMPOPTS[@]}" --databases $DBS mysql 2>"$OUT/dump.err" | gzip -6 > "$OUT/semua.sql.gz"
 [ "${PIPESTATUS[0]}" = 0 ] || die "mariadb-dump gagal — lihat $OUT/dump.err"
@@ -239,9 +249,18 @@ INST=$(command -v mariadb-install-db || command -v mysql_install_db || true)
 TROOT=${MARIADB_UJI_DIR:-/var/tmp}; [ -d "$TROOT" ] || TROOT=/tmp
 TF=$(df -Pk "$TROOT" | awk 'NR==2{print $4}'); [ "${USED_KB:-0}" -gt 0 ] && [ "$TF" -lt "$USED_KB" ] && die "Ruang di $TROOT tidak mencukupi untuk uji pulih (perlu ~$((USED_KB/1024)) MB). Tetapkan MARIADB_UJI_DIR=/folder/lain."
 TMPI=$(mktemp -d "$TROOT/mariadb-uji.XXXXXX"); SOCKD=$(mktemp -d /tmp/mdbu.XXXXXX); SOCK="$SOCKD/s.sock" # laluan soket pendek (had ~104 aksara)
-RUNAS=(); if [ "$(id -u)" = 0 ]; then id mysql >/dev/null 2>&1 && { chown -R mysql: "$TMPI" "$SOCKD"; chmod 750 "$TMPI" "$SOCKD"; RUNAS=(--user=mysql); }; fi
-"$INST" --no-defaults --datadir="$TMPI/data" ${RUNAS[@]+"${RUNAS[@]}"} --auth-root-authentication-method=normal --skip-test-db >"$TMPI/uji-install.log" 2>&1 || die_log "Gagal menyediakan instance uji (log disalin ke $OUT/uji-install.log)." "$TMPI/uji-install.log"
-"$MDB" --no-defaults --datadir="$TMPI/data" --socket="$SOCK" --skip-networking --pid-file="$SOCKD/p.pid" --log-error="$TMPI/uji-mariadbd.log" ${RUNAS[@]+"${RUNAS[@]}"} --innodb-buffer-pool-size=256M &
+# Instance uji berjalan sebagai mysql dari mula, bukan root + --user=mysql: profil AppArmor mariadbd (Ubuntu 26.04) melarang setuid, setgid &
+# dac_override, tetapi membenarkan owner /tmp/** dan /var/tmp/**. MARIADB_UJI_DIR di luar dua folder ini boleh ditolak AppArmor.
+RUNAS=()
+if [ "$(id -u)" = 0 ] && id mysql >/dev/null 2>&1; then
+  chown -R mysql: "$TMPI" "$SOCKD"; chmod 750 "$TMPI" "$SOCKD"
+  if command -v setpriv >/dev/null; then RUNAS=(setpriv --reuid=mysql --regid=mysql --init-groups) # exec terus: PID kekal untuk kill
+  elif command -v runuser >/dev/null; then RUNAS=(runuser -u mysql --)
+  else die "setpriv / runuser tidak dijumpai untuk menjalankan instance uji sebagai mysql."; fi
+fi
+cd / # pengguna mysql mungkin tiada akses ke folder semasa
+${RUNAS[@]+"${RUNAS[@]}"} "$INST" --no-defaults --datadir="$TMPI/data" --auth-root-authentication-method=normal --skip-test-db >"$TMPI/uji-install.log" 2>&1 || die_log "Gagal menyediakan instance uji (log disalin ke $OUT/uji-install.log)." "$TMPI/uji-install.log"
+${RUNAS[@]+"${RUNAS[@]}"} "$MDB" --no-defaults --datadir="$TMPI/data" --socket="$SOCK" --skip-networking --pid-file="$SOCKD/p.pid" --log-error="$TMPI/uji-mariadbd.log" --innodb-buffer-pool-size=256M &
 TMPPID=$!
 for _ in $(seq 1 60); do "$CLI" --no-defaults -uroot -S "$SOCK" -e "SELECT 1" >/dev/null 2>&1 && break; sleep 1; done
 "$CLI" --no-defaults -uroot -S "$SOCK" -e "SELECT 1" >/dev/null 2>&1 || die_log "Instance uji tidak bermula (log disalin ke $OUT/uji-mariadbd.log)." "$TMPI/uji-mariadbd.log"
