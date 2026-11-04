@@ -135,7 +135,8 @@ if [ "$MODE" = penuh ]; then
   # Repo rasmi MariaDB (r.mariadb.com) bagi satu siri; konfigurasi repo sahaja — tiada pakej dipasang di sini.
   add_repo(){
     local RS; RS=$(mktemp); curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup -o "$RS" || die "Gagal memuat turun mariadb_repo_setup."
-    bash "$RS" --mariadb-server-version="mariadb-$1" || die "mariadb_repo_setup gagal."; rm -f "$RS"; ok "Repo rasmi MariaDB $1 ditambah."
+    # --skip-maxscale: sistem ini tidak menggunakan MaxScale, dan repo MaxScale tiada untuk Ubuntu 26.04 (404 menggagalkan apt-get update).
+    bash "$RS" --mariadb-server-version="mariadb-$1" --skip-maxscale || die "mariadb_repo_setup gagal."; rm -f "$RS"; ok "Repo rasmi MariaDB $1 ditambah."
   }
   refresh(){ log "Mengemas kini senarai pakej ($PM)…"; if [ "$PM" = apt ]; then apt-get update -qq; else $PM -q makecache >/dev/null 2>&1 || true; fi
     ALL=$(list_versions); [ -n "$ALL" ] || die "Tiada versi mariadb-server ditemui dalam repo."; }
