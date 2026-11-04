@@ -7,7 +7,7 @@
 #   3. Backup         : mariadb-dump semua pangkalan data (+ routines/events/triggers, pengguna & grant) → .sql.gz + SHA-256 + bilangan baris.
 #   4. Uji backup     : pulih ke instance MariaDB SEMENTARA yang terasing (tanpa rangkaian, datadir sendiri), bandingkan jadual & bilangan baris.
 #                       Backup yang gagal diuji → naik taraf DIBATALKAN dan tulisan dibuka semula.
-#   5. Naik taraf     : pakej MariaDB sahaja (versi calon mesti ≥ versi dibaiki), restart, mariadb-upgrade.
+#   5. Naik taraf     : pakej MariaDB sahaja (versi calon mesti ≥ versi dibaiki) + pakej compat nama lama jika repo menyediakannya, restart, mariadb-upgrade.
 #   6. Semakan selepas: versi baharu, SELECT 1, semakan jadual (mariadb-check), read_only dimatikan, log ralat.
 #
 # Guna:
@@ -275,6 +275,12 @@ fi
 log "== Naik taraf MariaDB $CUR → $CAND =="
 if [ "$PM" = apt ]; then
   PKGS=$(dpkg-query -W -f='${db:Status-Abbrev} ${binary:Package}\n' 2>/dev/null | awk '$1=="ii" && $2 ~ /^(mariadb|libmariadb|galera)/ {print $2}')
+  # Repo rasmi mengasingkan nama lama (mysqlshow, mysql, mysqld…) ke pakej compat; Webmin/Virtualmin memerlukannya.
+  for pk in mariadb-client-compat mariadb-server-compat; do
+    if grep -qE "^$pk(:|\$)" <<<"$PKGS"; then continue; fi
+    VERS=$(apt-cache madison "$pk" 2>/dev/null | awk -F'|' '{gsub(/ /,"",$2); print $2}' || true)
+    if grep -qxF "$CANDFULL" <<<"$VERS"; then PKGS="$PKGS"$'\n'"$pk"; fi
+  done
   # Pin setiap pakej MariaDB kepada versi pilihan jika repo menyediakannya (pakej MariaDB bergantung pada versi yang sama tepat).
   PIN=""; for pk in $PKGS; do if apt-cache madison "$pk" 2>/dev/null | awk -F'|' '{gsub(/ /,"",$2); print $2}' | grep -qxF "$CANDFULL"; then PIN="$PIN $pk=$CANDFULL"; else PIN="$PIN $pk"; fi; done
   # shellcheck disable=SC2086
