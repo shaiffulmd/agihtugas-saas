@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
+const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -13,22 +13,22 @@ function post_ids(string $key): array { $v=$_POST[$key]??[]; if(!is_array($v)) t
 
 function handle_engine_action(string $action): never {
     $me=current_user();
-    $adminOnly=in_array($action,['sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal'],true);
+    $adminOnly=in_array($action,['sesi_baharu','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal'],true);
     if($action==='kelulusan'){ if(!in_array($me['role'],['admin','pk','head'],true)) error_page(403); }
     elseif($adminOnly) require_admin();
     else require_planner();
     // Ciri Pro (pakej Free): disemak sebelum transaksi.
-    $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','api_cipta'=>'api',
+    $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
+    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
         // Data perancangan dikunci selain Draf (kunci API tidak termasuk). Tetapan indeks turut dikunci supaya senarai guru terbeban
         // yang dinilai Pengetua tidak berubah semasa semakan.
         // Format surat digunakan serta-merta pada surat (letter_live) dan tidak dibandingkan dalam hash revisi — boleh diubah dalam apa jua status.
-        if(!in_array($action,['kelulusan','api_cipta','api_batal','sekolah_surat'],true)) workflow_require_draft();
+        if(!in_array($action,['kelulusan','api_cipta','api_batal','sekolah_surat','sesi_baharu'],true)) workflow_require_draft(); // sesi_baharu membuka draf sendiri
         $id=(int)input('id'); $msg=''; $anchor='';
         switch($action){
             case 'peranan_save':
@@ -39,6 +39,27 @@ function handle_engine_action(string $action): never {
             case 'peranan_padan':
                 $n=roles_match_apply(array_filter((array)($_POST['ids']??[]),'is_string')); audit('role_match','positions',null,$n.' jawatan');
                 $msg=$n.' jawatan dipadankan dengan peranan; pemberat kini ikut skor peranan.'; break;
+            case 'jawatan_standard':
+                $tpl=input('template'); $c=$_POST['count']??[]; if(!is_array($c)) $c=[];
+                [$n,$skip]=positions_import_template($tpl,array_filter((array)($_POST['items']??[]),'is_string'),array_filter($c,'is_string'));
+                audit('position_template','positions',null,$tpl.': '.$n); $msg=$n.' jawatan ditambah daripada senarai standard.'.($skip?' '.$skip.' yang sudah ada dilangkau.':''); break;
+            case 'jawatan_panduan':
+                $g=POSITION_TEMPLATE_GUIDE[input('template')]??null; if(!$g) throw new EngineError('Panduan tidak sah.');
+                allocation_save_rules(['heavy_threshold'=>$g['heavy_threshold'],'max_heavy'=>$g['max_heavy']]); audit('allocation_rules','allocation_config',null,'panduan '.input('template'));
+                $msg='Pusat Syarat dikemas kini: tugas berat = pemberat '.$g['heavy_threshold'].' ke atas, maksimum '.$g['max_heavy'].' tugas berat setiap guru.'; $anchor='&standard=1#standard'; break;
+            case 'kapasiti_panduan':
+                $n=capacity_apply_guide(input('template')); audit('capacity_guide','teachers',null,$n.' guru');
+                $msg=$n?'Kapasiti '.$n.' guru ditetapkan ikut julat panduan.':'Kapasiti semua guru sudah ikut julat panduan.'; $anchor='&standard=1#standard'; break;
+            case 'sesi_baharu':
+                $r=session_start_new(post_int('year',2020,2100,'Tahun sesi'),['clear_all'=>input('clear_all')==='1','release_transferred'=>input('release_transferred')==='1','reset_periods'=>input('reset_periods')==='1'],$me);
+                $msg='Sesi '.$r['year'].' dimulakan dalam Draf. Surat sesi lepas kekal diterbitkan sehingga sesi '.$r['year'].' dimuktamadkan.'.($r['cleared']?' '.$r['cleared'].' lantikan dikosongkan.':'').($r['released']?' '.$r['released'].' lantikan guru bertukar keluar dilepaskan.':'').($r['periods']?' Masa mengajar '.$r['periods'].' guru dikosongkan.':'');
+                $back='agihan'; break;
+            case 'organisasi_save':
+                $posts=$_POST['post']??[]; $bn=$_POST['bidang_nama']??[]; $bt=$_POST['bidang_guru']??[];
+                if(!is_array($posts) || !is_array($bn) || !is_array($bt)) throw new EngineError('Borang jawatan utama tidak sah.');
+                $bidang=[]; foreach(array_values($bn) as $i=>$n) if(is_string($n)) $bidang[]=[$n,is_string($bt[$i]??null)?$bt[$i]:null];
+                $n=leadership_save(array_map(fn($v)=>is_string($v)?$v:null,$posts),$bidang); audit('leadership','settings');
+                $msg='Jawatan utama sekolah disimpan.'.($n?' '.$n.' guru ditanda Pentadbir (tidak dikira dalam indeks beban).':''); break;
             case 'tanda_selesai':
                 $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru'); $done=input('done')==='1'; workflow_flag_resolve($tid,$done,$me);
                 audit($done?'flag_resolved':'flag_reopened','teachers',$tid,(string)(teacher_find($tid)['name']??''));

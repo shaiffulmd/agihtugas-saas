@@ -31,7 +31,17 @@ Selepas dikembalikan, PK dan Pentadbir melihat notis **Dikembalikan untuk semaka
 
 Penghantaran memerlukan sekurang-kurangnya satu lantikan; jawatan kosong dan beban berlebihan tidak menghalang keputusan tetapi perlu disemak oleh Guru Besar/Pengetua. Snapshot merangkumi guru, jawatan, penyandang, maklumat sekolah dan syarat. Jika data berubah di luar aplikasi selepas penghantaran, keputusan kelulusan ditolak dan draf perlu dihantar semula. Setiap keputusan merekodkan akaun pelaku dan masa; UI mengelakkan tindakan berdasarkan versi status lama.
 
-Pentadbir/Guru Besar/Pengetua boleh membuka draf pindaan dengan sebab. Surat muktamad terdahulu kekal sama sehingga versi baharu dimuktamadkan. Sejarah versi disimpan; pemilih untuk mencetak semula versi lama belum disediakan. Tarikh surat ialah tarikh pemuktamadan dalam zon Asia/Kuala_Lumpur, bukan tarikh pelayar dibuka.
+Pentadbir/Guru Besar/Pengetua boleh membuka draf pindaan dengan sebab. Surat muktamad terdahulu kekal sama sehingga versi baharu dimuktamadkan. Sejarah versi disimpan; versi muktamad lama (cth. sesi lepas) boleh dipilih di Surat Lantikan untuk dicetak semula atau dimuat turun sebagai PDF, dengan format surat ketika versi itu dimuktamadkan. Tarikh surat ialah tarikh pemuktamadan dalam zon Asia/Kuala_Lumpur, bukan tarikh pelayar dibuka.
+
+## Sesi baharu (tahun persekolahan)
+
+Pentadbir membuka **Profil Sekolah & Surat → Mula sesi baharu** pada hujung / awal tahun:
+
+1. Pilih tahun sesi baharu, dan sama ada lantikan tahun lepas dikekalkan sebagai titik mula atau dikosongkan.
+2. Pilihan: lepaskan lantikan guru bertukar keluar; kosongkan masa mengajar & kelas peperiksaan (isi semula ikut jadual waktu baharu).
+3. Agihan dibuka sebagai Draf sesi baharu. Versi muktamad sesi lepas kekal diterbitkan (surat & Tugas Saya) sehingga sesi baharu dimuktamadkan, dan kekal boleh dicetak melalui pemilih versi.
+
+Tidak boleh dimulakan ketika agihan dalam Semakan / Lulus — muktamadkan atau kembalikan kepada draf dahulu. Label tahun di borang profil hanya membetulkan label tanpa membuka sesi baharu.
 
 ## Integrasi
 

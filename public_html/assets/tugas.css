@@ -110,3 +110,22 @@ input[readonly]{background:color-mix(in srgb,var(--ink) 5%,var(--surface));color
 .letter.is-trial{position:relative;overflow:hidden}.letter.is-trial::after{content:'PERCUBAAN';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font:800 clamp(2.4rem,8vw,4.6rem)/1 sans-serif;letter-spacing:.06em;color:rgba(180,40,40,.11);white-space:nowrap;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .print-locked-note{display:none}
 @media print{.print-locked .letter{display:none!important}.print-locked .print-locked-note{display:block!important;font-size:14pt;text-align:center;margin-top:3cm}}
+/* Senarai jawatan standard: butang berjarak 10px daripada jadual di atas & bawahnya. */
+.template-panel .form-actions{margin:10px 0}
+/* Carta organisasi: kad jawatan utama + lajur bidang di bawah setiap PK. */
+.org-title{text-align:center;margin-bottom:14px}.org-title h2{margin:0}
+.org-chart .org-card{display:flex;flex-direction:column;gap:3px}.org-card.org-head{flex-basis:40%;border-top-width:4px}
+.org-bidang{padding-top:10px;border-top:1px dashed var(--line)}
+.org-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;align-items:start;margin-top:10px}
+.org-group{display:flex;flex-direction:column;gap:10px}.org-group .org-card{flex:none;min-width:0}
+.org-cat h4{margin:6px 0;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.org-cat ul{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px}
+.org-cat li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-top:1px solid var(--line);font-size:.86rem}.org-cat li:first-child{border-top:0}
+.org-cat li strong{text-align:right;font-weight:600}
+.org-leaders .form-actions{margin:10px 0}
+@media print{.org-groups{grid-template-columns:repeat(3,1fr)}.org-cat li{padding:3px 6px;font-size:8pt}.org-cat ul{break-inside:auto}}
+.org-leaders table{table-layout:fixed;width:100%}.org-leaders th:first-child{width:30%}
+.org-leaders td input,.org-leaders td select{display:block;width:100%;max-width:100%;box-sizing:border-box}
+/* Surat Lantikan: jarak antara panel pilih guru dan surat (skrin sahaja; cetakan tidak berubah). */
+@media screen{.panel+.letter{margin-top:1.25rem}}
+.org-leaders td{white-space:normal;overflow-wrap:anywhere}

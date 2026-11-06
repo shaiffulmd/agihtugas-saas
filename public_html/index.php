@@ -8,7 +8,7 @@ elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/api(/|$)#',(string)parse_url((strin
 elseif((string)($_GET['page']??'')==='bayar_kembali' || parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/bayar-callback') define('NO_SESSION',true);
 // robots.txt / sitemap.xml (platform, /KOD/ atau KOD.domain): tanpa sesi — perangkak tidak perlu kuki.
 elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/(robots\.txt|sitemap\.xml)$#D',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))) define('NO_SESSION',true);
-$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','enjin_actions','seo'] as $f) require $app.$f.'.php';
+$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi','enjin_actions','seo'] as $f) require $app.$f.'.php';
 // Webhook kemas kini daripada GitHub Actions (HMAC; sebelum semakan pemasangan supaya kemas kini skema juga boleh berjalan).
 if(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/kemaskini-hook'){ require_once dirname(__DIR__).'/app/updater.php'; upd_webhook(); }
 // Sistem belum dipasang / perlu naik taraf: jangan proses permintaan biasa.
@@ -69,7 +69,7 @@ if($user && $page==='dashboard' && in_array($user['role'],['head','teacher'],tru
 if($user && $page==='aset') branding_serve(input('id','get')); // logo & Jata Negara surat (sekolah semasa sahaja)
 if($user && isset($_GET['pdf']) && in_array($page,['surat','tugas_saya'],true) && !feature_on('surat_pukal')) error_page(403,'Muat turun PDF surat tersedia untuk pakej Pro. Gunakan butang Cetak untuk surat individu.');
 if($user && isset($_GET['pdf']) && in_array($page,['surat','tugas_saya'],true)) trial_pdf_guard(); // sekolah percubaan: PDF dimatikan / dihadkan
-if($user && isset($_GET['pdf']) && $page==='surat'){ $pub=workflow_published(); if(!$pub) error_page(404,'Belum ada agihan muktamad.'); $g=(int)input('guru','get'); $docs=letter_docs($pub,$g?:null); if(!$docs) error_page(404,'Tiada surat untuk dicetak.'); letters_pdf($docs,'surat-lantikan-v'.$pub['id'].($g?'-guru'.$g:'').'.pdf'); }
+if($user && isset($_GET['pdf']) && $page==='surat'){ $pub=workflow_published(((int)input('versi','get'))?:null); if(!$pub) error_page(404,'Belum ada agihan muktamad.'); $g=(int)input('guru','get'); $docs=letter_docs($pub,$g?:null); if(!$docs) error_page(404,'Tiada surat untuk dicetak.'); letters_pdf($docs,'surat-lantikan-v'.$pub['id'].($g?'-guru'.$g:'').'.pdf'); }
 if($user && isset($_GET['pdf']) && $page==='tugas_saya'){ $pub=workflow_published(); $tid=(int)query('SELECT teacher_id FROM users WHERE id=? AND school_id='.sid(),[$user['id']])->fetchColumn(); $docs=$pub && $tid?letter_docs($pub,$tid):[]; if(!$docs) error_page(404,'Belum ada lantikan muktamad untuk anda.'); letters_pdf($docs,'surat-lantikan-saya.pdf'); }
 if($user && isset($_GET['pdf'])) download_document_pdf($page);
 if($user && $page==='bayar_qr') pay_serve_qr();

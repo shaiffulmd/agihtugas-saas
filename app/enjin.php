@@ -23,13 +23,13 @@ final class WorkflowError extends EngineError {
 
 /* ---------- Peranan & halaman ---------- */
 const ENGINE_PAGES=['guru'=>'Pengurusan Guru','subjek'=>'Mata Pelajaran','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','analisis'=>'Analisis Beban','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
-    'kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
+    'organisasi'=>'Carta Organisasi','kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
 /** Halaman enjin yang dibenarkan bagi peranan. */
 function engine_pages(string $role): array {
     return match($role){
-        'admin'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat','sekolah','api'],
-        'pk'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','kelulusan','surat'],
-        'head'=>['analisis','kelulusan','surat'],
+        'admin'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','kelulusan','surat','sekolah','api'],
+        'pk'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','kelulusan','surat'],
+        'head'=>['analisis','organisasi','kelulusan','surat'],
         'teacher'=>['tugas_saya'],
         default=>[]};
 }
@@ -277,11 +277,12 @@ function role_match(string $position,array $roles): ?array {
     foreach($roles as $r){ $n=mb_strtolower($r['name']); if(($p===$n || str_starts_with($p,$n.' ')) && (!$best || mb_strlen($n)>mb_strlen($best['name']))) $best=$r; }
     return $best;
 }
-/** Cadangan peranan bagi jawatan yang belum berperanan: [{position, role, weight_before, weight_after}]. */
+/** Cadangan peranan bagi jawatan yang belum berperanan: [{position, role, weight_before, weight_after, standard}].
+ *  standard = mata jadual jawatan standard jika nama jawatan sepadan (paparan tidak menandanya secara lalai supaya mata standard tidak ditimpa). */
 function roles_match_preview(): array {
     $roles=roles_all(); $out=[]; if(!$roles) return [];
     foreach(query('SELECT id,name,category,weight FROM positions WHERE school_id='.sid().' AND role_id IS NULL ORDER BY name')->fetchAll() as $p)
-        if($r=role_match($p['name'],$roles)) $out[]=['position'=>$p,'role'=>$r,'weight_before'=>(int)$p['weight'],'weight_after'=>(int)$r['score']];
+        if($r=role_match($p['name'],$roles)) $out[]=['position'=>$p,'role'=>$r,'weight_before'=>(int)$p['weight'],'weight_after'=>(int)$r['score'],'standard'=>position_template_points($p['name'],$p['category'])];
     return $out;
 }
 /** Guna cadangan bagi jawatan terpilih (dikira semula di pelayan). Pulangkan bilangan jawatan dikemas kini. */
@@ -290,6 +291,83 @@ function roles_match_apply(array $ids): int {
     foreach(roles_match_preview() as $m) if(isset($want[(int)$m['position']['id']])){ query('UPDATE positions SET role_id=?,weight=? WHERE id=? AND school_id='.sid(),[(int)$m['role']['id'],$m['weight_after'],(int)$m['position']['id']]); $n++; }
     if(!$n) throw new EngineError('Tiada jawatan dipilih untuk dipadankan.');
     return $n;
+}
+
+/* ---------- Jawatan standard ----------
+ * Jadual jawatan standard (Panduan Mata Sasaran SMK) untuk diimport secara terpilih ke katalog jawatan. Wajaran 1–5 mata:
+ * 4–5 Berat, 3 Sederhana, 1–2 Ringan. Jawatan berganda dalam jadual asal (cth. "SU Kurikulum / HEM / Kokurikulum / PIBG") dipecahkan
+ * kepada satu rekod setiap jawatan kerana setiap rekod ialah satu tempat lantikan.
+ * Item: [nama, mata, kembang, bilangan lalai]. kembang: '' = satu rekod, atau berbilang jika bilangan lalai diberi (1 → nama asal, >1 → "Nama (1/3)"),
+ * 'tingkatan' = Tingkatan 1–5, 'subjek' = satu bagi setiap MP dalam katalog Mata Pelajaran sekolah. */
+const POSITION_TEMPLATES=[
+    'smk'=>['Jawatan standard SMK','Berdasarkan Panduan Julat Mata Sasaran SMK. Mata (wajaran) dimasukkan sebagai pemberat jawatan; semua boleh disunting selepas ditambah.','SMK',[
+        'Pentadbiran'=>[
+            ['SU Kurikulum',5],['SU Hal Ehwal Murid',5],['SU Kokurikulum',5],['SU PIBG',5],['Penyelaras Jadual Waktu',5],['Guru Data (EMIS / e-OPERASI)',5],
+            ['SU SKPM Kualiti@Sekolah',4],['SU TS25',4],['SU Ladap (SPLKPM)',4],
+            ['Penyelaras Bilik Khas',3,'',1],['Penyelaras Makmal',3,'',1],['Penyelaras Bengkel',3,'',1],['Penyelaras PSS',3],
+            ['AJK Siaraya',1],['AJK Dokumentasi',1],['AJK Kebajikan Staf',1],
+        ],
+        'Kurikulum'=>[
+            ['SU Peperiksaan Awam (SPM)',5],['SU Peperiksaan Awam (STPM)',5],['SU Peperiksaan Dalaman',5],['SU PBD (idMe)',5],
+            ['Ketua Panitia',4,'subjek'],['Penyelaras Tingkatan',3,'tingkatan'],['Setiausaha Panitia',2,'subjek'],['Penyelaras Program Akademik',2,'',1],
+        ],
+        'HEM'=>[
+            ['Guru Tingkatan',5,'',1],['Ketua Guru Disiplin',4],['Penyelaras SPBT',4],['Penyelaras Biasiswa',4],
+            ['Penyelaras 3K',3],['Penyelaras Kantin',3],['Penyelaras Kebajikan Murid',3],
+            ['Guru Bertugas Mingguan',2,'',1],['AJK Ziarah Cakna',1],['AJK PPDa',1],['AJK KPJ',1],
+        ],
+        'Kokurikulum'=>[
+            ['Setiausaha Sukan',5],['Penyelaras PAJSK',5],['Ketua Guru Penasihat Unit Beruniform',3,'',1],['Ketua Guru Penasihat Kelab Sukan & Permainan',3,'',1],
+            ['Jurulatih Pasukan Sekolah (MSSD / MSSN / Koakademik)',3,'',1],['Ketua Guru Rumah Sukan',2,'',4],['Guru Penasihat Kelab / Persatuan / Uniform',1,'',1],
+        ],
+    ]],
+];
+/** Panduan julat mata sasaran (kapasiti) setiap gred dan had jawatan berat bagi templat. */
+const POSITION_TEMPLATE_GUIDE=['smk'=>['capacity'=>[['Guru Akademik Biasa (GAB)',16,20],['Guru Kanan Mata Pelajaran (GKMP)',12,15],['Penolong Kanan / Pengetua',8,12]],'heavy_threshold'=>5,'max_heavy'=>1]];
+/** Kategori beban bagi mata 1–5 (jadual standard). */
+function template_load_label(int $w): string { return $w>=4?'Berat':($w===3?'Sederhana':'Ringan'); }
+/** Nama rekod yang dijana bagi satu item templat. $count dipakai untuk item tanpa kembang; $subjects = nama MP katalog. */
+function position_template_names(array $item,int $count,array $subjects): array {
+    [$name,,$exp]=$item+[2=>''];
+    if($exp==='tingkatan') return array_map(fn($n)=>"$name $n",range(1,5)); // "Penyelaras Tingkatan" → "Penyelaras Tingkatan 1"
+    if($exp==='subjek') return array_map(fn($s)=>"$name $s",$subjects);
+    if($count<1 || $count>50) throw new EngineError('Bilangan bagi "'.$name.'" mesti 1–50.');
+    return $count===1?[$name]:array_map(fn($n)=>"$name ($n/$count)",range(1,$count));
+}
+/** Mata jadual standard bagi jawatan (nama + bidang) dalam templat jenis sekolah semasa, atau null.
+ *  Mengenali bentuk jana: "Nama", "Nama (2/3)", "Penyelaras Tingkatan 4", "Ketua Panitia <MP>". */
+function position_template_points(string $name,string $category): ?int {
+    $n=mb_strtolower(trim($name)); $base=(string)preg_replace('/ \(\d+\/\d+\)$/','',$n);
+    foreach(POSITION_TEMPLATES as [,,$type,$groups]){
+        if($type!==school_type()) continue;
+        foreach($groups[$category]??[] as $item){
+            [$t,$w,$exp]=$item+[2=>'']; $t=mb_strtolower($t);
+            if(match($exp){'tingkatan'=>(bool)preg_match('/^'.preg_quote($t,'/').' [1-5]$/u',$n),'subjek'=>str_starts_with($n,$t.' ') && mb_strlen($n)>mb_strlen($t)+1,default=>$base===$t}) return (int)$w;
+        }
+    }
+    return null;
+}
+/** Import item terpilih daripada templat jawatan. $pick: senarai "Bidang|indeks"; $counts: ["Bidang|indeks"=>bilangan].
+ *  Rekod yang sudah ada (nama + bidang, tanpa beza huruf) dilangkau. Pulangkan [ditambah, dilangkau]. */
+function positions_import_template(string $key,array $pick,array $counts=[]): array {
+    $tpl=POSITION_TEMPLATES[$key]??null; if(!$tpl) throw new EngineError('Senarai jawatan standard tidak sah.');
+    if($tpl[2]!==school_type()) throw new EngineError('Senarai "'.$tpl[0].'" hanya untuk sekolah '.$tpl[2].'.');
+    $want=array_flip(array_map('strval',$pick)); $subjects=subject_names(); $rows=[]; $skipped=0;
+    $have=[]; foreach(query('SELECT name,category FROM positions WHERE school_id='.sid())->fetchAll() as $p) $have[mb_strtolower($p['name']).'|'.$p['category']]=true;
+    foreach($tpl[3] as $cat=>$items) foreach($items as $i=>$item){
+        $id=$cat.'|'.$i; if(!isset($want[$id])) continue;
+        $c=isset($item[3])?($counts[$id]??$item[3]):1; // bilangan hanya bagi jawatan berbilang if(!is_int($c)) $c=filter_var($c,FILTER_VALIDATE_INT); if($c===false) throw new EngineError('Bilangan bagi "'.$item[0].'" mesti nombor bulat.');
+        foreach(position_template_names($item,(int)$c,$subjects) as $name){
+            $k=mb_strtolower($name).'|'.$cat; if(isset($have[$k])){ $skipped++; continue; }
+            if(mb_strlen($name)>160) continue; // nama MP sangat panjang
+            $have[$k]=true; $rows[]=[$name,$cat,(int)$item[1]];
+        }
+    }
+    if(!$rows) throw new EngineError($skipped?'Semua jawatan yang dipilih sudah ada dalam katalog.':'Tiada jawatan dipilih.'.(!$subjects?' (Ketua / Setiausaha Panitia memerlukan senarai Mata Pelajaran.)':''));
+    if(count($rows)>1000) throw new EngineError('Maksimum 1,000 jawatan bagi satu import.');
+    free_guard('jawatan',count($rows));
+    foreach($rows as [$n,$cat,$w]) query('INSERT INTO positions (school_id,name,category,weight) VALUES ('.sid().',?,?,?)',[$n,$cat,$w]);
+    return [count($rows),$skipped];
 }
 
 /* ---------- Mata pelajaran ----------

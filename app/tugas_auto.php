@@ -56,11 +56,13 @@ function allocation_state(): array {
         'positions'=>$int(query('SELECT id,name,category,weight,level,term FROM positions WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','weight']),
         'index'=>index_settings(),
         'assignments'=>$int(query('SELECT position_id,teacher_id FROM assignments WHERE school_id='.sid().' ORDER BY position_id')->fetchAll(),['position_id','teacher_id']),
-        'rules'=>allocation_rules(),'position_rules'=>allocation_position_rules()];
+        'rules'=>allocation_rules(),'position_rules'=>allocation_position_rules(),
+        'head'=>function_exists('leadership')?leadership()['posts']['pengetua']:null]; // Pengetua / Guru Besar: tiada tugas baharu melalui agihan automatik
 }
 function allocation_snapshot(array $state): string { return hash('sha256',json_encode($state,JSON_THROW_ON_ERROR)); }
 function allocation_eligible(array $t,array $p,array $rule,array $rules): ?string {
     if(in_array($t['id'],$rules['excluded_teachers'],true)) return 'Guru dikecualikan';
+    if(($rules['head']??null)===$t['id']) return head_title().' tidak diberi tugas melalui agihan automatik';
     if(($t['status']??'aktif')!=='aktif') return 'Guru bercuti / bertukar keluar';
     if(($rule['fixed_teacher_id']??null)!==null && $t['id']!==$rule['fixed_teacher_id']) return 'Jawatan mempunyai penyandang tetap';
     if(!empty($rule['allowed_teachers']) && !in_array($t['id'],$rule['allowed_teachers'],true)) return 'Di luar senarai guru layak';
@@ -94,7 +96,7 @@ function allocation_index_after(array $t,array $p,array $scale): ?float {
 /** Jana pratonton (belum mengubah lantikan) dan simpan untuk apply. */
 function allocation_preview(string $mode): array {
     if(!in_array($mode,['vacant','rebalance'],true)) throw new AllocationError('Mod agihan tidak sah.');
-    $state=allocation_state(); $rules=$state['rules'];
+    $state=allocation_state(); $rules=$state['rules']+['head'=>$state['head']??null];
     $S=$state['index'];
     $teachers=[]; foreach($state['teachers'] as $t) $teachers[$t['id']]=[...$t,'load'=>0,'score'=>0.0,'task_count'=>0,'heavy'=>0,'categories'=>array_fill_keys(CATEGORIES,0),
         'teaching'=>$t['teaching_periods']*($t['exam_class']?$S['exam_factor']:1),'counted'=>$t['status']==='aktif' && !$t['index_exempt']];
@@ -103,6 +105,7 @@ function allocation_preview(string $mode): array {
     $mapping=[]; $reasons=[]; $warnings=[]; $pending=[]; $snames=null;
     if($mode==='vacant') foreach($existing as $pid=>$tid){
         $p=$positions[$pid]; $rule=$state['position_rules'][$pid]??[];
+        if($teachers[$tid]['status']==='bertukar'){ $warnings[]=$teachers[$tid]['name'].' · '.$p['name'].': guru bertukar keluar — lantikan dilepaskan dan diisi semula.'; continue; } // jawatan kosong; diisi di bawah
         $issue=allocation_eligible($teachers[$tid],$p,$rule,$rules)??allocation_limits($teachers[$tid],$p,$rules);
         if($issue) $warnings[]=$teachers[$tid]['name'].' · '.$p['name'].': '.$issue.' (lantikan sedia ada dikekalkan).';
         allocation_add($teachers[$tid],$p,$rules['heavy_threshold']); $mapping[$pid]=$tid; $reasons[$pid]='Lantikan sedia ada dikekalkan';

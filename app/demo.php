@@ -85,7 +85,7 @@ function demo_reset(): void {
 
 /** Jana data rekaan: tetapan sekolah, akaun kongsi, guru, jawatan & lantikan (draf). */
 function demo_seed(string $type='SMK'): void {
-    foreach(['subscription','enjin','tugas_auto','kelulusan','surat_lantikan'] as $f) require_once __DIR__.'/'.$f.'.php'; // CLI & pemasang tidak memuat modul enjin
+    foreach(['subscription','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi'] as $f) require_once __DIR__.'/'.$f.'.php'; // CLI & pemasang tidak memuat modul enjin
     $school=(string)(school()['name']??'SMK Demo UrusTugas');
     save_settings(['school_name'=>$school,'school_type'=>$type==='SK'?'SK':'SMK','school_tagline'=>'Demo agihan tugas guru','reg_mode'=>'off','mail_method'=>'mail','site_url'=>'']);
     db()->beginTransaction();

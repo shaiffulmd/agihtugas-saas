@@ -33,6 +33,9 @@ demo)
   run php tests/load_index.php
   run php tests/letter_format.php
   run php tests/subjects.php
+  run php tests/position_templates.php
+  run php tests/organisasi.php
+  run php tests/sesi_baharu.php
   run php tests/workflow_flags.php
   run php tests/roles.php
   run php tests/bulk_import.php

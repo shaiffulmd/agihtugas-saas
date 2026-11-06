@@ -11,6 +11,12 @@ Auto-agihan & Pusat Syarat ialah ciri Pro secara lalai (pentadbir platform memil
 
 Had ini untuk auto-agihan sahaja. Pentadbir masih boleh melantik secara manual. Guru yang dirujuk dalam syarat perlu dibuang daripada rujukan dahulu sebelum profilnya boleh dipadam.
 
+## Amalan sekolah yang dikuatkuasakan
+
+- **Guru bertukar keluar** tidak boleh memegang jawatan dalam versi yang dihantar: Hantar untuk semakan ditolak sehingga lantikan mereka dipindahkan. *Isi jawatan kosong* melepaskan lantikan guru bertukar dan mengisinya semula; lantikan guru **bercuti** dikekalkan (amaran sahaja) kerana mereka akan kembali.
+- **Pengetua / Guru Besar** (jawatan utama di Carta Organisasi) tidak diberi tugas oleh agihan automatik. Lantikan manual masih boleh.
+- PK dan Ketua Bidang ditanda Pentadbir — dipertimbangkan paling akhir (lihat Kaedah enjin).
+
 ## Jana dan semak
 
 - **Isi jawatan kosong** mengekalkan semua lantikan sedia ada. Beban lantikan itu dikira dahulu dan pelanggaran syarat dipaparkan sebagai perhatian. Penyandang tetap yang berbeza tidak memindahkan lantikan sedia ada dalam mod ini.
@@ -34,6 +40,25 @@ Enjin deterministik mendahulukan penyandang tetap, kemudian jawatan yang menyebu
 - Jadual "Beban guru selepas cadangan" memaparkan indeks jangkaan setiap guru.
 
 Ini heuristik, bukan penyelesaian matematik optimum. Ia mungkin meninggalkan jawatan kosong walaupun susunan lain boleh mengisinya. Semak sebab dan laraskan syarat atau gunakan lantikan manual. Sistem tidak menilai pengalaman, jantina, umur, kesihatan, waktu mengajar atau sejarah sesi kerana maklumat itu belum dimodelkan. Kepakaran dipadankan sebagai teks tanpa membezakan huruf besar/kecil.
+
+## Jawatan standard SMK
+
+Di Jawatan & Pemberat, pilih **Jawatan standard**. Senarai mengikut Panduan Julat Mata Sasaran SMK: mata 1–5 menjadi pemberat jawatan (Berat 4–5, Sederhana 3, Ringan 1–2). Tandakan jawatan yang ada di sekolah dan tekan Tambah yang ditanda; yang sudah ada (nama + bidang) dilangkau. Tersedia untuk semua pakej; had Free terpakai.
+
+- Jawatan berganda dalam jadual asal (cth. SU Kurikulum / HEM / Kokurikulum / PIBG) dipecahkan kepada satu rekod setiap jawatan.
+- Jawatan berbilang (Guru Tingkatan, Ketua Guru Rumah Sukan, Penyelaras Makmal, Guru Penasihat …) ada medan bilangan; bilangan 3 menghasilkan "Nama (1/3)" … — namakan semula selepas ditambah.
+- Penyelaras Tingkatan dijana Tingkatan 1–5. Ketua Panitia dan Setiausaha Panitia dijana bagi setiap MP dalam katalog Mata Pelajaran (sediakan katalog dahulu); nama seperti "Ketua Panitia Matematik" dikenali oleh enjin untuk mengutamakan guru MP itu.
+- Senarai ini untuk sekolah SMK sahaja.
+- Padankan jawatan ikut nama (jadual skor peranan) tidak menanda secara lalai jawatan standard yang matanya akan ditimpa oleh skor peranan — tandakan sendiri jika mahu ikut skor peranan.
+- Panduan kapasiti: GAB 16–20, GKMP 12–15, PK / Pengetua 8–12 mata — tetapkan di Pengurusan Guru. Butang *Guna had jawatan berat di Pusat Syarat* (Pro) menetapkan tugas berat = pemberat 5 ke atas, maksimum 1 setiap guru.
+
+## Jawatan utama & carta organisasi
+
+Halaman **Carta Organisasi** (Pentadbir / PK menyunting semasa Draf; Pengetua melihat):
+
+- **Jawatan utama sekolah** — Pengetua / Guru Besar, PK Pentadbiran, PK HEM, PK Kokurikulum, PK Tingkatan 6 (SMK sahaja), PK PPKI dan Ketua Bidang. Ini bukan jawatan katalog: tiada pemberat, tidak diagih dan **tiada surat lantikan** (dilantik oleh JPN). Disimpan dalam tetapan sekolah `leadership` (JSON).
+- Guru yang dipilih ditanda **Pentadbir** (`index_exempt`) dan nama Pengetua mengisi nama pada surat. Menyahpilih tidak membuang tanda Pentadbir. Seorang guru hanya satu jawatan utama; guru yang dipadam dikosongkan secara automatik.
+- **Carta** — Pengetua → PK → Ketua Bidang → jawatan tugas ikut bidang dengan penyandang semasa (Pentadbiran & Kurikulum di bawah PK Pentadbiran, HEM di bawah PK HEM, Kokurikulum di bawah PK Kokurikulum). PK Tingkatan 6 / PPKI dipaparkan jika diisi.
 
 ## Jawatan pukal
 
