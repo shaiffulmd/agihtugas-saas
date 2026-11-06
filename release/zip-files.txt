@@ -962,6 +962,7 @@ app/enjin.php
 app/tugas_auto.php
 app/kelulusan.php
 app/surat_lantikan.php
+app/organisasi.php
 app/enjin_actions.php
 app/enjin_views.php
 app/api.php
