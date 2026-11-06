@@ -129,3 +129,8 @@ input[readonly]{background:color-mix(in srgb,var(--ink) 5%,var(--surface));color
 /* Surat Lantikan: jarak antara panel pilih guru dan surat (skrin sahaja; cetakan tidak berubah). */
 @media screen{.panel+.letter{margin-top:1.25rem}}
 .org-leaders td{white-space:normal;overflow-wrap:anywhere}
+/* Langganan: ringkasan pakej padat — lima kad sebaris (berbalut di skrin kecil). */
+.plan-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem}
+.plan-stats .stat-card{padding:.75rem .95rem}
+.plan-stats .stat-card>strong{font-size:clamp(1.1rem,4.6vw,1.35rem);margin:.2rem 0 .25rem;white-space:nowrap;overflow-wrap:normal}
+.plan-stats .stat-card>small{padding-top:.35rem}
