@@ -1,141 +1,153 @@
-/* Public directory: shared search, three independently selectable layouts. */
-.lp-main:has(.directory){background:var(--surface)}
-.lp-pautan>a[aria-current=page]{color:#fff;text-decoration:underline 3px var(--accent);text-underline-offset:10px} /* tanpa padding: tinggi header sama dengan halaman utama */
-.directory{background:var(--surface);min-height:calc(100vh - 180px)}
-.dir-intro{padding:48px 0 30px}
-.dir-intro .eyebrow{color:var(--primary);font-size:.8rem;letter-spacing:.11em}
-.dir-intro h1{font:800 clamp(1.8rem,3.8vw,3rem)/1.16 var(--fon-tajuk);margin:14px 0 12px;max-width:100%;letter-spacing:-.035em}
-.dir-intro>div>p{font-size:1.1rem;color:var(--muted)}
-.dir-search{display:flex;gap:12px;align-items:stretch;margin-top:28px}
-.dir-search-input{display:flex;align-items:center;gap:12px;flex:1;min-width:0;background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;padding:0 18px;color:var(--muted)}
-.dir-search-input:focus-within{outline:3px solid var(--accent);outline-offset:2px}
-.dir-search-input .i{flex:none;width:23px;height:23px}
-.dir-search-input input{width:100%;min-width:0;border:0;box-shadow:none;outline:none!important;background:transparent;padding:16px 0;color:var(--ink);font-size:1rem;border-radius:0}
-.dir-state-select{flex:0 1 240px;min-width:170px}
-.dir-state-select select{height:100%;min-height:56px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:10px}
-.dir-search>.btn{min-height:56px;padding:12px 24px;font-size:.95rem}
-.dir-carian .dir-intro{background:var(--dark);padding:48px 0 42px;color:#fff}
-.dir-carian .dir-intro .eyebrow{color:var(--accent)}
-.dir-carian .dir-intro h1{color:#fff;font-size:clamp(2rem,4.5vw,3.8rem)}
-.dir-carian .dir-intro>div>p{color:rgba(255,255,255,.82)}
-.dir-body{padding-top:24px;padding-bottom:48px}
-.dir-switch{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:32px;color:var(--muted);font-size:.82rem}
-.dir-switch>div{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:10px}
-.dir-switch a{display:flex;align-items:center;padding:9px 13px;min-height:40px;border-radius:7px;color:var(--muted);font-weight:600;text-decoration:none}
-.dir-switch a:hover{background:var(--surface-alt);color:var(--fg-dark)}
-.dir-switch a[aria-current=true]{background:var(--dark);color:#fff}
-.dir-workspace,.dir-results{min-width:0}
-.dir-result-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:22px}
-.dir-result-heading h2{font-size:1.3rem;margin:0 0 5px}
-.dir-result-heading p,.dir-result-heading>span{font-size:.87rem}
-.dir-result-heading>div{min-width:0;overflow-wrap:anywhere}
-.dir-result-heading>span{white-space:nowrap}
-.dir-school-list{border-top:1px solid var(--line)}
-.dir-school{display:flex;align-items:center;gap:22px;padding:24px 0;border-bottom:1px solid var(--line);min-width:0}
-.dir-school-icon{display:grid;place-items:center;flex:0 0 54px;height:54px;background:var(--brand-soft);color:var(--primary);border-radius:12px}
-.dir-school-icon .i{width:28px;height:28px}
-.dir-school-info{flex:1;min-width:0}
-.dir-school h3{font-size:1.1rem;line-height:1.45;overflow-wrap:anywhere;margin:0 0 5px}
-.dir-school p{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:.86rem}
-.dir-portal{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 15px;font-weight:600;font-size:.86rem;color:var(--primary);text-decoration:none!important;white-space:nowrap;border-radius:8px}
-.dir-portal:hover,.dir-portal:focus-visible{background:var(--primary);color:#fff}
-.dir-carian .dir-portal{border:1px solid var(--primary)}
-.dir-kad .dir-school-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;border:0}
-.dir-kad .dir-school{display:grid;grid-template-columns:1fr;align-content:start;gap:16px;padding:24px;border:1px solid var(--line);border-radius:12px}
-.dir-kad .dir-school-info{align-self:start}
-.dir-kad .dir-school-icon{width:50px;height:50px}
-.dir-kad .dir-portal{width:100%;background:var(--brand-soft);margin-top:auto}
-.dir-kad .dir-portal:hover,.dir-kad .dir-portal:focus-visible{background:var(--primary);color:#fff}
-.dir-kad .dir-school{grid-template-rows:auto 1fr auto}
-.dir-senarai .dir-workspace{display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px}
-.dir-filters{border-right:1px solid var(--line);padding-right:24px}
-.dir-filters h2{font-size:1.1rem;margin-bottom:16px}
-.dir-filters nav{display:grid;gap:4px;margin-bottom:20px}
-.dir-filters nav a{min-height:44px;display:flex;align-items:center;gap:10px;padding:8px 10px;color:var(--muted);text-decoration:none;border-radius:7px;overflow-wrap:anywhere}
-.dir-filters nav a:hover{background:var(--surface-alt)}
-.dir-filters nav a[aria-current=true]{background:var(--brand-soft);color:var(--primary);font-weight:700;box-shadow:inset 3px 0 var(--primary)}
-.dir-table{width:100%;border-collapse:collapse;font-size:.88rem;table-layout:auto;white-space:normal}
-.dir-table th,.dir-table td{text-align:left;border-bottom:1px solid var(--line);padding:16px 12px;background:transparent}
-.dir-table thead th{background:var(--surface-alt);font-size:.78rem;color:var(--muted);font-weight:600}
-.dir-table tbody th{font-weight:700;font-size:.92rem;text-transform:none;letter-spacing:normal;max-width:320px;overflow-wrap:anywhere;color:var(--fg-dark)}
-.dir-table tbody tr:last-child th,.dir-table tbody tr:last-child td{border-bottom:1px solid var(--line)}
-.dir-table tbody td{color:var(--muted)}
-.dir-table tbody td:nth-child(2){white-space:nowrap;font-family:ui-monospace,monospace}
-.dir-table tbody td:last-child{padding-right:0;text-align:right}
-.dir-table tbody tr:hover,.dir-table tbody tr:focus-within{background:var(--brand-soft)}
-.dir-pagination{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:24px;font-size:.82rem;flex-wrap:wrap}
-.dir-pagination nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.dir-help{display:flex;align-items:flex-start;gap:12px;background:var(--surface-alt);border-radius:8px;padding:18px;margin-top:32px;color:var(--muted);font-size:.88rem;scroll-margin-top:100px}
-.dir-help .i{flex:none}
-.dir-help a{font-weight:600}
-.dir-empty{text-align:center;padding:48px 20px;background:var(--surface-alt);border-radius:12px}
-.dir-empty>.i{width:32px;height:32px;color:var(--muted);margin-bottom:16px}
-.dir-empty h3{margin-bottom:8px}
-.dir-empty p{color:var(--muted);margin-bottom:24px}
-.directory a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-@media(max-width:1000px){
- .dir-kad .dir-school-list{grid-template-columns:repeat(2,minmax(0,1fr))}
- .dir-senarai .dir-workspace{grid-template-columns:170px minmax(0,1fr);gap:20px}
- .dir-table th,.dir-table td{padding:14px 8px}
- .dir-table .dir-portal{padding:8px}
+/* Direktori awam (/direktori): satu carian, tiga susun atur (Carian Utama, Kad Sekolah, Senarai Ringkas).
+ * Dimuat selepas landing.css — guna token --lx-* (warna jenama daripada Rupa Halaman Utama). Patuh CSP: tiada gaya sebaris. */
+.directory{background:var(--lx-bg)}
+
+/* Hero carian */
+.dir-intro{position:relative;overflow:hidden;background:var(--lx-soft);padding:136px 0 48px;border-bottom:1px solid var(--lx-line)}
+.dir-intro .dir-bl1{width:360px;height:360px;background:var(--lx-sun);right:-120px;top:40px;opacity:.45}
+.dir-intro .dir-bl2{width:220px;height:220px;background:var(--lx-sky);left:-80px;bottom:-110px;opacity:.18}
+.dir-intro-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}
+.dir-intro h1{font-size:60px;line-height:60px;letter-spacing:-0.03em;max-width:880px}
+.dir-tajuk-kecil .dir-intro h1{font-size:36px;line-height:40px}
+.dir-tajuk-besar .dir-intro h1{font-size:72px;line-height:72px}
+.dir-intro-in>p{max-width:640px}
+.dir-intro .lx-tag{align-self:center}
+@media (max-width:767px){.dir-intro{padding:120px 0 40px}.dir-intro h1,.dir-tajuk-besar .dir-intro h1{font-size:36px;line-height:40px}.dir-tajuk-kecil .dir-intro h1{font-size:30px;line-height:36px}}
+
+.dir-search{display:flex;gap:8px;align-items:stretch;width:100%;max-width:760px;margin-top:8px;padding:8px;border-radius:20px;background:#fff;border:1px solid var(--lx-line2);box-shadow:var(--lx-shadow-s);text-align:left;
+  transition:border-color 300ms var(--lx-ease),box-shadow 300ms var(--lx-ease)}
+.dir-search:focus-within{border-color:var(--lx-brand);box-shadow:0 0 0 4px var(--lx-brand-s)}
+.dir-search-input,.dir-state-select{position:relative;display:flex;align-items:center;gap:8px;min-width:0;margin:0;color:var(--lx-ink3)}
+.dir-search-input{flex:1;padding-left:12px}
+.dir-search-input .i,.dir-state-select .i{flex:none;width:18px;height:18px}
+.dir-search input,.dir-search select{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--lx-ink);font:inherit;font-size:16px;line-height:24px;padding:8px 0;margin:0;box-shadow:none;height:auto;-webkit-appearance:none;appearance:none}
+.dir-search input:focus,.dir-search select:focus{outline:0;box-shadow:none}
+.dir-search input::placeholder{color:var(--lx-ink3)}
+.dir-state-select{flex:0 0 200px;padding:0 32px 0 12px;border-left:1px solid var(--lx-line)}
+.dir-state-select select{cursor:pointer}
+.dir-state-select .dir-chev{position:absolute;right:8px;transform:rotate(90deg);pointer-events:none}
+.dir-search .lx-btn{flex:none}
+@media (max-width:767px){
+  .dir-search{flex-direction:column;padding:8px;border-radius:16px}
+  .dir-search-input{padding:4px 8px}
+  .dir-state-select{flex:none;border-left:0;border-top:1px solid var(--lx-line);padding:4px 32px 4px 8px}
+  .dir-search .lx-btn{width:100%}
 }
-@media(max-width:760px){
- .dir-intro,.dir-carian .dir-intro{padding:30px 0}
- .dir-search{flex-wrap:wrap}
- .dir-search-input{flex-basis:100%}
- .dir-state-select{flex:1;min-width:0}
- .dir-search>.btn{flex:1;padding:12px}
- .dir-body{padding-top:20px;padding-bottom:30px}
- .dir-switch{justify-content:flex-start;margin-bottom:26px;gap:6px}
- .dir-switch>span{width:100%}
- .dir-switch>div{width:100%}
- .dir-switch a{flex:1;justify-content:center;text-align:center;padding:8px 5px;font-size:.76rem}
- .dir-senarai .dir-workspace{display:block}
- .dir-filters{border-right:0;border-bottom:1px solid var(--line);padding:0 0 20px;margin-bottom:24px}
- .dir-filters nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
- .dir-filters nav a{border:1px solid var(--line);font-size:.83rem}
- .dir-result-heading{gap:10px;align-items:flex-start}
- .dir-result-heading h2{font-size:1.15rem}
- .dir-result-heading>span{font-size:.75rem;padding-top:4px}
- .dir-table,.dir-table tbody,.dir-table tr,.dir-table th,.dir-table td{display:block;width:100%}
- .dir-table thead{display:none}
- .dir-table tr{padding:16px 0;border-bottom:1px solid var(--line)}
- .dir-table th,.dir-table td{border:0;padding:4px 8px;max-width:none!important}
- .dir-table tbody tr:last-child th,.dir-table tbody tr:last-child td{border-bottom:0}
- .dir-table td[data-label]::before{content:attr(data-label) ': ';font-family:var(--fon-teks);color:var(--muted)}
- .dir-table tbody td:last-child{text-align:left;padding:8px}
- .dir-table .dir-portal{border:1px solid var(--primary);padding:8px 14px}
- .dir-school{gap:14px;flex-wrap:wrap;padding:20px 0}
- .dir-school-info{flex-basis:calc(100% - 70px)}
- .dir-carian .dir-school>.dir-portal{margin-left:68px}
- .dir-school h3{font-size:1rem}
- .dir-help{padding:14px}
+
+.dir-stats{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px 24px;color:var(--lx-ink2)}
+.dir-stats li{display:inline-flex;align-items:center;gap:8px}
+.dir-stats b{color:var(--lx-ink);font-weight:700}
+.dir-stats .i{width:16px;height:16px}
+.dir-stats li:nth-child(1) .i{color:var(--lx-brand)}.dir-stats li:nth-child(2) .i{color:var(--lx-sky)}.dir-stats li:nth-child(3) .i{color:var(--lx-mint)}
+.dir-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:880px}
+.dir-chips a{padding:4px 12px;border-radius:9999px;border:1px solid var(--lx-line);background:#fff;color:var(--lx-ink2);text-decoration:none;font-size:12px;line-height:16px;font-weight:500;
+  transition:transform 300ms var(--lx-ease),border-color 300ms var(--lx-ease),color 300ms var(--lx-ease)}
+.dir-chips a:hover{transform:translateY(-2px);border-color:var(--lx-ink3);color:var(--lx-ink)}
+.dir-chips a[aria-current="true"]{background:var(--lx-ink);border-color:var(--lx-ink);color:#fff}
+
+/* Badan */
+.dir-body{padding-block:48px 96px}
+.dir-toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.dir-result-heading{display:flex;flex-direction:column;gap:4px;min-width:0}
+.dir-switch{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:var(--lx-soft);border:1px solid var(--lx-line)}
+.dir-switch a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--lx-ink2);font-size:14px;line-height:20px;font-weight:500;transition:background-color 300ms var(--lx-ease),color 300ms var(--lx-ease)}
+.dir-switch a .i{width:16px;height:16px}
+.dir-switch a:hover{color:var(--lx-ink)}
+.dir-switch a[aria-current="true"]{background:#fff;color:var(--lx-ink);box-shadow:0 1px 2px rgba(15,28,46,.08)}
+@media (max-width:599px){.dir-switch{width:100%}.dir-switch a{flex:1;justify-content:center}.dir-switch a span{display:none}}
+
+.dir-workspace{display:block}
+.dir-senarai .dir-workspace{display:grid;grid-template-columns:240px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:899px){.dir-senarai .dir-workspace{grid-template-columns:minmax(0,1fr)}}
+.dir-results{min-width:0}
+
+/* Tanda sekolah (logo / ikon) */
+.dir-school-icon,.dir-row-logo{display:grid;place-items:center;flex:none;overflow:hidden;background:var(--lx-brand-s);color:var(--lx-brand)}
+.dir-school-icon{width:56px;height:56px;border-radius:16px}
+.dir-row-logo{width:32px;height:32px;border-radius:10px}
+.dir-school-icon .i{width:26px;height:26px}.dir-row-logo .i{width:16px;height:16px}
+.dir-school-icon.has-logo,.dir-row-logo.has-logo{background:#fff;border:1px solid var(--lx-line)}
+.dir-school-icon img,.dir-row-logo img{width:100%;height:100%;object-fit:contain;padding:4px}
+.dir-code{display:inline-flex;padding:2px 8px;border-radius:8px;background:var(--lx-brand-s);color:var(--lx-brand-d);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.02em}
+.dir-state{display:inline-flex;align-items:center;gap:4px;color:var(--lx-ink2);font-size:12px;line-height:16px}
+.dir-state .i{width:14px;height:14px;color:var(--lx-ink3)}
+
+.dir-portal{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:none;padding:8px 12px;border-radius:12px;background:var(--lx-ink);color:#fff;text-decoration:none;white-space:nowrap;font-size:14px;line-height:20px;font-weight:600;
+  transition:transform 300ms var(--lx-ease),background-color 300ms var(--lx-ease)}
+.dir-portal .i{width:16px;height:16px;transition:transform 300ms var(--lx-ease)}
+.dir-portal:hover{color:#fff;background:var(--lx-brand);transform:translateY(-2px)}
+.dir-portal:hover .i{transform:translate(2px,-2px)}
+.dir-portal:active{transform:scale(0.98)}
+
+/* Carian Utama: baris besar */
+.dir-school-list{display:flex;flex-direction:column;gap:12px}
+.dir-school{display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:20px;background:#fff;border:1px solid var(--lx-line);
+  transition:transform 500ms var(--lx-ease),box-shadow 500ms var(--lx-ease),border-color 300ms var(--lx-ease)}
+.dir-school:hover{transform:translateY(-3px);box-shadow:var(--lx-shadow-s);border-color:var(--lx-line2)}
+.dir-school-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.dir-school-info h3{margin:0;font-family:var(--lx-h);font-size:18px;line-height:28px;font-weight:700;letter-spacing:-0.01em;overflow-wrap:anywhere}
+.dir-school-info p{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+@media (max-width:599px){.dir-school{flex-wrap:wrap;padding:16px}.dir-school .dir-portal{width:100%}}
+
+/* Kad Sekolah: grid berwarna */
+.dir-kad .dir-school-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.dir-kad .dir-school{flex-direction:column;align-items:flex-start;gap:16px;padding:24px;border:0;background:var(--lx-c2)}
+.dir-kad .dir-school:hover{transform:translateY(-6px)}
+.dir-kad .dir-school.is-t0{--lx-c2:var(--lx-brand-s)}.dir-kad .dir-school.is-t1{--lx-c2:var(--lx-sky-s)}.dir-kad .dir-school.is-t2{--lx-c2:var(--lx-mint-s)}
+.dir-kad .dir-school.is-t3{--lx-c2:var(--lx-sun-s)}.dir-kad .dir-school.is-t4{--lx-c2:var(--lx-grape-s)}
+.dir-kad .dir-school-icon{background:#fff;box-shadow:var(--lx-shadow-s)}
+.dir-kad .dir-school-info{width:100%}
+.dir-kad .dir-code{background:#fff}
+.dir-kad .dir-portal{width:100%;margin-top:auto}
+@media (max-width:959px){.dir-kad .dir-school-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:599px){.dir-kad .dir-school-list{grid-template-columns:minmax(0,1fr)}}
+
+/* Senarai Ringkas: penapis sisi + jadual */
+.dir-filters{position:sticky;top:112px;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:var(--lx-soft);border:1px solid var(--lx-line)}
+.dir-filters h2{margin:0}
+.dir-filters nav{display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
+.dir-filters nav a{padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--lx-ink2);font-size:14px;line-height:20px;transition:background-color 300ms var(--lx-ease),color 300ms var(--lx-ease)}
+.dir-filters nav a:hover{background:#fff;color:var(--lx-ink)}
+.dir-filters nav a[aria-current="true"]{background:var(--lx-ink);color:#fff;font-weight:600}
+.dir-reset{color:var(--lx-brand-d);font-size:14px;line-height:20px;font-weight:600;text-decoration:none}
+.dir-reset:hover{text-decoration:underline}
+@media (max-width:899px){.dir-filters{position:static}.dir-filters nav{flex-direction:row;flex-wrap:wrap;max-height:none}.dir-filters nav a{background:#fff;border:1px solid var(--lx-line);padding:4px 12px;border-radius:9999px;font-size:12px;line-height:16px}}
+.dir-table-wrap{border-radius:20px;border:1px solid var(--lx-line);overflow:hidden;background:#fff}
+.dir-table{width:100%;border-collapse:collapse;font-size:14px;line-height:20px}
+.dir-table th,.dir-table td{padding:12px 16px;text-align:left;border-top:1px solid var(--lx-line);vertical-align:middle}
+.dir-table thead th{border-top:0;background:var(--lx-soft);color:var(--lx-ink3);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.dir-table tbody tr{transition:background-color 300ms var(--lx-ease)}
+.dir-table tbody tr:hover{background:var(--lx-soft)}
+.dir-table tbody th{font-weight:600;font-size:14px;line-height:20px;text-transform:none;letter-spacing:0;color:var(--lx-ink);background:transparent}
+.dir-table td:last-child{text-align:right}
+.dir-row-name{display:flex;align-items:center;gap:12px;min-width:0;overflow-wrap:anywhere}
+@media (max-width:699px){
+  .dir-table thead{display:none}
+  .dir-table,.dir-table tbody,.dir-table tr,.dir-table th,.dir-table td{display:block;width:100%}
+  .dir-table tr{padding:12px 16px;border-top:1px solid var(--lx-line)}
+  .dir-table tbody tr:first-child{border-top:0}
+  .dir-table th,.dir-table td{border:0;padding:4px 0;text-align:left}
+  .dir-table td:last-child{text-align:left;padding-top:8px}
+  .dir-table td[data-label]::before{content:attr(data-label) ": ";color:var(--lx-ink3);font-size:12px}
+  .dir-table .dir-portal{width:100%}
 }
-@media(max-width:520px){
- .dir-kad .dir-school-list{grid-template-columns:1fr}
- .dir-kad .dir-school{padding:20px;gap:14px}
- .dir-intro>div>p{font-size:.95rem}
- .dir-search-input{padding:0 12px}
- .dir-search-input input{font-size:1rem}
- .lp-pill{padding:8px 10px;font-size:.75rem}
- .lp-brand b{font-size:.95rem}
- .lp-brand small{font-size:.65rem}
-}
-/* Paparan Kad: kad terangkat dengan bayang apabila dihala tetikus (atau fokus papan kekunci di dalamnya) */
-.dir-kad .dir-school{background:var(--surface);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;will-change:transform}
-.dir-kad .dir-school:hover,.dir-kad .dir-school:focus-within{transform:translateY(-5px);border-color:color-mix(in srgb,var(--primary) 35%,var(--line));box-shadow:0 14px 28px -10px color-mix(in srgb,var(--dark) 30%,transparent),0 4px 10px -4px color-mix(in srgb,var(--dark) 14%,transparent)}
-@media (prefers-reduced-motion:reduce){.dir-kad .dir-school{transition:box-shadow .18s ease,border-color .18s ease}.dir-kad .dir-school:hover,.dir-kad .dir-school:focus-within{transform:none}}
-/* Saiz tajuk direktori (Rupa Halaman Utama → Halaman carian / direktori) */
-.dir-tajuk-kecil .dir-intro h1,.dir-carian.dir-tajuk-kecil .dir-intro h1{font-size:clamp(1.4rem,2.4vw,1.9rem)}
-.dir-tajuk-sederhana .dir-intro h1,.dir-carian.dir-tajuk-sederhana .dir-intro h1{font-size:clamp(1.6rem,3vw,2.4rem)}
-.dir-tajuk-besar .dir-intro h1{font-size:clamp(1.8rem,3.8vw,3rem)}
-.dir-carian.dir-tajuk-besar .dir-intro h1{font-size:clamp(2rem,4.5vw,3.8rem)}
-.dir-tajuk-kecil .dir-intro>div>p{font-size:.98rem}
-/* Logo sekolah dalam direktori */
-.dir-school-icon.has-logo{background:#fff;border:1px solid var(--line);padding:5px;overflow:hidden}
-.dir-school-icon.has-logo img{width:100%;height:100%;object-fit:contain;display:block}
-.dir-row-name{display:inline-flex;align-items:center;gap:10px}
-.dir-row-logo{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:8px;background:var(--brand-soft);color:var(--primary);overflow:hidden}
-.dir-row-logo .i{width:18px;height:18px}
-.dir-row-logo.has-logo{background:#fff;border:1px solid var(--line);padding:3px}
-.dir-row-logo img{width:100%;height:100%;object-fit:contain;display:block}
+
+/* Kosong, halaman & bantuan */
+.dir-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:64px 24px;border-radius:24px;border:1px dashed var(--lx-line2);background:var(--lx-soft)}
+.dir-empty-ic{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:#fff;color:var(--lx-brand);box-shadow:var(--lx-shadow-s)}
+.dir-empty-ic .i{width:28px;height:28px}
+.dir-empty h3,.dir-empty p{margin:0}
+.dir-empty-act{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px}
+.dir-pagination{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:24px}
+.dir-pagination nav{display:flex;align-items:center;gap:8px}
+.dir-pagination .lx-btn .i{width:16px;height:16px}
+.dir-page{padding:8px 12px;border-radius:10px;background:var(--lx-soft);font-size:14px;line-height:20px;font-weight:600}
+.dir-help{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center;margin-top:48px;padding:24px 28px;border-radius:24px;background:var(--lx-sky-s);scroll-margin-top:120px}
+.dir-help-ic{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:#fff;color:var(--lx-sky)}
+.dir-help-ic .i{width:24px;height:24px}
+.dir-help-copy{display:flex;flex-direction:column;gap:4px}
+.dir-help-copy h2,.dir-help-copy p{margin:0}
+.dir-help-act{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:767px){.dir-help{grid-template-columns:minmax(0,1fr);padding:24px}.dir-help-act .lx-btn{flex:1}}
+
+@media (prefers-reduced-motion:reduce){.dir-school,.dir-portal,.dir-chips a,.dir-kad .dir-school{transform:none!important}}

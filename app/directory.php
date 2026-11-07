@@ -46,10 +46,10 @@ function directory_url(string $q,string $state,string $layout,int $page=1): stri
 function directory_search_form(string $q,string $state,string $layout,array $states,bool $withState=true): void { ?>
 <form method="get" action="/direktori" role="search" class="dir-search">
 <input type="hidden" name="paparan" value="<?= e($layout) ?>">
-<label class="dir-search-input"><span class="sr-only">Nama sekolah atau kod sekolah</span><?= icon('search') ?><input name="q" value="<?= e($q) ?>" maxlength="80" placeholder="Nama sekolah atau kod sekolah" autocomplete="off" type="search"></label>
-<?php if($withState): ?><label class="dir-state-select"><span class="sr-only">Negeri</span><select name="negeri"><option value="">Semua negeri</option><?php foreach($states as $s): ?><option value="<?= e($s) ?>"<?= $state===$s?' selected':'' ?>><?= e($s) ?></option><?php endforeach; ?></select></label>
+<label class="dir-search-input"><span class="sr-only">Nama sekolah atau kod sekolah</span><?= icon('search') ?><input name="q" value="<?= e($q) ?>" maxlength="80" placeholder="Nama sekolah atau kod KPM, cth. CEA1234" autocomplete="off" autocapitalize="characters" type="search"></label>
+<?php if($withState): ?><label class="dir-state-select"><span class="sr-only">Negeri</span><?= icon('globe') ?><select name="negeri"><option value="">Semua negeri</option><?php foreach($states as $s): ?><option value="<?= e($s) ?>"<?= $state===$s?' selected':'' ?>><?= e($s) ?></option><?php endforeach; ?></select><?= icon('chev-r','dir-chev') ?></label>
 <?php else: ?><input type="hidden" name="negeri" value="<?= e($state) ?>"><?php endif; ?>
-<button class="btn primary" type="submit">Cari sekolah <?= icon('arrow') ?></button>
+<button class="lx-btn lx-btn-primary lx-btn-lg" type="submit">Cari sekolah <?= icon('arrow','lx-go') ?></button>
 </form>
 <?php }
 /** Logo sekolah (Tetapan & Tema sekolah) untuk direktori; tiada logo = ikon sekolah. */
@@ -68,7 +68,7 @@ function directory_logo_serve(): never {
     header('Cache-Control: public, max-age='.(input('v','get')!==''?'31536000, immutable':'3600')); echo $bytes; exit;
 }
 function directory_portal_link(array $school,string $class=''): void { ?>
-<a class="dir-portal <?= e($class) ?>" href="<?= e(school_url($school['code'],'/')) ?>" aria-label="<?= e('Buka portal '.$school['name']) ?>">Buka portal <?= icon('arrow-ur') ?></a>
+<a class="dir-portal <?= e($class) ?>" href="<?= e(school_url($school['code'],'/')) ?>" aria-label="<?= e('Buka portal '.$school['name']) ?>"><span>Buka portal</span><?= icon('arrow-ur') ?></a>
 <?php }
 function platform_search_directory(): never {
     $layout=directory_layout();
@@ -78,37 +78,44 @@ function platform_search_directory(): never {
     if(preg_match(SCHOOL_CODE_RE,$code) && ($hit=school_find($code)) && $hit['status']==='aktif') redirect(school_url($hit['code'],'/'));
     $state=mb_substr(trim(input('negeri','get')),0,40);
     $states=array_column(query('SELECT DISTINCT state FROM schools WHERE status=? AND state<>? ORDER BY state',['aktif',''])->fetchAll(),'state');
+    $all=(int)query('SELECT COUNT(*) FROM schools WHERE status=?',['aktif'])->fetchColumn();
     // Preserve an unknown filter as an explicit zero-result state, rather than silently broadening it.
     $stateOk=$state==='' || in_array($state,$states,true); if(!$stateOk){ $states[]=$state; sort($states); }
     $result=directory_results($q,$state,(int)input('halaman','get'));
     extract($result,EXTR_SKIP);
     // Hanya senarai bersih (tanpa carian, negeri yang wujud, ada hasil) diindeks; ?q=… memaparkan semula teks pengguna → noindex (halaman carian spam).
     $canQ=array_filter(['negeri'=>$state,'halaman'=>$page>1?$page:null]);
-    lp_head($state!==''?'Direktori sekolah · '.$state:'Direktori sekolah',true,['path'=>'/direktori'.($canQ?'?'.http_build_query($canQ,'','&',PHP_QUERY_RFC3986):''),'noindex'=>$q!=='' || !$total || !$stateOk,
-        'desc'=>'Direktori sekolah yang menggunakan '.platform_name().($state!==''?' di '.$state:'').': cari mengikut nama atau kod sekolah KPM dan terus ke laman agihan tugas guru sekolah.']); ?>
+    lp_head($state!==''?'Direktori sekolah · '.$state:'Direktori sekolah',true,['path'=>'/direktori'.($canQ?'?'.http_build_query($canQ,'','&',PHP_QUERY_RFC3986):''),'home'=>true,'noindex'=>$q!=='' || !$total || !$stateOk,
+        'desc'=>'Direktori sekolah yang menggunakan '.platform_name().($state!==''?' di '.$state:'').': cari mengikut nama atau kod sekolah KPM dan terus ke laman agihan tugas guru sekolah.']);
+    $icons=['carian'=>'search','kad'=>'image','senarai'=>'list']; ?>
 <div class="directory dir-<?= e($layout) ?> dir-tajuk-<?= e(directory_title_size()) ?>">
-<section class="dir-intro"><div class="lp-wrap">
-<span class="eyebrow">DIREKTORI SEKOLAH</span>
-<h1><?= match($layout){'kad'=>'Temui portal sekolah anda','senarai'=>'Pilih sekolah. Terus ke portal.',default=>'Cari sekolah anda.'} ?></h1>
-<p><?= $layout==='carian'?'Akses portal agihan tugas sekolah dengan mudah.':'Cari mengikut nama, kod atau negeri.' ?></p>
+<section class="dir-intro"><span class="lx-blob dir-bl1" aria-hidden="true"></span><span class="lx-blob dir-bl2" aria-hidden="true"></span><div class="lx-wrap dir-intro-in">
+<span class="lx-tag lx-c3">Direktori sekolah</span>
+<h1 class="lx-h"><?= match($layout){'kad'=>'Temui portal sekolah anda','senarai'=>'Pilih sekolah. Terus ke portal.',default=>'Cari sekolah anda.'} ?></h1>
+<p class="lx-blg lx-muted"><?= $layout==='carian'?'Akses portal agihan tugas sekolah dengan mudah. Taip kod KPM yang tepat untuk terus ke laman log masuk sekolah.':'Cari mengikut nama, kod KPM atau negeri, kemudian buka portal sekolah untuk log masuk.' ?></p>
 <?php directory_search_form($q,$state,$layout,$states,$layout!=='senarai'); ?>
+<ul class="dir-stats lx-c4"><li><?= icon('school') ?><b><?= $all ?></b> sekolah aktif</li><?php if($states): ?><li><?= icon('globe') ?><b><?= count(array_filter($states,fn($s)=>$s!=='')) ?></b> negeri</li><?php endif; ?><li><?= icon('lock') ?>Data setiap sekolah diasingkan</li></ul>
+<?php if($layout!=='senarai' && count($states)>1): ?><nav class="dir-chips" aria-label="Tapis mengikut negeri"><a href="<?= e(directory_url($q,'',$layout)) ?>"<?= $state===''?' aria-current="true"':'' ?>>Semua</a><?php foreach($states as $s): ?><a href="<?= e(directory_url($q,$s,$layout)) ?>"<?= $state===$s?' aria-current="true"':'' ?>><?= e($s) ?></a><?php endforeach; ?></nav><?php endif; ?>
 </div></section>
-<div class="lp-wrap dir-body">
-<?php if(directory_switch_enabled()): ?><nav class="dir-switch" aria-label="Pilihan paparan direktori"><span>Paparan</span><div><?php foreach(DIRECTORY_LAYOUTS as $key=>[$label]): ?><a href="<?= e(directory_url($q,$state,$key,$page)) ?>"<?= $layout===$key?' aria-current="true"':'' ?>><?= e($label) ?></a><?php endforeach; ?></div></nav><?php endif; ?>
+<div class="lx-wrap dir-body">
+<div class="dir-toolbar">
+<div class="dir-result-heading"><h2 class="lx-h lx-h5" id="dir-result-title"><?= $q!==''?'Hasil carian':($total.' sekolah ditemui') ?></h2><p class="lx-b6 lx-muted"><?php if($q!==''): ?><?= $total ?> sekolah ditemui untuk “<?= e($q) ?>”<?php else: ?>Sekolah berdaftar yang aktif, disusun nama A hingga Z<?php endif; ?><?= $state!==''?' · '.e($state):'' ?></p></div>
+<?php if(directory_switch_enabled()): ?><nav class="dir-switch" aria-label="Pilihan paparan direktori"><?php foreach(DIRECTORY_LAYOUTS as $key=>[$label]): ?><a href="<?= e(directory_url($q,$state,$key,$page)) ?>"<?= $layout===$key?' aria-current="true"':'' ?> title="<?= e($label) ?>"><?= icon($icons[$key]) ?><span><?= e($label) ?></span></a><?php endforeach; ?></nav><?php endif; ?>
+</div>
 <div class="dir-workspace">
-<?php if($layout==='senarai'): ?><aside class="dir-filters"><h2>Tapis negeri</h2><nav aria-label="Penapis negeri"><a href="<?= e(directory_url($q,'',$layout)) ?>"<?= $state===''?' aria-current="true"':'' ?>>Semua negeri</a><?php foreach($states as $s): ?><a href="<?= e(directory_url($q,$s,$layout)) ?>"<?= $state===$s?' aria-current="true"':'' ?>><?= e($s) ?></a><?php endforeach; ?></nav><a class="text-link" href="<?= e(directory_url('','',$layout)) ?>">Tetapkan semula</a></aside><?php endif; ?>
+<?php if($layout==='senarai'): ?><aside class="dir-filters"><h2 class="lx-t4">Tapis negeri</h2><nav aria-label="Penapis negeri"><a href="<?= e(directory_url($q,'',$layout)) ?>"<?= $state===''?' aria-current="true"':'' ?>>Semua negeri</a><?php foreach($states as $s): ?><a href="<?= e(directory_url($q,$s,$layout)) ?>"<?= $state===$s?' aria-current="true"':'' ?>><?= e($s) ?></a><?php endforeach; ?></nav><a class="dir-reset" href="<?= e(directory_url('','',$layout)) ?>">Tetapkan semula</a></aside><?php endif; ?>
 <section class="dir-results" aria-labelledby="dir-result-title">
-<div class="dir-result-heading"><div><h2 id="dir-result-title"><?= $q!==''?'Hasil carian':($total.' sekolah ditemui') ?></h2><p class="muted"><?php if($q!==''): ?><?= $total ?> sekolah ditemui untuk “<?= e($q) ?>”<?php else: ?>Sekolah berdaftar yang aktif<?php endif; ?><?= $state!==''?' · '.e($state):'' ?></p></div><span class="muted">Nama A–Z</span></div>
-<?php if(!$rows): ?><div class="dir-empty"><?= icon('search') ?><h3>Tiada sekolah dijumpai</h3><p>Semak ejaan, cuba kod sekolah atau kosongkan penapis negeri.</p><a class="btn outline" href="<?= e(directory_url('','',$layout)) ?>">Lihat semua sekolah</a></div>
+<?php if(!$rows): ?><div class="dir-empty"><span class="dir-empty-ic"><?= icon('search') ?></span><h3 class="lx-h lx-h6">Tiada sekolah dijumpai</h3><p class="lx-b6 lx-muted">Semak ejaan, cuba kod sekolah KPM atau kosongkan penapis negeri.</p><div class="dir-empty-act"><a class="lx-btn lx-btn-ghost" href="<?= e(directory_url('','',$layout)) ?>">Lihat semua sekolah</a><?php if(registration_open()): ?><a class="lx-btn lx-btn-primary" href="/daftar">Daftar sekolah baharu</a><?php endif; ?></div></div>
 <?php elseif($layout==='senarai'): ?>
-<table class="dir-table"><caption class="sr-only">Senarai sekolah aktif</caption><thead><tr><th scope="col">Nama sekolah</th><th scope="col">Kod sekolah</th><th scope="col">Negeri</th><th scope="col"><span class="sr-only">Portal sekolah</span></th></tr></thead><tbody>
-<?php foreach($rows as $s): ?><tr><th scope="row"><span class="dir-row-name"><?= directory_school_mark($s,'dir-row-logo') ?><?= e($s['name']) ?></span></th><td data-label="Kod sekolah"><?= e($s['code']) ?></td><td data-label="Negeri"><?= e($s['state']?:'Tidak dinyatakan') ?></td><td><?php directory_portal_link($s); ?></td></tr><?php endforeach; ?>
-</tbody></table>
+<div class="dir-table-wrap"><table class="dir-table"><caption class="sr-only">Senarai sekolah aktif</caption><thead><tr><th scope="col">Nama sekolah</th><th scope="col">Kod sekolah</th><th scope="col">Negeri</th><th scope="col"><span class="sr-only">Portal sekolah</span></th></tr></thead><tbody>
+<?php foreach($rows as $s): ?><tr><th scope="row"><span class="dir-row-name"><?= directory_school_mark($s,'dir-row-logo') ?><?= e($s['name']) ?></span></th><td data-label="Kod sekolah"><span class="dir-code"><?= e($s['code']) ?></span></td><td data-label="Negeri"><?= e($s['state']?:'Tidak dinyatakan') ?></td><td><?php directory_portal_link($s); ?></td></tr><?php endforeach; ?>
+</tbody></table></div>
 <?php else: ?><div class="dir-school-list">
-<?php foreach($rows as $s): ?><article class="dir-school"><?= directory_school_mark($s) ?><div class="dir-school-info"><h3><?= e($s['name']) ?></h3><p><span><?= e($s['code']) ?></span><span><?= e($s['state']?:'Negeri tidak dinyatakan') ?></span></p></div><?php directory_portal_link($s); ?></article><?php endforeach; ?>
+<?php foreach($rows as $i=>$s): ?><article class="dir-school is-t<?= $i%5 ?>"><?= directory_school_mark($s) ?><div class="dir-school-info"><h3><?= e($s['name']) ?></h3><p><span class="dir-code"><?= e($s['code']) ?></span><span class="dir-state"><?= icon('globe') ?><?= e($s['state']?:'Negeri tidak dinyatakan') ?></span></p></div><?php directory_portal_link($s); ?></article><?php endforeach; ?>
 </div><?php endif; ?>
-<?php if($total): ?><div class="dir-pagination"><span class="muted">Memaparkan <?= $offset+1 ?>–<?= min($offset+$size,$total) ?> daripada <?= $total ?> sekolah</span><?php if($pages>1): ?><nav aria-label="Halaman keputusan"><?php if($page>1): ?><a class="btn outline sm" href="<?= e(directory_url($q,$state,$layout,$page-1)) ?>" rel="prev">Sebelumnya</a><?php endif; ?><span>Halaman <?= $page ?> / <?= $pages ?></span><?php if($page<$pages): ?><a class="btn outline sm" href="<?= e(directory_url($q,$state,$layout,$page+1)) ?>" rel="next">Seterusnya</a><?php endif; ?></nav><?php endif; ?></div><?php endif; ?>
-<div class="dir-help" id="bantuan-direktori"><?= icon('help') ?><p>Tidak jumpa sekolah anda? Cuba kod sekolah atau semak penapis.<?php if(registration_open()): ?> <a href="/daftar">Daftar sekolah baharu</a>.<?php endif; ?></p></div>
-</section></div></div></div>
+<?php if($total): ?><div class="dir-pagination"><span class="lx-b6 lx-muted">Memaparkan <?= $offset+1 ?>–<?= min($offset+$size,$total) ?> daripada <?= $total ?> sekolah</span><?php if($pages>1): ?><nav aria-label="Halaman keputusan"><?php if($page>1): ?><a class="lx-btn lx-btn-ghost" href="<?= e(directory_url($q,$state,$layout,$page-1)) ?>" rel="prev"><?= icon('chev-l') ?>Sebelumnya</a><?php endif; ?><span class="dir-page">Halaman <?= $page ?> / <?= $pages ?></span><?php if($page<$pages): ?><a class="lx-btn lx-btn-ghost" href="<?= e(directory_url($q,$state,$layout,$page+1)) ?>" rel="next">Seterusnya<?= icon('chev-r') ?></a><?php endif; ?></nav><?php endif; ?></div><?php endif; ?>
+</section></div>
+<div class="dir-help" id="bantuan-direktori"><span class="dir-help-ic"><?= icon('help') ?></span><div class="dir-help-copy"><h2 class="lx-h lx-h6">Tidak jumpa sekolah anda?</h2><p class="lx-b6 lx-muted">Cuba kod sekolah KPM (3 huruf dan 4 digit) atau kosongkan penapis negeri. Guru log masuk melalui portal sekolah masing-masing; akaun guru dicipta oleh pentadbir sekolah.</p></div><div class="dir-help-act"><?php if(registration_open()): ?><a class="lx-btn lx-btn-primary" href="/daftar">Daftar sekolah baharu <?= icon('arrow','lx-go') ?></a><?php endif; ?><a class="lx-btn lx-btn-ghost" href="/">Halaman utama</a></div></div>
+</div></div>
 <?php lp_foot(); exit;
 }
