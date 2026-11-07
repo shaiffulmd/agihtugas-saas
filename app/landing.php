@@ -23,7 +23,7 @@ function lp_head(string $title,bool $directory=false,array $seo=[]): void {
 <?= function_exists('icons_sprite')?icons_sprite():'' ?><div class="lx-page"><a class="lx-skip" href="#utama">Langkau ke kandungan</a>
 <header class="lx-nav" aria-label="Navigasi utama"><?= lp_brand() ?>
 <nav class="lx-links" aria-label="Halaman awam"><?php foreach($links as [$u,$l,$cur]): ?><a href="<?= e($u) ?>"<?= $cur?' aria-current="page"':'' ?>><?= e($l) ?></a><?php endforeach; ?></nav>
-<div class="lx-cta"><a class="lx-login" href="/#cari">Log masuk</a><?php if($daftar): ?><a class="lx-btn lx-btn-primary" href="/daftar"<?= $here==='/daftar'?' aria-current="page"':'' ?>>Daftar sekolah</a><?php endif; ?>
+<div class="lx-cta"><?php if($daftar): ?><a class="lx-btn lx-btn-primary" href="/daftar"<?= $here==='/daftar'?' aria-current="page"':'' ?>>Daftar sekolah</a><?php endif; ?>
 <button class="lx-menu" type="button" aria-expanded="false" aria-controls="lx-sheet" aria-label="Buka menu"><span></span><span></span><span></span></button></div></header>
 <div class="lx-sheet" id="lx-sheet" aria-hidden="true"><?php foreach($links as [$u,$l]): ?><a href="<?= e($u) ?>"><?= e($l) ?></a><?php endforeach; ?><a href="/#cari">Cari sekolah</a><?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="/daftar">Daftar sekolah</a><?php endif; ?></div>
 <main class="lp-main lx-main" id="utama"><?php if(empty($seo['home'])): ?><div class="lx-nav-gap" aria-hidden="true"></div><?php endif;
