@@ -6,6 +6,12 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.16'=>['2026-11-07',[
+        'Halaman utama platform direka semula: hero dengan tangkapan skrin sebenar sistem dan carian sekolah, ciri dipaparkan dengan keratan skrin (agihan automatik, Pusat Syarat, analisis beban, kelulusan, surat lantikan, Tugas Saya), galeri skrin bertab, langkah Draf hingga Muktamad, keselamatan, pakej Free/Pro dan FAQ.',
+        'Navigasi terapung dan footer baharu untuk semua halaman awam (/direktori, /faq, /terma, /polisi, /lapor-keselamatan), termasuk butang amaran Log masuk pentadbir platform.',
+        'Halaman Daftar Sekolah baharu: borang tiga bahagian (Sekolah, Pegawai, Akaun) dengan penunjuk kemajuan, pratonton alamat sekolah daripada kod KPM, meter kekuatan kata laluan, butang tunjuk kata laluan dan semakan medan sebelum dihantar. Semakan di pelayan tidak berubah.',
+        'Rupa Halaman Utama: teks hero lalai kini "Setiap guru, tugas yang seimbang." dan fon lalai Kontemporari (Poppins). Gambar latar yang dimuat naik kini digunakan sebagai imej pratonton apabila pautan dikongsi.',
+    ]],
     '1.15'=>['2026-11-07',[
         'Mula sesi baharu (Profil Sekolah & Surat, Pentadbir): buka draf tahun persekolahan baharu terus daripada versi muktamad. Pilih sama ada mengekalkan lantikan tahun lepas sebagai titik mula atau mengosongkan semuanya, melepaskan lantikan guru bertukar keluar dan mengosongkan masa mengajar untuk jadual waktu baharu. Katalog jawatan, guru dan jawatan utama dikekalkan. Surat & Tugas Saya sesi lepas kekal diterbitkan sehingga sesi baharu dimuktamadkan. Tidak boleh dimulakan semasa agihan dalam semakan.',
         'Surat Lantikan: pemilih versi muktamad (sesi & tarikh) untuk mencetak semula atau memuat turun PDF surat sesi lepas. Versi lama dicetak seperti dimuktamadkan dahulu (tarikh berkuat kuasa dan format surat ketika itu).',
