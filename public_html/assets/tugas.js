@@ -27,18 +27,21 @@ function loadPreview() {
   hint.textContent = `Beban selepas lantikan: ${after} / ${cap} mata.` + (after > cap ? ' Melebihi kapasiti — semak kesesuaian sebelum menyimpan.' : ' Masih dalam kapasiti guru.') + idx;
   hint.classList.toggle('warning-text', after > cap || heavy);
 }
-// Jawatan yang menyebut mata pelajaran (cth. Ketua Panitia Matematik): guru yang mengajar MP itu disusun di atas dengan ★
-// (susunan asal = indeks terendah dahulu dikekalkan dalam setiap kumpulan).
+// Jawatan yang menyebut mata pelajaran (cth. Ketua Panitia Bahasa Melayu): guru yang mengajar MP itu disusun di atas dengan ★,
+// kemudian guru yang mengajar MP lain dalam kumpulan katalog yang sama (cth. Bahasa) dengan ☆ beserta kepakarannya.
+// Susunan asal (indeks terendah dahulu) dikekalkan dalam setiap kumpulan.
 const teacherOpts = teacherSel ? [...teacherSel.options].slice(1) : [];
 teacherOpts.forEach(o => { o.dataset.label = o.textContent; });
 function rankBySubject() {
   if (!posSel || !teacherSel) return;
-  const subj = (posSel.selectedOptions[0]?.dataset.subject || '').toLocaleLowerCase('ms');
-  const match = o => subj !== '' && (o.dataset.subjects || '').split('|').includes(subj);
-  const sorted = [...teacherOpts.filter(match), ...teacherOpts.filter(o => !match(o))];
-  sorted.forEach(o => { o.textContent = (match(o) ? '★ ' : '') + o.dataset.label; teacherSel.appendChild(o); });
-  const hint = document.getElementById('anggaran-beban'), n = teacherOpts.filter(match).length;
-  if (hint && !teacherSel.value) hint.textContent = subj ? (n ? `${n} guru mengajar ${posSel.selectedOptions[0].dataset.subject} — disusun di atas (★), indeks terendah dahulu.` : `Tiada guru dengan kepakaran ${posSel.selectedOptions[0].dataset.subject}. Calon disusun ikut indeks terendah.`) : 'Calon disusun daripada indeks beban paling rendah.';
+  const pd = posSel.selectedOptions[0]?.dataset || {};
+  const subj = (pd.subject || '').toLocaleLowerCase('ms'), grp = pd.group || '';
+  const tier = o => subj === '' ? 0 : (o.dataset.subjects || '').split('|').includes(subj) ? 2 : (grp !== '' && (o.dataset.groups || '').split('|').includes(grp) ? 1 : 0);
+  const sorted = [2, 1, 0].flatMap(t => teacherOpts.filter(o => tier(o) === t));
+  sorted.forEach(o => { const t = tier(o); o.textContent = t === 2 ? '★ ' + o.dataset.label : t === 1 ? '☆ ' + o.dataset.label.replace(' · ', ` (${o.dataset.spec || ''}) · `) : o.dataset.label; teacherSel.appendChild(o); });
+  const hint = document.getElementById('anggaran-beban'), n2 = teacherOpts.filter(o => tier(o) === 2).length, n1 = teacherOpts.filter(o => tier(o) === 1).length;
+  if (hint && !teacherSel.value) hint.textContent = !subj ? 'Calon disusun daripada indeks beban paling rendah. Pilih jawatan dan guru untuk melihat anggaran beban selepas lantikan.'
+    : (n2 ? `${n2} guru mengajar ${pd.subject} (★)` : `Tiada guru dengan kepakaran ${pd.subject}`) + (n1 ? `, ${n1} guru mengajar MP berkaitan${grp ? ' (' + grp + ')' : ''} (☆)` : '') + ' — disusun di atas, indeks terendah dahulu.';
 }
 posSel?.addEventListener('change', rankBySubject);
 posSel?.addEventListener('change', loadPreview); teacherSel?.addEventListener('change', loadPreview);

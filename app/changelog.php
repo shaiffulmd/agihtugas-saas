@@ -11,6 +11,7 @@ const APP_CHANGELOG=[
         'Direktori sekolah direka semula: hero carian dengan statistik dan cip negeri, tiga susun atur (Carian Utama, Kad Sekolah berwarna, Senarai Ringkas dengan penapis negeri) yang lebih kemas di telefon, keadaan tiada hasil dan kotak bantuan dengan pautan Daftar sekolah baharu.',
         'Navigasi terapung dan footer baharu untuk semua halaman awam (/direktori, /faq, /terma, /polisi, /lapor-keselamatan), termasuk butang amaran Log masuk pentadbir platform.',
         'Halaman Daftar Sekolah baharu: borang tiga bahagian (Sekolah, Pegawai, Akaun) dengan penunjuk kemajuan, pratonton alamat sekolah daripada kod KPM, meter kekuatan kata laluan, butang tunjuk kata laluan dan semakan medan sebelum dihantar. Semakan di pelayan tidak berubah.',
+        'Agihan Tugas: bagi jawatan yang menyebut mata pelajaran (cth. Ketua Panitia Bahasa Melayu), senarai guru dalam Tetapkan lantikan dan Pindahkan kepada guru lain kini mendahulukan guru yang mengajar MP itu (★), kemudian guru yang mengajar MP berkaitan dalam kumpulan katalog yang sama, cth. Bahasa (☆, dengan kepakaran guru dipaparkan). Setiap kumpulan disusun indeks terendah dahulu.',
         'Rupa Halaman Utama: teks hero lalai kini "Setiap guru, tugas yang seimbang." dan fon lalai Kontemporari (Poppins). Gambar latar yang dimuat naik kini digunakan sebagai imej pratonton apabila pautan dikongsi.',
     ]],
     '1.15'=>['2026-11-07',[

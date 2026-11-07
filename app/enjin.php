@@ -462,6 +462,15 @@ function position_subject(string $position,array $subjects): ?string {
 function teacher_teaches(array $t,string $subject): bool {
     $s=mb_strtolower($subject); foreach(specialty_tokens((string)$t['specialty']) as $x) if(mb_strtolower($x)===$s) return true; return false;
 }
+/** Kumpulan MP katalog sekolah: nama MP (huruf kecil) => kumpulan, cth. "bahasa melayu" => "Bahasa". */
+function subject_groups(): array { $g=[]; foreach(subjects_all() as $r) if((string)$r['grp']!=='') $g[mb_strtolower((string)$r['name'])]=(string)$r['grp']; return $g; }
+/** Kesesuaian guru dengan MP jawatan (cth. Ketua Panitia Bahasa Melayu): [2, MP] mengajar MP itu;
+ *  [1, MP] mengajar MP lain dalam kumpulan katalog yang sama (cth. Bahasa Inggeris untuk Bahasa Melayu); [0, ''] tiada padanan. */
+function subject_fit(array $t,string $subject,array $groups): array {
+    $s=mb_strtolower($subject); $g=$groups[$s]??''; $near='';
+    foreach(specialty_tokens((string)$t['specialty']) as $x){ $lx=mb_strtolower($x); if($lx===$s) return [2,$x]; if($g!=='' && $near==='' && ($groups[$lx]??'')===$g) $near=$x; }
+    return $near!==''?[1,$near]:[0,''];
+}
 /** Nama MP untuk pengesanan: katalog sekolah; jika kosong, kepakaran semua guru (supaya cadangan tetap berfungsi tanpa katalog). */
 function subject_names(): array {
     $n=array_column(subjects_all(),'name'); if($n) return $n;
