@@ -8,6 +8,7 @@ declare(strict_types=1);
 const APP_CHANGELOG=[
     '1.16'=>['2026-11-07',[
         'Halaman utama platform direka semula: hero dengan tangkapan skrin sebenar sistem dan carian sekolah, ciri dipaparkan dengan keratan skrin (agihan automatik, Pusat Syarat, analisis beban, kelulusan, surat lantikan, Tugas Saya), galeri skrin bertab, langkah Draf hingga Muktamad, keselamatan, pakej Free/Pro dan FAQ.',
+        'Direktori sekolah direka semula: hero carian dengan statistik dan cip negeri, tiga susun atur (Carian Utama, Kad Sekolah berwarna, Senarai Ringkas dengan penapis negeri) yang lebih kemas di telefon, keadaan tiada hasil dan kotak bantuan dengan pautan Daftar sekolah baharu.',
         'Navigasi terapung dan footer baharu untuk semua halaman awam (/direktori, /faq, /terma, /polisi, /lapor-keselamatan), termasuk butang amaran Log masuk pentadbir platform.',
         'Halaman Daftar Sekolah baharu: borang tiga bahagian (Sekolah, Pegawai, Akaun) dengan penunjuk kemajuan, pratonton alamat sekolah daripada kod KPM, meter kekuatan kata laluan, butang tunjuk kata laluan dan semakan medan sebelum dihantar. Semakan di pelayan tidak berubah.',
         'Rupa Halaman Utama: teks hero lalai kini "Setiap guru, tugas yang seimbang." dan fon lalai Kontemporari (Poppins). Gambar latar yang dimuat naik kini digunakan sebagai imej pratonton apabila pautan dikongsi.',
