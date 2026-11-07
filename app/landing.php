@@ -17,8 +17,8 @@ function lp_head(string $title,bool $directory=false,array $seo=[]): void {
     $faq=(bool)faq_items(true); $daftar=registration_open(); $here=$seo['path']??'';
     p_head($title,'<link rel="stylesheet" href="/?page=lp-css&amp;v='.e(lp_css_ver()).'"><link rel="stylesheet" href="'.e(asset('landing.css')).'">'.($directory?'<link rel="stylesheet" href="'.e(asset('directory.css')).'">':'').'<script src="'.e(asset('landing.js')).'" defer></script>',$meta);
     $links=[['/direktori','Direktori',$directory]];
-    if($directory) $links[]=['#bantuan-direktori','Bantuan',false];
-    else array_push($links,['/#ciri','Ciri',false],['/#skrin','Lihat sistem',false],['/#pakej','Pakej',false]);
+    // Menu sama pada semua halaman awam (utama, direktori, daftar, FAQ, terma …) supaya lebar & susunan tidak berubah.
+    array_push($links,['/#ciri','Ciri',false],['/#skrin','Lihat sistem',false],['/#pakej','Pakej',false]);
     if($faq) $links[]=['/faq','FAQ',$here==='/faq']; ?>
 <?= function_exists('icons_sprite')?icons_sprite():'' ?><div class="lx-page"><a class="lx-skip" href="#utama">Langkau ke kandungan</a>
 <header class="lx-nav" aria-label="Navigasi utama"><?= lp_brand() ?>
