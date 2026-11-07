@@ -35,6 +35,8 @@ const DEMO_BLOCK_MSG=[
 
 /** Pemasangan dibenarkan menjalankan demo (DEMO_MODE=1 dalam .env). */
 function demo_env(): bool { return env('DEMO_MODE')==='1'; }
+/** Laman demo berasingan: butang "Sedia untuk daftar" menghala ke /daftar laman utama (.env DAFTAR_URL, http/https sahaja). */
+function demo_daftar_url(): string { if(!demo_env()) return ''; $u=trim(env('DAFTAR_URL')); return $u!=='' && preg_match('~^https?://~i',$u) && filter_var($u,FILTER_VALIDATE_URL)?$u:''; }
 /** Mod demo aktif untuk konteks semasa: platform (sid 0) atau sekolah yang ditanda sebagai sekolah demo. Sekolah sebenar dalam pemasangan demo tidak terjejas. */
 function demo_mode(): bool { static $c=[]; if(!demo_env()) return false; return $c[sid()]??=(sid()===0 || sys_get('demo')==='1'); }
 function demo_is_account(string $email): bool { foreach(DEMO_ACCOUNTS as $a) if($a[2]===strtolower(trim($email))) return true; return false; }
@@ -126,12 +128,12 @@ function demo_login_panel(): void {
     if(!demo_mode()) return;
     echo '<section class="demo-accounts" aria-label="Akaun demo"><h3>Akaun demo</h3><p class="muted">Klik untuk isi borang secara automatik.</p><ul>';
     foreach(DEMO_ACCOUNTS as [$role,$name,$email,$pass,$desc]) echo '<li><button type="button" class="demo-fill" data-email="'.e($email).'" data-password="'.e($pass).'"><span class="demo-role r-'.e($role).'">'.e(role_label($role)).'</span><span class="demo-cred"><code>'.e($email).'</code><code>'.e($pass).'</code></span><small>'.e($desc).'</small></button></li>';
-    echo '</ul></section>';
+    echo '</ul>'.(($u=demo_daftar_url())!==''?'<p class="demo-daftar-note">Suka apa yang anda lihat? <a class="text-link" href="'.e($u).'" target="_blank" rel="noopener">Sedia untuk daftar sekolah anda →</a></p>':'').'</section>';
 }
 /** Jalur makluman di atas setiap halaman. */
 function demo_banner(): string {
     if(!demo_mode()) return '';
     $last=demo_last_reset();
     $btn=demo_can_reset()?'<form method="post" class="demo-reset" data-confirm="Jana semula semua data demo sekolah ini? Perubahan semua penguji akan hilang dan anda perlu log masuk semula.">'.csrf_field().'<input type="hidden" name="action" value="demo_reset_now"><button class="btn sm outline" type="submit"'.(demo_manual_wait()?' disabled title="Boleh diset semula sekali setiap '.(DEMO_MANUAL_GAP/60).' minit"':'').'>Set semula demo sekarang</button></form>':'';
-    return '<div class="demo-banner" role="note"><strong>Mod demo</strong><span>Semua data adalah rekaan dan dijana semula setiap hari pada 12:00 tengah malam'.($last?' (terakhir: '.e(date('j/n/Y g:i a',strtotime($last))).')':'').(sid()>0?'. Draf contoh telah dikembalikan oleh '.e(head_title()).' dengan guru terbeban ditanda':'').'. Muat naik fail, e-mel dan perubahan akaun dimatikan.</span>'.$btn.'</div>';
+    return '<div class="demo-banner" role="note"><strong>Mod demo</strong><span>Semua data adalah rekaan dan dijana semula setiap hari pada 12:00 tengah malam'.($last?' (terakhir: '.e(date('j/n/Y g:i a',strtotime($last))).')':'').(sid()>0?'. Draf contoh telah dikembalikan oleh '.e(head_title()).' dengan guru terbeban ditanda':'').'. Muat naik fail, e-mel dan perubahan akaun dimatikan.</span>'.(($u=demo_daftar_url())!==''?'<a class="btn sm primary demo-daftar" href="'.e($u).'" target="_blank" rel="noopener">Sedia untuk daftar →</a>':'').$btn.'</div>';
 }

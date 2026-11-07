@@ -99,6 +99,8 @@ function registration_resend(): void {
 
 /* ---------- Halaman ---------- */
 function registration_page(): never {
+    // Laman demo dengan DAFTAR_URL: pendaftaran sebenar berlaku di laman utama, bukan pada pangkalan data demo yang direset setiap hari.
+    if(($u=demo_daftar_url())!==''){ header('Location: '.$u,true,302); exit; }
     if(!registration_open()) error_page(404);
     $error=''; $done=null; $resent=false;
     if($_SERVER['REQUEST_METHOD']==='POST'){

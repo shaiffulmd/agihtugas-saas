@@ -68,6 +68,9 @@ body{background:var(--lx-bg);color:var(--lx-ink)}
 .lx-btn-primary[disabled]{opacity:.7;cursor:progress;transform:none}
 .lx-btn-dark{background:var(--lx-ink);color:#fff}
 .lx-btn-dark:hover{color:#fff;transform:translateY(-2px);background:color-mix(in srgb,var(--lx-ink) 85%,#fff)}
+.lx-actions-start{justify-content:flex-start}
+.lx-btn-light{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.4)}
+.lx-btn-light:hover{background:rgba(255,255,255,.28);color:#fff;transform:translateY(-2px)}
 .lx-btn-ghost{background:#fff;border-color:var(--lx-line2);color:var(--lx-ink)}
 .lx-btn-ghost:hover{border-color:var(--lx-ink3);color:var(--lx-ink);transform:translateY(-2px)}
 .lx-page a:focus-visible,.lx-page button:focus-visible,.lx-page summary:focus-visible,.lx-page input:focus-visible,.lx-page select:focus-visible{outline:2px solid var(--lx-brand);outline-offset:2px}

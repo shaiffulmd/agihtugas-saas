@@ -8,32 +8,41 @@ declare(strict_types=1);
 require_once __DIR__.'/icons.php';
 
 function lp_brand(): string { return '<a class="lx-brand" href="/">'.plat_brand_mark().'<span>'.plat_brand_name('b').'<small>'.e(plat_tagline()).'</small></span></a>'; }
+/** URL luaran daripada .env (http/https sah sahaja); '' jika kosong atau tidak sah. */
+function lp_env_url(string $k): string { $u=trim(env($k)); return $u!=='' && preg_match('~^https?://~i',$u) && filter_var($u,FILTER_VALIDATE_URL)?$u:''; }
+/** Laman demo berasingan (.env DEMO_URL) dipaut dari laman utama; tidak dipaparkan pada laman demo itu sendiri. */
+function lp_demo_url(): string { return demo_env()?'':lp_env_url('DEMO_URL'); }
+/** Pautan pendaftaran: laman demo menghala ke /daftar laman utama (.env DAFTAR_URL); selainnya /daftar tempatan bila dibuka. */
+function lp_reg_url(): string { $u=demo_daftar_url(); return $u!==''?$u:(registration_open()?'/daftar':''); }
+/** Label butang pendaftaran: "Sedia untuk daftar" di laman demo yang menghala ke laman utama. */
+function lp_reg_label(string $default): string { return demo_daftar_url()!==''?'Sedia untuk daftar':$default; }
 /** Gambar skrin sebenar (assets/landing/NAMA.jpg). */
 function lp_shot(string $name): string { return asset('landing/'.$name.'.jpg'); }
 /** $seo: desc, path (kanonik), noindex, ld (JSON-LD), home (halaman utama: tiada ruang bawah nav). Tanpa 'path' → noindex. */
 function lp_head(string $title,bool $directory=false,array $seo=[]): void {
     $can=isset($seo['path'])?seo_platform_abs($seo['path']):''; $img=seo_platform_abs(lp_has_hero()?'/?page=lp-hero&v='.rawurlencode(pset('lp_hero_ver')):lp_shot('dashboard'));
     $meta=seo_meta(['title'=>$title.' · '.platform_name(),'desc'=>$seo['desc']??lp_text('teks'),'canonical'=>$can,'image'=>$img,'site'=>platform_name(),'noindex'=>!empty($seo['noindex']) || !isset($seo['path'])]).implode('',array_map('seo_json_ld',$seo['ld']??[]));
-    $faq=(bool)faq_items(true); $daftar=registration_open(); $here=$seo['path']??'';
+    $faq=(bool)faq_items(true); $reg=lp_reg_url(); $daftar=$reg!==''; $demo=lp_demo_url(); $here=$seo['path']??'';
     p_head($title,'<link rel="stylesheet" href="/?page=lp-css&amp;v='.e(lp_css_ver()).'"><link rel="stylesheet" href="'.e(asset('landing.css')).'">'.($directory?'<link rel="stylesheet" href="'.e(asset('directory.css')).'">':'').'<script src="'.e(asset('landing.js')).'" defer></script>',$meta);
     $links=[['/direktori','Direktori',$directory]];
     // Menu sama pada semua halaman awam (utama, direktori, daftar, FAQ, terma …) supaya lebar & susunan tidak berubah.
     array_push($links,['/#ciri','Ciri',false],['/#skrin','Lihat sistem',false],['/#pakej','Pakej',false]);
+    if($demo!=='') $links[]=[$demo,'Demo',false];
     if($faq) $links[]=['/faq','FAQ',$here==='/faq']; ?>
 <?= function_exists('icons_sprite')?icons_sprite():'' ?><div class="lx-page"><a class="lx-skip" href="#utama">Langkau ke kandungan</a>
 <header class="lx-nav" aria-label="Navigasi utama"><?= lp_brand() ?>
 <nav class="lx-links" aria-label="Halaman awam"><?php foreach($links as [$u,$l,$cur]): ?><a href="<?= e($u) ?>"<?= $cur?' aria-current="page"':'' ?>><?= e($l) ?></a><?php endforeach; ?></nav>
-<div class="lx-cta"><?php if($daftar): ?><a class="lx-btn lx-btn-primary" href="/daftar"<?= $here==='/daftar'?' aria-current="page"':'' ?>>Daftar sekolah</a><?php endif; ?>
+<div class="lx-cta"><?php if($daftar): ?><a class="lx-btn lx-btn-primary" href="<?= e($reg) ?>"<?= $here==='/daftar'?' aria-current="page"':'' ?>><?= e(lp_reg_label('Daftar sekolah')) ?></a><?php endif; ?>
 <button class="lx-menu" type="button" aria-expanded="false" aria-controls="lx-sheet" aria-label="Buka menu"><span></span><span></span><span></span></button></div></header>
-<div class="lx-sheet" id="lx-sheet" aria-hidden="true"><?php foreach($links as [$u,$l]): ?><a href="<?= e($u) ?>"><?= e($l) ?></a><?php endforeach; ?><a href="/#cari">Cari sekolah</a><?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="/daftar">Daftar sekolah</a><?php endif; ?></div>
+<div class="lx-sheet" id="lx-sheet" aria-hidden="true"><?php foreach($links as [$u,$l]): ?><a href="<?= e($u) ?>"><?= e($l) ?></a><?php endforeach; ?><a href="/#cari">Cari sekolah</a><?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar sekolah')) ?></a><?php endif; ?></div>
 <main class="lp-main lx-main" id="utama"><?php if(empty($seo['home'])): ?><div class="lx-nav-gap" aria-hidden="true"></div><?php endif;
 }
 function lp_foot(): void {
-    $email=pset('emel_notis'); $links=lp_links(); ?></main>
+    $email=pset('emel_notis'); $links=lp_links(); $reg=lp_reg_url(); $demo=lp_demo_url(); ?></main>
 <footer class="lx-footer"><div class="lx-wrap"><div class="lx-fgrid<?= $links?' lp-f5':'' ?>">
 <div class="lx-fcol"><?= lp_brand() ?><p>Agihan tugas guru dalam talian untuk sekolah SK dan SMK. Guru, jawatan, lantikan, kelulusan dan surat lantikan di satu tempat.</p>
 <ul class="lx-badges"><li><?= icon('lock') ?>Data setiap sekolah diasingkan</li><li><?= icon('shield') ?>Selaras PDPA 2010</li></ul></div>
-<nav class="lx-fcol" aria-label="Platform"><h3>Platform</h3><a href="/direktori">Cari sekolah</a><?php if(registration_open()): ?><a href="/daftar">Daftar sekolah</a><?php endif; ?><?php if(faq_items(true)): ?><a href="/faq"><?= e(faq_title()) ?></a><?php endif; ?><a href="/lapor-keselamatan">Lapor isu keselamatan</a></nav>
+<nav class="lx-fcol" aria-label="Platform"><h3>Platform</h3><a href="/direktori">Cari sekolah</a><?php if($reg!==''): ?><a href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar sekolah')) ?></a><?php endif; ?><?php if($demo!==''): ?><a href="<?= e($demo) ?>">Cuba demo</a><?php endif; ?><?php if(faq_items(true)): ?><a href="/faq"><?= e(faq_title()) ?></a><?php endif; ?><a href="/lapor-keselamatan">Lapor isu keselamatan</a></nav>
 <?php if($links): ?><nav class="lx-fcol" aria-label="<?= e(lp_links_title()) ?>"><h3><?= e(lp_links_title()) ?></h3><?php foreach($links as [$l,$u]): $ext=preg_match('~^https?://~i',$u); ?><a href="<?= e($u) ?>"<?= $ext?' target="_blank" rel="noopener noreferrer"':'' ?>><?= e($l) ?></a><?php endforeach; ?></nav><?php endif; ?>
 <nav class="lx-fcol" aria-label="Dokumen"><h3>Dokumen</h3><a href="/terma">Terma &amp; Syarat</a><a href="/polisi">Polisi Perkhidmatan &amp; Privasi</a><a href="/.well-known/security.txt">security.txt</a></nav>
 <div class="lx-fcol"><h3>Hubungi</h3><?php if($email!==''): ?><a href="mailto:<?= e($email) ?>"><?= icon('mail') ?><?= e($email) ?></a><?php endif; ?>
@@ -43,6 +52,13 @@ function lp_foot(): void {
 
 /** Panel "Cuba demo" (DEMO_MODE=1): pautan sekolah demo; akaun kongsi dipaparkan di halaman log masuk sekolah. */
 function lp_demo_section(): void {
+    if(($demo=lp_demo_url())!==''){ ?>
+<section class="lx-sec lx-tight" id="demo"><div class="lx-wrap"><div class="lx-demo lx-rv">
+<div class="lx-demo-copy"><span class="lx-tag is-sky lx-c3">Cuba sekarang</span><h2 class="lx-h lx-h4">Demo tanpa daftar</h2>
+<p class="lx-b3 lx-muted">Cuba semua ciri di laman demo: log masuk sebagai Pentadbir, Penolong Kanan, Guru Besar atau Pengetua, atau Guru dengan akaun demo sedia ada. Data rekaan dijana semula setiap hari.</p></div>
+<div class="lx-demo-links"><a href="<?= e($demo) ?>"><?= icon('arrow-ur') ?><span><b class="lx-t4">Buka laman demo</b><br><small class="lx-c5"><?= e((string)preg_replace('~^https?://~i','',rtrim($demo,'/'))) ?></small></span></a></div>
+</div></div></section><?php return;
+    }
     $schools=array_values(array_filter(array_map(fn($d)=>school_find($d[0]),DEMO_SCHOOLS))); if(!$schools) return; ?>
 <section class="lx-sec lx-tight" id="demo"><div class="lx-wrap"><div class="lx-demo lx-rv">
 <div class="lx-demo-copy"><span class="lx-tag is-sky lx-c3">Cuba sekarang</span><h2 class="lx-h lx-h4">Demo tanpa daftar</h2>
@@ -60,7 +76,7 @@ function platform_landing(): never {
         if(mb_strlen($q)>=3) $rows=array_slice(array_values(array_filter(platform_schools($q),fn($s)=>$s['status']==='aktif')),0,20);
     }
     $total=(int)query('SELECT COUNT(*) FROM schools WHERE status="aktif"')->fetchColumn();
-    $free=pset('free_aktif')==='1'; $trial=(int)pset('percubaan_hari'); $price=str_replace('.00','',ringgit(pay_price())); $daftar=registration_open();
+    $free=pset('free_aktif')==='1'; $trial=(int)pset('percubaan_hari'); $price=str_replace('.00','',ringgit(pay_price())); $reg=lp_reg_url(); $daftar=$reg!==''; $demo=lp_demo_url();
     $locked=pro_locked_features(); $lock=fn(string $k): string=>$free && in_array($k,$locked,true)?'<span class="lx-pro">Pro</span>':'';
     $ck='<span class="lx-ck">'.icon('check').'</span>'; $ok=icon('check');
     $host=(string)preg_replace('~^https?://~','',rtrim(school_url('KODSEKOLAH','/'),'/'));
@@ -74,7 +90,7 @@ function platform_landing(): never {
 <span class="lx-pill lx-c4"><b><?= e(date('Y')) ?></b><?= e(lp_text('lencana')) ?></span>
 <h1 class="lx-h lx-h1"><?= e(lp_text('t1')) ?><br><span class="lx-hl"><?= e(lp_text('t2')) ?></span></h1>
 <p class="lx-lead lx-blg"><?= e(lp_text('teks')) ?></p>
-<div class="lx-actions"><?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="/daftar">Daftar sekolah percuma <?= icon('arrow','lx-go') ?></a><?php endif; ?><a class="lx-btn lx-btn-ghost lx-btn-lg" href="#skrin">Lihat sistem sebenar</a></div>
+<div class="lx-actions"><?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar sekolah percuma')) ?> <?= icon('arrow','lx-go') ?></a><?php endif; ?><?php if($demo!==''): ?><a class="lx-btn lx-btn-ghost lx-btn-lg" href="<?= e($demo) ?>">Cuba demo <?= icon('arrow-ur','lx-go') ?></a><?php else: ?><a class="lx-btn lx-btn-ghost lx-btn-lg" href="#skrin">Lihat sistem sebenar</a><?php endif; ?></div>
 <ul class="lx-proof lx-c4"><?php if($trial>0): ?><li><?= icon('check') ?>Pro percuma <?= $trial ?> hari</li><?php endif; ?><li><?= icon('lock') ?>Data setiap sekolah diasingkan</li><li><?= icon('shield') ?>Selaras PDPA 2010</li><?php if($total): ?><li><?= icon('school') ?><?= $total ?> sekolah menggunakan <?= e(platform_name()) ?></li><?php endif; ?></ul>
 <form class="lx-find" id="cari" method="get" action="/" role="search">
 <label class="lx-find-lb" for="lx-q">Pilih sekolah anda: cari dengan kod KPM atau nama sekolah untuk log masuk</label>
@@ -82,7 +98,7 @@ function platform_landing(): never {
 <?php if($q!==''): ?><div class="lx-res" aria-live="polite"><?php if(!$rows): ?><p class="lx-b6">Tiada sekolah dijumpai untuk “<?= e($q) ?>”.<?= mb_strlen($q)<3?' Taip sekurang-kurangnya 3 aksara.':' Sekolah anda mungkin belum mendaftar.' ?></p><?php endif; ?>
 <?php foreach($rows as $s): ?><a href="<?= e(school_url($s['code'],'/')) ?>"><span class="lx-kd"><?= e($s['code']) ?></span><span><span class="lx-t4"><?= e($s['name']) ?></span><?php if($s['state']!==''): ?><span class="lx-c5 lx-faint"><?= e($s['state']) ?></span><?php endif; ?></span><?= icon('chev-r') ?></a><?php endforeach; ?></div><?php endif; ?>
 <p class="lx-find-hint lx-c5">Laman sekolah anda: <code><?= e(school_url('KODSEKOLAH','/')) ?></code></p>
-<p class="lx-find-more"><a href="/direktori">Lihat semua sekolah →</a><?php if($daftar): ?><a href="/daftar">Daftar sekolah baharu →</a><?php endif; ?></p>
+<p class="lx-find-more"><a href="/direktori">Lihat semua sekolah →</a><?php if($daftar): ?><a href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar sekolah baharu')) ?> →</a><?php endif; ?></p>
 </form></div>
 <div class="lx-stage"><span class="lx-blob lx-bl1" aria-hidden="true"></span><span class="lx-blob lx-bl2" aria-hidden="true"></span><span class="lx-blob lx-bl3" aria-hidden="true"></span>
 <div class="lx-float lx-fl-badge" aria-hidden="true"><span class="lx-ic"><?= icon('scale') ?></span><span><span class="lx-t4">Indeks beban setiap guru</span><span class="lx-c5 lx-muted">Seimbang: 0.70 hingga 1.30</span></span></div>
@@ -134,7 +150,7 @@ function platform_landing(): never {
 <ol class="lx-steps"><?php foreach([['Pentadbir · PK','Draf','Masukkan guru dan jawatan, atau tampal terus daripada Excel. Guna jawatan standard SK atau SMK.'],['PK','Semakan','Agih secara manual atau automatik, kemudian hantar. Data dikunci supaya tiada perubahan senyap.'],['Guru Besar · Pengetua','Lulus','Semak beban guru dan luluskan, atau buka draf pindaan dengan guru yang ditanda.'],['Semua guru','Muktamad','Surat lantikan diterbitkan dan setiap guru melihat tugasnya di Tugas Saya.']] as $i=>[$w,$t,$d]): ?>
 <li class="lx-step is-<?= $i+1 ?> lx-rv<?= $i%2?' d1':'' ?>"><span class="lx-no"><?= $i+1 ?></span><span class="lx-c4 lx-who"><?= e($w) ?></span><h3 class="lx-h lx-h6"><?= e($t) ?></h3><p class="lx-b6 lx-muted"><?= e($d) ?></p></li><?php endforeach; ?></ol>
 </div></section>
-<?php if(demo_env()) lp_demo_section(); ?>
+<?php if(demo_env() || $demo!=='') lp_demo_section(); ?>
 
 <section class="lx-sec lx-tight" id="keselamatan"><div class="lx-wrap"><div class="lx-secure lx-rv">
 <div class="lx-head"><span class="lx-tag lx-c3">Keselamatan dan privasi</span><h2 class="lx-h lx-h3">Data guru dilindungi seperti fail peribadi</h2><p class="lx-b3 lx-muted">Direka mengikut prinsip PDPA: simpan sesedikit mungkin, sulitkan apa yang disimpan, rekod setiap tindakan.</p></div>
@@ -153,11 +169,11 @@ function platform_landing(): never {
 <div class="lx-plans<?= $free?'':' is-one' ?>">
 <?php if($free): $open=array_diff(array_keys(PRO_FEATURES),$locked); ?><article class="lx-plan lx-rv"><div class="lx-plan-top"><h3 class="lx-h lx-h6">Free</h3><span class="lx-chip">Untuk mencuba</span></div>
 <div><div class="lx-price"><b>RM0</b><span class="lx-b6 lx-muted">selamanya</span></div><p class="lx-b6 lx-muted">Untuk sekolah kecil yang mahu mula dengan agihan manual.</p></div>
-<?php if($daftar): ?><a class="lx-btn lx-btn-ghost lx-btn-lg" href="/daftar">Daftar percuma</a><?php endif; ?>
+<?php if($daftar): ?><a class="lx-btn lx-btn-ghost lx-btn-lg" href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar percuma')) ?></a><?php endif; ?>
 <ul class="lx-b6"><li><?= $ck ?><span>Sehingga <b><?= (int)pset('free_guru') ?> guru</b> dan <?= (int)pset('free_jawatan') ?> jawatan</span></li><li><?= $ck ?><span>Sehingga <?= (int)pset('free_pengguna') ?> pengguna aktif</span></li><li><?= $ck ?><span>Agihan manual, aliran kelulusan dan cetak surat</span></li><li><?= $ck ?><span>Analisis beban dan Tugas Saya</span></li><?php foreach($open as $k): ?><li><?= $ck ?><span><?= e(PRO_FEATURES[$k][0]) ?></span></li><?php endforeach; ?></ul></article><?php endif; ?>
 <article class="lx-plan is-pro lx-rv d1"><div class="lx-plan-top"><h3 class="lx-h lx-h6">Pro</h3><span class="lx-pro">Disyorkan</span></div>
 <div><div class="lx-price"><b><?= e($price) ?></b><span class="lx-b6 lx-muted">setahun, setiap sekolah</span></div><p class="lx-b6 lx-muted">Semua ciri, tanpa had guru, jawatan atau pengguna.</p></div>
-<?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="/daftar"><?= $trial>0?'Cuba Pro '.$trial.' hari percuma':'Daftar sekolah' ?></a><?php endif; ?>
+<?php if($daftar): ?><a class="lx-btn lx-btn-primary lx-btn-lg" href="<?= e($reg) ?>"><?= e(lp_reg_label($trial>0?'Cuba Pro '.$trial.' hari percuma':'Daftar sekolah')) ?></a><?php endif; ?>
 <ul class="lx-b6"><li><?= $ck ?><span><b>Guru, jawatan dan pengguna tanpa had</b></span></li><?php foreach($locked as $k): ?><li><?= $ck ?><span><?= e(PRO_FEATURES[$k][0]) ?></span></li><?php endforeach; ?><li><?= $ck ?><span>Sokongan melalui tiket</span></li></ul></article>
 </div>
 <div class="lx-pay"><span class="lx-chip">FPX</span><span class="lx-chip">Pindahan bank</span><span class="lx-chip">Pesanan belian (PO)</span><span class="lx-chip">Ditaja PPD</span><?php if($free): ?><span class="lx-chip">Langganan tamat: kembali ke Free</span><?php endif; ?></div>
@@ -168,7 +184,7 @@ function platform_landing(): never {
 <span class="lx-blob f1" aria-hidden="true"></span><span class="lx-blob f2" aria-hidden="true"></span>
 <div class="lx-final-copy"><span class="lx-tag lx-c3">Sedia untuk sesi baharu</span><h2 class="lx-h lx-h2">Siapkan agihan tugas sebelum mesyuarat guru pertama</h2>
 <p class="lx-blg"><?= $daftar?'Daftar dengan kod sekolah KPM. Ruang sekolah anda sedia selepas diluluskan'.($trial>0?', dengan Pro percuma '.$trial.' hari.':'.'):'Cari sekolah anda di direktori dan log masuk.' ?></p>
-<?php if($daftar): ?><a class="lx-btn lx-btn-dark lx-btn-lg" href="/daftar">Daftar sekolah percuma <?= icon('arrow','lx-go') ?></a><?php else: ?><a class="lx-btn lx-btn-dark lx-btn-lg" href="/direktori">Cari sekolah anda <?= icon('arrow','lx-go') ?></a><?php endif; ?></div>
+<?php if($daftar): ?><div class="lx-actions lx-actions-start"><a class="lx-btn lx-btn-dark lx-btn-lg" href="<?= e($reg) ?>"><?= e(lp_reg_label('Daftar sekolah percuma')) ?> <?= icon('arrow','lx-go') ?></a><?php if($demo!==''): ?><a class="lx-btn lx-btn-light lx-btn-lg" href="<?= e($demo) ?>">Cuba demo dahulu</a><?php endif; ?></div><?php else: ?><a class="lx-btn lx-btn-dark lx-btn-lg" href="/direktori">Cari sekolah anda <?= icon('arrow','lx-go') ?></a><?php endif; ?></div>
 <div class="lx-letter" aria-hidden="true"><div class="lx-crop crop-letter"><img src="<?= e(lp_shot('surat-guru')) ?>" alt="" loading="lazy" width="1600" height="1111"></div></div>
 </div></div></section>
 <?php lp_foot(); exit;

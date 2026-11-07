@@ -33,6 +33,16 @@ Dipaparkan di halaman log masuk setiap sekolah (klik untuk isi automatik):
 
 Cadangan aliran ujian: PK → *Agihan Automatik* (isi jawatan kosong) → *Semakan & Kelulusan* → hantar; Ketua → luluskan → muktamadkan; Guru → *Tugas Saya*.
 
+## Pautkan laman utama ↔ demo
+Tambah dalam `.env` (fail ini tidak ditindih oleh kemas kini automatik):
+
+| Laman | Baris `.env` | Kesan |
+|---|---|---|
+| Laman utama | `DEMO_URL=https://demourustugas.apasaja.my` | Menu **Demo**, butang **Cuba demo** di hero & CTA akhir, bahagian **Demo tanpa daftar**, pautan footer |
+| Laman demo | `DAFTAR_URL=https://urustugas.apasaja.my/daftar` | Semua butang daftar menjadi **Sedia untuk daftar** dan menghala ke laman utama; butang yang sama di jalur demo setiap halaman sekolah & di halaman log masuk; `/daftar` demo dilencongkan ke laman utama |
+
+Pendaftaran sebenar sentiasa berlaku di laman utama kerana data demo dipadam setiap hari.
+
 ## Reset harian
 Automatik: lawatan pertama ke setiap sekolah demo selepas tengah malam menjana semula datanya (beberapa saat untuk lawatan itu sahaja). Tiada cron diperlukan.
 
