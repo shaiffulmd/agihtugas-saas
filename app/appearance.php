@@ -15,16 +15,16 @@ const LP_FONT_FILES=[
 ];
 /** kunci => [label, fon hero (tajuk besar), fon tajuk, keterangan] */
 const LP_FONTS=[
-    'klasik'=>['Klasik','Playfair Display','Montserrat','Serif berwibawa + tajuk moden (lalai)'],
+    'klasik'=>['Klasik','Playfair Display','Montserrat','Serif berwibawa + tajuk moden'],
     'moden'=>['Moden','Montserrat','Montserrat','Tegas & bersih'],
     'mesra'=>['Mesra','Nunito','Nunito','Bulat & mesra — sesuai sekolah rendah'],
     'korporat'=>['Korporat','Plus Jakarta Sans','Plus Jakarta Sans','Profesional & kemas'],
     'elegan'=>['Elegan','Lora','Lora','Serif klasik yang anggun'],
-    'kontemporari'=>['Kontemporari','Poppins','Poppins','Geometri moden'],
+    'kontemporari'=>['Kontemporari','Poppins','Poppins','Geometri moden (lalai)'],
     'sistem'=>['Sistem','','','Fon peranti — paling pantas'],
 ];
 const LP_SYSTEM_STACK='system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
-const LP_TEXT_DEFAULT=['lencana'=>'Agihan tugas guru','t1'=>'Agih tugas guru','t2'=>'adil & telus.','teks'=>'Senarai guru, jawatan dan lantikan, auto-agihan beban tugas, aliran kelulusan PK → GB/Pengetua dan surat lantikan — dalam satu sistem untuk pentadbir sekolah.'];
+const LP_TEXT_DEFAULT=['lencana'=>'Agihan tugas guru','t1'=>'Setiap guru,','t2'=>'tugas yang seimbang.','teks'=>'Sistem agihan tugas guru untuk SK dan SMK. Kira indeks beban setiap guru, jana cadangan agihan mengikut syarat sekolah, luluskan oleh Guru Besar atau Pengetua, dan cetak surat lantikan berjata.'];
 
 require_once __DIR__.'/links.php';
 require_once __DIR__.'/directory.php';
@@ -61,7 +61,7 @@ function plat_logo_process(array $f): string {
     if($out==='') throw new DomainException('Logo tidak dapat diproses.');
     return $out;
 }
-function lp_font(): string { $f=pset('lp_fon','klasik'); return isset(LP_FONTS[$f])?$f:'klasik'; }
+function lp_font(): string { $f=pset('lp_fon','kontemporari'); return isset(LP_FONTS[$f])?$f:'kontemporari'; }
 /** Warna halaman awam: pratetap tema (settings.php) atau tersuai. */
 function lp_colors(): array {
     $p=pset('lp_preset','delima');
@@ -136,7 +136,7 @@ function handle_appearance_platform(string $action): never {
         flash('Tetapan direktori disimpan.'); redirect('/platform/?p=rupa');
     }
     if($action==='p_rupa_hero_remove'){ pset_set(['lp_hero_data'=>'','lp_hero_ver'=>'']); platform_log('appearance_hero_removed'); flash('Gambar latar dibuang; hero kembali ke latar warna tema.'); redirect('/platform/?p=rupa'); }
-    if($action==='p_rupa_reset'){ pset_set(['lp_preset'=>'delima','lp_fon'=>'klasik','lp_hero_gelap'=>'70','lp_lencana'=>'','lp_t1'=>'','lp_t2'=>'','lp_teks'=>'']); platform_log('appearance_reset'); flash('Rupa halaman utama dikembalikan ke lalai (gambar latar dikekalkan).'); redirect('/platform/?p=rupa'); }
+    if($action==='p_rupa_reset'){ pset_set(['lp_preset'=>'delima','lp_fon'=>'kontemporari','lp_hero_gelap'=>'70','lp_lencana'=>'','lp_t1'=>'','lp_t2'=>'','lp_teks'=>'']); platform_log('appearance_reset'); flash('Rupa halaman utama dikembalikan ke lalai (gambar latar dikekalkan).'); redirect('/platform/?p=rupa'); }
     if($action!=='p_rupa_save') error_page(400);
     $preset=input('lp_preset'); if($preset!=='custom' && !isset(THEME_PRESETS[$preset])) throw new DomainException('Pratetap warna tidak sah.');
     $kv=['lp_preset'=>$preset];
@@ -172,7 +172,7 @@ function platform_page_appearance(): void {
 <section class="panel padded"><h3>Fon</h3><fieldset class="pay-gw"><legend class="sr-only">Pilihan fon</legend><?php foreach(LP_FONTS as $k=>[$label,$hero,$title,$desc]): ?>
 <label class="check"><input type="radio" name="lp_fon" value="<?= e($k) ?>"<?= $font===$k?' checked':'' ?>> <span><strong><?= e($label) ?></strong> <small class="muted"><?= e($hero!==''?$hero.($title!==$hero?' + '.$title:''):'Fon peranti') ?> · <?= e($desc) ?></small></span></label><?php endforeach; ?></fieldset></section>
 <section class="panel padded"><h3>Gambar latar hero</h3>
-<p class="muted"><?= lp_has_hero()?'Gambar latar aktif (versi <code>'.e(pset('lp_hero_ver')).'</code>).':'Tiada gambar — hero menggunakan latar warna gelap tema.' ?> PNG/JPG/WEBP, maks 6 MB, minimum 600 piksel; dikecilkan ke lebar 1920 px dan metadata dibuang.</p>
+<p class="muted"><?= lp_has_hero()?'Gambar aktif (versi <code>'.e(pset('lp_hero_ver')).'</code>).':'Tiada gambar.' ?> Hero halaman utama memaparkan tangkapan skrin sistem; gambar ini digunakan sebagai imej pratonton apabila pautan dikongsi (media sosial / WhatsApp). PNG/JPG/WEBP, maks 6 MB, minimum 600 piksel; dikecilkan ke lebar 1920 px dan metadata dibuang.</p>
 <div class="form-grid"><label class="field full">Gambar baharu<input type="file" name="lp_hero" accept="image/png,image/jpeg,image/webp"></label>
 <label class="field full">Kegelapan lapisan di atas gambar (20–95)<input type="range" name="lp_hero_gelap" min="20" max="95" step="5" value="<?= lp_dim() ?>"><small class="muted">Lebih tinggi = teks lebih mudah dibaca. Semasa: <?= lp_dim() ?>.</small></label></div></section>
 <section class="panel padded"><h3>Teks hero</h3><div class="form-grid">

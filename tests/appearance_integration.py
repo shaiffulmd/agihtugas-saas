@@ -32,13 +32,13 @@ def img(w,h,fmt='jpeg'):
     return subprocess.check_output(['php','-r','$im=imagecreatetruecolor('+str(w)+','+str(h)+'); imagefilledrectangle($im,0,0,'+str(w)+','+str(h)+',imagecolorallocate($im,30,120,90)); ob_start(); image'+fmt+'($im); echo ob_get_clean();'])
 pemail=P+'@platform.test'; saved=sql('SELECT name,value FROM platform_settings WHERE name LIKE "cfg\\_lp\\_%"',fetch=True); saved_faq=sql('SELECT name,value FROM platform_settings WHERE name LIKE "cfg\\_faq\\_%"',fetch=True)
 run('query("INSERT INTO platform_admins(name,email,password_hash,totp_secret) VALUES (?,?,?,?)",["QA Rupa",'+json.dumps(pemail)+',hash_password('+json.dumps(password)+'),encrypt_value('+json.dumps(secret)+')]);')
-BASEF={'action':'p_rupa_save','lp_preset':'delima','lp_primary':'#c2410c','lp_dark':'#0b1a2b','lp_accent':'#fb923c','lp_fon':'klasik','lp_hero_gelap':'70','lp_lencana':'','lp_t1':'','lp_t2':'','lp_teks':''}
+BASEF={'action':'p_rupa_save','lp_preset':'delima','lp_primary':'#c2410c','lp_dark':'#0b1a2b','lp_accent':'#fb923c','lp_fon':'kontemporari','lp_hero_gelap':'70','lp_lencana':'','lp_t1':'','lp_t2':'','lp_teks':''}
 try:
     sql('DELETE FROM platform_settings WHERE name LIKE "cfg\\_lp\\_%"')
     p=C(PBASE); sql('UPDATE platform_admins SET last_totp_step=-1 WHERE email=?',[pemail]); p.post('/platform/',{'action':'p_login','email':pemail,'password':password}); p.post('/platform/?p=verify',{'action':'p_verify','code':code()})
     s,b,_=p.text('/platform/?p=rupa'); check(s==200 and 'Rupa Halaman Utama' in b and 'Warna tersuai' in b and 'Mesra' in b,'halaman Rupa Halaman Utama (warna, fon, gambar, teks)')
-    s,b,_=C(PBASE).text('/'); v=re.search(r'href="/\?page=lp-css&amp;v=([a-f0-9]{12})"',b); check(v and 'Agih tugas guru' in b and 'style=' not in b,'halaman utama memuat CSS rupa berversi, teks lalai, tiada gaya sebaris')
-    s,css,h=C(PBASE).text('/?page=lp-css&v='+v[1]); check('--primary:#c2410c' in css and 'Playfair Display' in css and 'immutable' in h.get('Cache-Control',''),'CSS lalai: oren DELIMa + Playfair, di-cache kekal')
+    s,b,_=C(PBASE).text('/'); v=re.search(r'href="/\?page=lp-css&amp;v=([a-f0-9]{12})"',b); check(v and 'Setiap guru,' in b and 'style=' not in b,'halaman utama memuat CSS rupa berversi, teks lalai, tiada gaya sebaris')
+    s,css,h=C(PBASE).text('/?page=lp-css&v='+v[1]); check('--primary:#c2410c' in css and 'Poppins' in css and 'immutable' in h.get('Cache-Control',''),'CSS lalai: oren DELIMa + Poppins, di-cache kekal')
     p.post('/platform/?p=rupa',{**BASEF,'lp_preset':'hijau','lp_fon':'mesra','lp_lencana':'Platform QA','lp_t1':'Kokurikulum','lp_t2':'lebih mudah.','lp_teks':'Teks <b>hero</b> QA.'})
     s,b,_=C(PBASE).text('/'); v2=re.search(r'lp-css&amp;v=([a-f0-9]{12})',b)[1]; css=C(PBASE).text('/?page=lp-css&v='+v2)[1]
     check(v2!=v[1] and '--primary:#176c5b' in css and 'nunito-latin-800-normal.woff2' in css and '"Nunito"' in css,'pratetap Hijau + fon Mesra: CSS & versi berubah, @font-face Nunito')
@@ -56,7 +56,7 @@ try:
     c2,raw,h=C(PBASE).req('/?page=lp-hero&v='+ver); dims=json.loads(subprocess.check_output(['php','-r','$i=getimagesizefromstring(stream_get_contents(STDIN)); echo json_encode([$i[0],$i[1],$i["mime"]]);'],input=raw))
     check(c2==200 and dims[0]==1920 and h.get('Content-Type') in ('image/webp','image/jpeg') and 'immutable' in h.get('Cache-Control',''),'gambar dikecilkan ke 1920 px, dikod semula & di-cache')
     s,b,_=p.post('/platform/?p=rupa',{'action':'p_rupa_hero_remove'}); check(run("echo pset('lp_hero_ver');")=='' and 'lp-hero' not in C(PBASE).text('/?page=lp-css&v=z')[1],'buang gambar latar → hero kembali ke warna tema')
-    p.post('/platform/?p=rupa',{'action':'p_rupa_reset'}); css=C(PBASE).text('/?page=lp-css&v=w')[1]; check('--primary:#c2410c' in css and 'Agih tugas guru' in C(PBASE).text('/')[1],'kembalikan lalai')
+    p.post('/platform/?p=rupa',{'action':'p_rupa_reset'}); css=C(PBASE).text('/?page=lp-css&v=w')[1]; check('--primary:#c2410c' in css and 'Setiap guru,' in C(PBASE).text('/')[1],'kembalikan lalai')
     s,b,_=C(PBASE).post('/platform/?p=rupa',{**BASEF,'lp_preset':'ungu'}); check(run("echo pset('lp_preset');")=='delima','tanpa log masuk platform: tetapan tidak berubah')
     s,b,_=p.post('/platform/?p=rupa',{**BASEF,'lp_pautan':'Tanpa url'}); check('Label | URL' in b and 'Pautan footer' in b,'pautan footer tanpa URL ditolak')
     s,b,_=p.post('/platform/?p=rupa',{**BASEF,'lp_pautan':'Jahat | javascript:alert(1)'}); check('URL tidak sah' in b and run("echo pset('lp_pautan');")=='','URL javascript: ditolak')

@@ -106,25 +106,78 @@ function registration_page(): never {
         try { if(input('act')==='semula'){ registration_resend(); $resent=true; } else $done=registration_submit(); }
         catch(DomainException $ex){ $error=$ex->getMessage(); }
     }
-    $v=fn($k)=>e($done?'':input($k));
-    lp_head('Daftar Sekolah',false,['path'=>'/daftar','noindex'=>$_SERVER['REQUEST_METHOD']==='POST','desc'=>'Daftar sekolah anda di '.platform_name().' — Pro percuma '.(int)pset('percubaan_hari').' hari untuk agihan tugas guru, auto-agihan, kelulusan dan surat lantikan.']); ?>
-<div class="main-content platform-dir"><div class="page-heading"><div><span class="eyebrow teal"><?= e(mb_strtoupper(platform_name())) ?></span><h1>Daftar sekolah</h1><p class="muted">Pro percuma selama <?= (int)pset('percubaan_hari') ?> hari selepas diluluskan. Satu pendaftaran bagi setiap sekolah (kod KPM).</p></div><div class="button-group"><a class="btn outline" href="/direktori">← Direktori sekolah</a></div></div>
-<?php if($error!=='') p_notice($error,'error'); if($resent) p_notice('Jika pendaftaran itu masih menunggu pengesahan, pautan baharu telah dihantar ke e-mel pegawai.','success'); ?>
-<?php if($done): [$st,$s]=$done; ?><section class="panel padded"><h3>Pendaftaran diterima</h3><p><?= $st==='emel'?'Semak e-mel <strong>'.e($s['pic_email']).'</strong> dan tekan pautan pengesahan dalam '.DAFTAR_SAH_JAM.' jam (semak juga folder Spam).':'Pendaftaran menunggu kelulusan pentadbir platform. Anda akan dimaklumkan melalui e-mel.' ?></p></section>
-<?php else: ?><section class="panel padded spaced"><form method="post" class="form-grid"><?= csrf_field() ?><input type="hidden" name="act" value="daftar">
-<label class="field">Kod sekolah (KPM)<input name="kod" value="<?= $v('kod') ?>" maxlength="7" pattern="[A-Za-z]{3}[0-9]{4}" placeholder="CEA1234" required></label>
-<label class="field">Jenis sekolah<select name="jenis"><option value="SMK">Sekolah Menengah</option><option value="SK"<?= input('jenis')==='SK'?' selected':'' ?>>Sekolah Rendah</option></select></label>
-<label class="field full">Nama sekolah<input name="nama" value="<?= $v('nama') ?>" maxlength="150" required></label>
-<label class="field">Negeri<select name="negeri" required><option value="">— Pilih —</option><?php foreach(NEGERI as $n): ?><option<?= input('negeri')===$n?' selected':'' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
-<label class="field">Nama pegawai (Pentadbir Utama)<input name="pic_nama" value="<?= $v('pic_nama') ?>" maxlength="120" required></label>
-<label class="field">E-mel pegawai<?= registration_domains()?' <small class="muted">('.e(implode(', ',registration_domains())).')</small>':'' ?><input name="pic_emel" type="email" value="<?= $v('pic_emel') ?>" maxlength="190" required></label>
-<label class="field">No. telefon<input name="pic_telefon" value="<?= $v('pic_telefon') ?>" maxlength="20" inputmode="tel" required></label>
-<label class="field">Kata laluan Pentadbir Utama (12–128)<input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password"></label>
-<label class="field">Sahkan kata laluan<input name="password_confirm" type="password" required autocomplete="new-password"></label>
-<label class="check full"><input type="checkbox" name="setuju" value="1" required> Saya bersetuju dengan <a class="text-link" href="/terma" target="_blank">Terma &amp; Syarat</a> dan <a class="text-link" href="/polisi" target="_blank">Polisi Privasi</a>, dan mengesahkan saya diberi kuasa mendaftarkan sekolah ini.</label>
-<div class="full"><?= captcha_field('daftar') ?></div>
-<div class="button-group"><button class="btn primary">Daftar sekolah</button></div></form></section>
-<section class="panel padded spaced"><details class="manual-key"><summary>Tidak menerima e-mel pengesahan?</summary><form method="post" class="form-grid"><?= csrf_field() ?><input type="hidden" name="act" value="semula"><label class="field">Kod sekolah<input name="kod" maxlength="7" required></label><label class="field">E-mel pegawai<input name="emel" type="email" required></label><div class="button-group"><button class="btn outline">Hantar semula pautan</button></div></form></details></section><?php endif; ?>
+    $trial=(int)pset('percubaan_hari'); $v=fn($k)=>e($done?'':input($k)); $sk=!$done && input('jenis')==='SK';
+    $err=fn(string $id,string $msg): string=>'<span class="lx-err" id="'.$id.'-e">'.icon('alert').e($msg).'</span>';
+    $okm='<span class="lx-ok" aria-hidden="true">'.icon('check').'</span>';
+    $host=(string)preg_replace('~^https?://~','',rtrim(school_url('KODSEKOLAH','/'),'/'));
+    lp_head('Daftar Sekolah',false,['path'=>'/daftar','noindex'=>$_SERVER['REQUEST_METHOD']==='POST','desc'=>'Daftar sekolah anda di '.platform_name().': Pro percuma '.$trial.' hari untuk agihan tugas guru, agihan automatik, kelulusan dan surat lantikan.']); ?>
+<div class="lx-wrap lx-reg">
+<aside class="lx-aside" aria-label="Apa yang sekolah anda dapat"><span class="lx-blob" aria-hidden="true"></span>
+<span class="lx-tag lx-c3">Daftar sekolah</span>
+<h1 class="lx-h lx-h3"><?= $trial>0?'Mula agih tugas guru dengan Pro percuma '.$trial.' hari':'Mula agih tugas guru di '.e(platform_name()) ?></h1>
+<p class="lx-lead lx-b3">Satu pendaftaran bagi setiap sekolah, menggunakan kod KPM.<?= pset('free_aktif')==='1'?' Selepas tempoh percubaan, sekolah kekal di Free tanpa kehilangan data.':'' ?></p>
+<ul class="lx-perks lx-b6"><li><span class="lx-ck"><?= icon('check') ?></span><span>Agihan automatik, Pusat Syarat dan surat pukal PDF sepanjang percubaan</span></li><li><span class="lx-ck"><?= icon('check') ?></span><span>Tiada kad atau bayaran diperlukan untuk mendaftar</span></li><li><span class="lx-ck"><?= icon('check') ?></span><span>Data sekolah diasingkan dan disulitkan dengan kunci sendiri</span></li></ul>
+<div class="lx-after"><span class="lx-c3">Selepas anda tekan daftar</span><ol class="lx-b6">
+<li><span class="lx-n">1</span><div><span class="lx-t4">Sahkan e-mel</span><span class="lx-c5 lx-sub">Tekan pautan dalam e-mel dalam masa <?= DAFTAR_SAH_JAM ?> jam</span></div></li>
+<li><span class="lx-n">2</span><div><span class="lx-t4">Kelulusan platform</span><span class="lx-c5 lx-sub"><?= pset('daftar_kelulusan')==='auto'?'Sekolah diaktifkan secara automatik selepas e-mel disahkan':'Pentadbir platform menyemak pendaftaran anda' ?></span></div></li>
+<li><span class="lx-n">3</span><div><span class="lx-t4">Log masuk sebagai Pentadbir Utama</span><span class="lx-c5 lx-sub">Tambah guru, jawatan dan pengguna sekolah</span></div></li></ol></div>
+<div class="lx-peek" aria-hidden="true"><div class="lx-crop crop-peek"><img src="<?= e(lp_shot('dashboard')) ?>" alt="" loading="lazy" width="1600" height="1000"></div></div>
+</aside>
+
+<div>
+<section class="lx-card" aria-labelledby="lx-form-title">
+<?php if($done): [$st,$s]=$done; ?>
+<div class="lx-done" role="status"><span class="lx-mail<?= $st==='emel'?'':' is-wait' ?>"><?= icon('mail') ?></span>
+<h2 class="lx-h lx-h4" id="lx-form-title"><?= $st==='emel'?'Semak e-mel anda':'Pendaftaran diterima' ?></h2>
+<p class="lx-b3 lx-muted"><?= $st==='emel'?'Pautan pengesahan telah dihantar ke <b>'.e($s['pic_email']).'</b>. Tekan pautan itu dalam masa '.DAFTAR_SAH_JAM.' jam, dan semak juga folder Spam.':'Pendaftaran menunggu kelulusan pentadbir platform. Anda akan dimaklumkan melalui e-mel <b>'.e($s['pic_email']).'</b>.' ?></p>
+<ol class="lx-next"><li><span class="lx-n"><?= icon('check') ?></span><span>Pendaftaran <b><?= e($s['code']) ?></b> · <?= e($s['name']) ?> diterima</span></li>
+<?php if($st==='emel'): ?><li><span class="lx-n">2</span><span>Sahkan e-mel melalui pautan</span></li><?php endif; ?>
+<li><span class="lx-n"><?= $st==='emel'?3:2 ?></span><span>Pentadbir platform meluluskan, dan anda dimaklumkan melalui e-mel</span></li></ol>
+<a class="lx-btn lx-btn-ghost" href="/">Kembali ke halaman utama</a></div>
+<?php else: ?>
+<div class="lx-card-head"><h2 class="lx-h lx-h6" id="lx-form-title">Butiran pendaftaran</h2><p class="lx-b6 lx-muted">Semua medan wajib diisi. Ambil masa kira-kira 3 minit.</p></div>
+<nav class="lx-progress" aria-label="Kemajuan borang"><a href="#lx-f1" id="lx-pg1" class="lx-g1"><span class="lx-bar"><i></i></span><span class="lx-lbl"><?= icon('check') ?>Sekolah</span></a><a href="#lx-f2" id="lx-pg2" class="lx-g2"><span class="lx-bar"><i></i></span><span class="lx-lbl"><?= icon('check') ?>Pegawai</span></a><a href="#lx-f3" id="lx-pg3" class="lx-g3"><span class="lx-bar"><i></i></span><span class="lx-lbl"><?= icon('check') ?>Akaun</span></a></nav>
+<?php if($error!==''): ?><div class="lx-alert is-error" role="alert"><?= icon('alert') ?><span><?= e($error) ?></span></div><?php endif; ?>
+<?php if($resent): ?><div class="lx-alert is-ok" role="status"><?= icon('check') ?><span>Jika pendaftaran itu masih menunggu pengesahan, pautan baharu telah dihantar ke e-mel pegawai.</span></div><?php endif; ?>
+<div class="lx-alert is-error" id="lx-form-err" role="alert" hidden><?= icon('alert') ?><span>Ada medan yang perlu dibetulkan. Semak medan bertanda merah.</span></div>
+<form method="post" class="lx-form" id="lx-daftar" novalidate><?= csrf_field() ?><input type="hidden" name="act" value="daftar">
+<fieldset id="lx-f1" class="lx-g1" data-pg="lx-pg1"><legend><span class="lx-ic"><?= icon('school') ?></span>Maklumat sekolah</legend>
+<div class="lx-field"><span class="lx-lbl" id="lx-jenis-lb">Jenis sekolah</span><div class="lx-choice" role="radiogroup" aria-labelledby="lx-jenis-lb">
+<label class="lx-g1"><input type="radio" name="jenis" value="SMK"<?= $sk?'':' checked' ?>><span class="lx-em"><?= icon('building') ?></span><span class="lx-t"><b>Sekolah Menengah</b><span class="lx-c5 lx-muted">Pelulus: Pengetua</span></span><span class="lx-dot"></span></label>
+<label class="lx-g2"><input type="radio" name="jenis" value="SK"<?= $sk?' checked':'' ?>><span class="lx-em"><?= icon('book') ?></span><span class="lx-t"><b>Sekolah Rendah</b><span class="lx-c5 lx-muted">Pelulus: Guru Besar</span></span><span class="lx-dot"></span></label></div></div>
+<div class="lx-grid2">
+<div class="lx-field" data-f="kod"><label for="lx-kod">Kod sekolah (KPM)</label><div class="lx-ctrl"><input id="lx-kod" name="kod" value="<?= $v('kod') ?>" maxlength="7" pattern="[A-Za-z]{3}[0-9]{4}" placeholder="CEA1234" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="lx-kod-h kod-e"><?= $okm ?></div><span class="lx-hint" id="lx-kod-h">3 huruf diikuti 4 digit</span><?= $err('kod','Kod mesti 3 huruf dan 4 digit, cth. CEA1234.') ?></div>
+<div class="lx-field" data-f="negeri"><label for="lx-negeri">Negeri</label><div class="lx-ctrl"><select id="lx-negeri" name="negeri" required aria-describedby="negeri-e"><option value="">Pilih negeri</option><?php foreach(NEGERI as $n): ?><option<?= !$done && input('negeri')===$n?' selected':'' ?>><?= e($n) ?></option><?php endforeach; ?></select><?= icon('chev-r','lx-chev') ?></div><?= $err('negeri','Sila pilih negeri.') ?></div>
+</div>
+<span class="lx-url" id="lx-url" hidden><?= icon('globe') ?>Alamat sekolah anda: <?= e(preg_replace('~KODSEKOLAH$~','',$host)) ?><b id="lx-url-kod"></b></span>
+<div class="lx-field" data-f="nama"><label for="lx-nama">Nama sekolah</label><div class="lx-ctrl"><input id="lx-nama" name="nama" value="<?= $v('nama') ?>" maxlength="150" placeholder="cth. SMK Seri Jaya" autocomplete="organization" required aria-describedby="lx-nama-h nama-e"><?= $okm ?></div><span class="lx-hint" id="lx-nama-h">Dipaparkan di direktori sekolah dan surat lantikan</span><?= $err('nama','Nama sekolah diperlukan, tanpa pautan laman web.') ?></div>
+</fieldset>
+<hr class="lx-sep">
+<fieldset id="lx-f2" class="lx-g2" data-pg="lx-pg2"><legend><span class="lx-ic"><?= icon('user') ?></span>Pegawai bertanggungjawab</legend>
+<div class="lx-field" data-f="pic_nama"><label for="lx-pic-nama">Nama pegawai <span class="lx-opt">akan menjadi Pentadbir Utama</span></label><div class="lx-ctrl"><input id="lx-pic-nama" name="pic_nama" value="<?= $v('pic_nama') ?>" maxlength="120" autocomplete="name" required aria-describedby="pic_nama-e"><?= $okm ?></div><?= $err('pic_nama','Nama pegawai diperlukan.') ?></div>
+<div class="lx-grid2">
+<div class="lx-field" data-f="pic_emel"><label for="lx-pic-emel">E-mel pegawai<?= registration_domains()?' <span class="lx-opt">'.e(implode(', ',registration_domains())).'</span>':'' ?></label><div class="lx-ctrl"><input id="lx-pic-emel" name="pic_emel" type="email" value="<?= $v('pic_emel') ?>" maxlength="190" placeholder="nama@sekolah.edu.my" autocomplete="email" required aria-describedby="lx-emel-h pic_emel-e"><?= $okm ?></div><span class="lx-hint" id="lx-emel-h">Pautan pengesahan dihantar ke sini</span><?= $err('pic_emel','Masukkan e-mel yang sah, cth. nama@sekolah.edu.my.') ?></div>
+<div class="lx-field" data-f="pic_telefon"><label for="lx-pic-tel">No. telefon</label><div class="lx-ctrl"><input id="lx-pic-tel" name="pic_telefon" value="<?= $v('pic_telefon') ?>" maxlength="20" inputmode="tel" placeholder="012 345 6789" autocomplete="tel" required aria-describedby="pic_telefon-e"><?= $okm ?></div><?= $err('pic_telefon','No. telefon mesti 9 hingga 15 digit.') ?></div>
+</div></fieldset>
+<hr class="lx-sep">
+<fieldset id="lx-f3" class="lx-g3" data-pg="lx-pg3"><legend><span class="lx-ic"><?= icon('lock') ?></span>Akaun Pentadbir Utama</legend>
+<div class="lx-grid2">
+<div class="lx-field" data-f="password"><label for="lx-pw">Kata laluan</label><div class="lx-ctrl is-pw"><input id="lx-pw" name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password" aria-describedby="lx-pw-rules password-e"><button class="lx-tog" type="button" aria-label="Tunjuk kata laluan" aria-pressed="false" data-for="lx-pw"><?= icon('eye') ?></button></div><div class="lx-meter" id="lx-meter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div><?= $err('password','Kata laluan mesti 12 hingga 128 aksara.') ?></div>
+<div class="lx-field" data-f="password_confirm"><label for="lx-pw2">Sahkan kata laluan</label><div class="lx-ctrl is-pw"><input id="lx-pw2" name="password_confirm" type="password" maxlength="128" required autocomplete="new-password" aria-describedby="password_confirm-e"><button class="lx-tog" type="button" aria-label="Tunjuk kata laluan" aria-pressed="false" data-for="lx-pw2"><?= icon('eye') ?></button></div><?= $err('password_confirm','Kata laluan tidak sepadan.') ?></div>
+</div>
+<ul class="lx-rules" id="lx-pw-rules" aria-label="Syarat kata laluan"><li data-r="len"><?= icon('check') ?>12 aksara atau lebih</li><li data-r="case"><?= icon('check') ?>Huruf besar dan kecil</li><li data-r="num"><?= icon('check') ?>Nombor</li><li data-r="sym"><?= icon('check') ?>Simbol</li></ul>
+<div class="lx-field" data-f="setuju"><label class="lx-agree" for="lx-setuju"><input type="checkbox" id="lx-setuju" name="setuju" value="1" required><span class="lx-box"><?= icon('check') ?></span><span>Saya bersetuju dengan <a href="/terma" target="_blank">Terma &amp; Syarat</a> dan <a href="/polisi" target="_blank">Polisi Privasi</a>, dan mengesahkan saya diberi kuasa mendaftarkan sekolah ini.</span></label><?= $err('setuju','Anda perlu bersetuju sebelum mendaftar.') ?></div>
+<?= captcha_field('daftar') ?>
+</fieldset>
+<div class="lx-submit"><button class="lx-btn lx-btn-primary lx-btn-lg" type="submit" id="lx-go"><span class="lx-spin" aria-hidden="true"></span><span class="lx-go-tx">Daftar sekolah</span><?= icon('arrow','lx-go') ?></button>
+<span class="lx-c5 lx-faint">Ruang sekolah diaktifkan selepas diluluskan<?= $trial>0?', bermula dengan Pro percuma '.$trial.' hari':'' ?>.</span></div>
+</form>
+<?php endif; ?>
+</section>
+<?php if(!$done): ?><details class="lx-resend"<?= $resent?' open':'' ?>><summary>Tidak menerima e-mel pengesahan?<?= icon('plus') ?></summary>
+<form method="post"><?= csrf_field() ?><input type="hidden" name="act" value="semula"><p class="lx-b6 lx-muted">Masukkan kod sekolah dan e-mel pegawai yang digunakan semasa mendaftar. Pautan baharu dihantar jika pendaftaran masih menunggu pengesahan.</p>
+<div class="lx-rrow"><label>Kod sekolah<input id="lx-r-kod" name="kod" maxlength="7" placeholder="CEA1234" autocapitalize="characters" required></label><label>E-mel pegawai<input name="emel" type="email" placeholder="nama@sekolah.edu.my" required></label><button class="lx-btn lx-btn-ghost">Hantar semula pautan</button></div></form></details><?php endif; ?>
+</div>
 </div><?php lp_foot(); exit;
 }
 function registration_verify_page(): never {

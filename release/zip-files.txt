@@ -5,6 +5,17 @@ public_html/ralat.html
 public_html/assets/
 public_html/assets/fonts.css
 public_html/assets/directory.css
+public_html/assets/landing.css
+public_html/assets/landing.js
+public_html/assets/landing/
+public_html/assets/landing/dashboard.jpg
+public_html/assets/landing/analisis.jpg
+public_html/assets/landing/auto.jpg
+public_html/assets/landing/kelulusan.jpg
+public_html/assets/landing/syarat.jpg
+public_html/assets/landing/surat.jpg
+public_html/assets/landing/surat-guru.jpg
+public_html/assets/landing/tugas-saya.jpg
 public_html/assets/app.js
 public_html/assets/fonts/
 public_html/assets/fonts/FONTS.txt
