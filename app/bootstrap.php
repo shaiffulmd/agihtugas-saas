@@ -37,6 +37,10 @@ function hash_password(string $password): string { return password_hash($passwor
 function asset(string $file): string { $p=dirname(__DIR__).'/public_html/assets/'.$file; return '/assets/'.$file.(is_file($p)?'?v='.substr(md5(filemtime($p).'-'.filesize($p)),0,10):''); }
 function redirect(string $path): never { header('Location: '.tenant_location($path)); exit; }
 function csrf(): string { return $_SESSION['csrf']??=bin2hex(random_bytes(32)); }
+/** Medan "back" (halaman asal selepas POST) dihantar sebagai query sahaja (page=...), tanpa awalan "/?":
+ *  WAF ModSecurity CRS 932190 menyekat nilai "/?page=..." sebagai cubaan pintasan wildcard (403). */
+function back_field(string $url): string { return '<input type="hidden" name="back" value="'.e((string)preg_replace('~^/\?~','',$url)).'">'; }
+function back_input(): string { $b=input('back'); return $b===''?'':(str_starts_with($b,'/?')?$b:'/?'.$b); }
 function csrf_field(): string { return '<input type="hidden" name="csrf" value="'.e(csrf()).'">'; }
 function verify_csrf(): void { if(!hash_equals(csrf(),(string)($_POST['csrf']??''))){ error_page(419); } }
 function flash(string $text): void { $_SESSION['flash']=$text; }

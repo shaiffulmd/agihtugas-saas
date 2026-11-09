@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 const APP_CHANGELOG=[
     '1.17'=>['2026-11-09',[
+        'Pembaikan: butang "Saya telah membaca" pada pop up hebahan tidak lagi disekat 403 oleh firewall hosting (ModSecurity CRS 932190). Halaman asal kini dihantar sebagai page=... tanpa awalan "/?".',
         'Panduan Penggunaan dalam aplikasi (menu Akaun → Panduan Penggunaan): langkah demi langkah dari data asas hingga surat lantikan, maksud lajur import guru (termasuk Kapasiti), pemberat jawatan, Pusat Syarat, indeks beban, aliran kelulusan dan soalan lazim. Kandungan ditapis mengikut peranan dan boleh dicetak.',
         'Reset kata laluan pentadbir sekolah dari panel platform (dan reset guru oleh pentadbir) kini membuka kunci log masuk akaun yang dikunci selepas banyak cubaan gagal.',
         'Kata laluan sementara kini 16 aksara huruf & nombor tanpa simbol atau aksara mengelirukan (0/O, 1/l/I), dipaparkan dengan butang Salin bersama e-mel dan pautan log masuk sekolah.',
