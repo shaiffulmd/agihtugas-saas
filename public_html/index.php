@@ -8,7 +8,7 @@ elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/api(/|$)#',(string)parse_url((strin
 elseif((string)($_GET['page']??'')==='bayar_kembali' || parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/bayar-callback') define('NO_SESSION',true);
 // robots.txt / sitemap.xml (platform, /KOD/ atau KOD.domain): tanpa sesi — perangkak tidak perlu kuki.
 elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/(robots\.txt|sitemap\.xml)$#D',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))) define('NO_SESSION',true);
-$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi','enjin_actions','seo'] as $f) require $app.$f.'.php';
+$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi','enjin_actions','seo','panduan'] as $f) require $app.$f.'.php';
 // Webhook kemas kini daripada GitHub Actions (HMAC; sebelum semakan pemasangan supaya kemas kini skema juga boleh berjalan).
 if(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/kemaskini-hook'){ require_once dirname(__DIR__).'/app/updater.php'; upd_webhook(); }
 // Sistem belum dipasang / perlu naik taraf: jangan proses permintaan biasa.
@@ -62,7 +62,7 @@ $user=current_user();
 if($user && !impersonating() && !user_ip_ok($user)){ audit('session_ip_denied','users',(int)$user['id']); $_SESSION=[]; error_page(403,'Akaun anda tidak dibenarkan dari alamat IP ini ('.client_ip().').'); }
 if(!$user){ if(isset($_SESSION['pending_uid'])) $page=$page==='enroll'?'enroll':'verify'; elseif(!in_array($page,ACCOUNT_PAGES,true)) $page='login'; }
 elseif(in_array($page,ACCOUNT_PAGES,true) || in_array($page,['login','verify'],true)) redirect('/?page=dashboard'); // sudah log masuk
-elseif(!in_array($page,['dashboard','security','users','enroll','recovery','settings','system','avatar','urus_akaun','versi','langganan','sokongan','bayar_qr','ipsekat','hebahan','sandaran','aset',...array_keys(ENGINE_PAGES)],true)) error_page(404);
+elseif(!in_array($page,['dashboard','security','users','enroll','recovery','settings','system','avatar','urus_akaun','versi','langganan','sokongan','bayar_qr','ipsekat','hebahan','sandaran','aset','panduan',...array_keys(ENGINE_PAGES)],true)) error_page(404);
 // Halaman enjin mengikut peranan; GB/Pengetua & guru tiada dashboard perancangan.
 if($user && isset(ENGINE_PAGES[$page]) && !in_array($page,engine_pages((string)$user['role']),true)) error_page(403,'Peranan anda tidak membenarkan halaman ini.');
 if($user && $page==='dashboard' && in_array($user['role'],['head','teacher'],true) && empty($user['must_change'])) redirect($user['role']==='head'?'/?page=kelulusan':'/?page=tugas_saya');

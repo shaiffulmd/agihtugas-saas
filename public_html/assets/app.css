@@ -1819,3 +1819,12 @@ body:has(.hb-modal){overflow:hidden}
 .pk-note{margin-top:1rem;font-size:.8rem}
 @media print{.mp-top,.mp-body .no-print{display:none!important}.mp-main{padding:0}}
 .pl-addon-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* ---------- Panduan Penggunaan (app/panduan.php) ---------- */
+.pd-toc ol{margin:0;padding-left:1.25rem;columns:2;column-gap:2rem}.pd-toc li{margin:.3rem 0;break-inside:avoid}.pd-toc a{color:var(--fg-dark);text-decoration:none}.pd-toc a:hover{color:var(--primary);text-decoration:underline}
+.pd-sec{scroll-margin-top:84px;line-height:1.65}.pd-sec h2{margin:0 0 .75rem;font-size:1.15rem}.pd-sec p{margin:0 0 .75rem;max-width:72ch}
+.pd-steps,.pd-list{margin:0 0 .9rem;padding-left:1.35rem;max-width:78ch}.pd-steps li,.pd-list li{margin:.4rem 0}
+.pd-table{width:100%;border-collapse:collapse;margin:.25rem 0 1rem;font-size:.92rem}.pd-table th,.pd-table td{text-align:left;vertical-align:top;padding:.55rem .7rem;border-bottom:1px solid var(--line)}.pd-table th{font-weight:650;background:color-mix(in srgb,var(--dark) 4%,var(--surface))}.pd-table td{white-space:normal;overflow-wrap:anywhere}.pd-table td:first-child{font-weight:600;white-space:nowrap;width:1%}
+.pd-faq dt{font-weight:650;margin-top:.9rem}.pd-faq dd{margin:.25rem 0 0;max-width:72ch}
+.pd-sec .notice{margin:.5rem 0 0}.pd-top{margin:.75rem 0 0!important;font-size:.85rem}
+@media(max-width:700px){.pd-toc ol{columns:1}.pd-table td:first-child{white-space:normal}}
+@media print{.pd-toc,.pd-top{display:none}.pd-sec{break-inside:avoid-page;border:0;box-shadow:none}}

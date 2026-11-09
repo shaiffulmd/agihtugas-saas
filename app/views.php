@@ -11,8 +11,8 @@ if($role==='admin'){
  $nav['Sistem']=[['users','key','Pengguna & Audit'],['sekolah','school','Profil Sekolah & Surat'],['settings','sliders','Tetapan & Tema'],['api','link','API & Integrasi'.(page_pro_feature('api')?' · Pro':'')],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
  $nav['Langganan & bantuan']=[['langganan','card','Langganan'],['sokongan','help','Sokongan']];
 } // Integriti & Sandaran: peringkat pelayan → panel platform
-$nav['Akaun']=[['security','user','Profil & Keselamatan']];
-const PAGE_TITLES=['dashboard'=>'Dashboard','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan & Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
+$nav['Akaun']=[['security','user','Profil & Keselamatan'],['panduan','book','Panduan Penggunaan']];
+const PAGE_TITLES=['dashboard'=>'Dashboard','panduan'=>'Panduan Penggunaan','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan & Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
 $pageTitle=PAGE_TITLES[$page]??ENGINE_PAGES[$page]??'Halaman';
 function notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
 function field(string $key,array $f,mixed $value=''): void {
@@ -68,6 +68,7 @@ function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','M
  if($pf=page_pro_feature($page)) pro_locked_panel($pf); else match($page){'guru'=>guru_page($error),'jawatan'=>jawatan_page($error),'pukal'=>pukal_page(),'agihan'=>agihan_page(),'subjek'=>subjek_page($error),'analisis'=>analisis_page($user),'syarat'=>syarat_page(),'auto'=>auto_page(),'kelulusan'=>kelulusan_page($user),'surat'=>surat_page(),'tugas_saya'=>tugas_saya_page($user),'organisasi'=>organisasi_page(),'sekolah'=>sekolah_page(),'api'=>api_page()};
  if($locked) echo '</fieldset>'; ?>
 <?php elseif($page==='versi'): versi_page(); ?>
+<?php elseif($page==='panduan'): panduan_page($user); ?>
 <?php elseif($page==='hebahan'): hebahan_page(); ?>
 <?php elseif($page==='langganan'): langganan_page(); ?>
 <?php elseif($page==='ipsekat'): school_page_ipblocks(); ?>
