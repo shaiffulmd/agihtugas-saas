@@ -13,7 +13,9 @@ function handle_auth(string $action): void {
   $u=query('SELECT * FROM users WHERE school_id='.sid().' AND email=?',[$email])->fetch();
   // Dummy Argon2id hash reduces account enumeration timing differences.
   $hash=$u['password_hash']??'$argon2id$v=19$m=65536,t=3,p=1$YWJjZGVmZ2hpamtsbW5vcA$X61Nhx+pvNQyLdlNsgmbY3DfiY1vYD+L0G5QOIoVr/0';
-  if(!password_verify(input('password'),$hash) || !$u){ shield_fail($email); if(login_captcha_needed($email)) $_SESSION['login_cap']=true; audit('login_failed','users',$u?(int)$u['id']:null); throw new DomainException('E-mel atau kata laluan tidak sah.'); }
+  // Kata laluan yang disalin kadangkala membawa ruang/baris baharu di hujung: cuba versi dipangkas hanya jika berbeza.
+  $pwIn=input('password'); $pwOk=password_verify($pwIn,$hash) || (($pwT=trim($pwIn))!==$pwIn && $pwT!=='' && password_verify($pwT,$hash));
+  if(!$pwOk || !$u){ shield_fail($email); if(login_captcha_needed($email)) $_SESSION['login_cap']=true; audit('login_failed','users',$u?(int)$u['id']:null); throw new DomainException('E-mel atau kata laluan tidak sah.'); }
   // Mesej status akaun hanya selepas kata laluan betul (tiada pendedahan akaun).
   if(!(int)$u['active']){
    audit('login_inactive','users',(int)$u['id']);
@@ -23,7 +25,7 @@ function handle_auth(string $action): void {
   }
   if(!user_ip_ok($u)){ audit('login_ip_denied','users',(int)$u['id']); throw new DomainException('Log masuk akaun ini tidak dibenarkan dari alamat IP anda ('.client_ip().').'); }
   shield_success($email); unset($_SESSION['login_cap']);
-  if(password_needs_rehash($u['password_hash'],PASSWORD_ARGON2ID,['memory_cost'=>65536,'time_cost'=>3,'threads'=>1])) query('UPDATE users SET password_hash=? WHERE id=? AND school_id='.sid(),[hash_password(input('password')),$u['id']]);
+  if(password_needs_rehash($u['password_hash'],PASSWORD_ARGON2ID,['memory_cost'=>65536,'time_cost'=>3,'threads'=>1])) query('UPDATE users SET password_hash=? WHERE id=? AND school_id='.sid(),[hash_password(password_verify($pwIn,$hash)?$pwIn:trim($pwIn)),$u['id']]);
   session_regenerate_id(true); $_SESSION=['csrf'=>bin2hex(random_bytes(32)),'pending_uid'=>(int)$u['id'],'pending_version'=>(int)$u['auth_version'],'pending_at'=>time()];
   if($u['totp_secret']) redirect('/?page=verify');
   if(twofa_required((string)$u['role'])) redirect('/?page=enroll'); login_user($u);

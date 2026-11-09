@@ -12,7 +12,11 @@ require_once __DIR__.'/platform_accounts.php'; require_once __DIR__.'/subscripti
 
 /* ---------- Sekolah ---------- */
 function school_code_valid(string $code): bool { return (bool)preg_match(SCHOOL_CODE_RE,$code); }
-function platform_temp_password(): string { return rtrim(strtr(base64_encode(random_bytes(12)),'+/','-_'),'='); }
+/** Kata laluan sementara: 16 aksara (~92 bit) tanpa simbol dan tanpa aksara mengelirukan (0/O, 1/l/I) — selamat disalin
+ *  dengan klik dua kali (tiada - atau _ yang memotong pemilihan perkataan) dan ditaip semula daripada mesej. */
+function platform_temp_password(int $n=16): string { $abc='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; $o=''; for($i=0;$i<$n;$i++) $o.=$abc[random_int(0,strlen($abc)-1)]; return $o; }
+/** Kata laluan sekali papar dengan butang Salin (input readonly: pemilihan & salinan sentiasa lengkap). */
+function temp_password_field(string $pw,string $id='temp-pw'): string { return '<span class="copy-row temp-pw"><input id="'.e($id).'" class="copy-field secret-input" readonly value="'.e($pw).'" aria-label="Kata laluan sementara" autocomplete="off" spellcheck="false"><button type="button" class="btn outline" data-copy-target="#'.e($id).'">Salin</button></span>'; }
 
 /**
  * Cipta sekolah + Pentadbir Utama (kata laluan sementara, wajib tukar pada log masuk pertama).
@@ -354,8 +358,8 @@ function platform_page_school(array $s): void {
   <div class="sch-hero-act"><a class="btn outline" href="/platform/">← Senarai</a><?php if($aktif): ?><a class="btn outline" href="<?= e($url) ?>" target="_blank" rel="noopener">Buka laman</a><?php endif; ?><?php if($boleh_masuk): ?><a class="btn primary" href="#sokongan">Masuk sebagai pentadbir</a><?php endif; ?></div>
 </section>
 <nav class="sch-tabs" aria-label="Bahagian halaman"><?php foreach($nav as $k=>$l): ?><a class="chip<?= $k==='bahaya'?' chip-danger':'' ?>" href="#<?= $k ?>"><?= e($l) ?></a><?php endforeach; ?></nav>
-<?php if($created && $created['code']===$s['code']): ?><div class="notice success" role="status"><strong>Sekolah dicipta.</strong> Log masuk Pentadbir Utama: <code><?= e($created['email']) ?></code> · kata laluan sementara <code class="secret"><?= e($created['password']) ?></code> (dipaparkan sekali sahaja).<?= $created['demo']?' Data demo dijana (akaun demo: admin@demo.test / Demo-Admin-2026).':'' ?></div><?php endif; ?>
-<?php if($reset): ?><div class="notice success" role="status">Kata laluan sementara baharu untuk <strong><?= e((string)($reset['email']??'')) ?></strong>: <code class="secret"><?= e($reset['password']) ?></code> (2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja).</div><?php endif; ?>
+<?php if($created && $created['code']===$s['code']): ?><div class="notice success" role="status"><strong>Sekolah dicipta.</strong> Log masuk Pentadbir Utama: <code><?= e($created['email']) ?></code> · kata laluan sementara (dipaparkan sekali sahaja):<?= temp_password_field((string)$created['password'],'created-pw') ?><?= $created['demo']?' Data demo dijana (akaun demo: admin@demo.test / Demo-Admin-2026).':'' ?></div><?php endif; ?>
+<?php if($reset): ?><div class="notice success" role="status"><div>Kata laluan sementara baharu untuk <strong><?= e((string)($reset['email']??'')) ?></strong> — log masuk dengan e-mel ini di laman sekolah. 2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja.<?= temp_password_field((string)$reset['password'],'reset-pw') ?></div></div><?php endif; ?>
 <section class="stats-grid stats-4 sch-stats"><article class="stat-card"><div class="stat-top"><small>Pengguna</small><?= icon('users') ?></div><strong><?= (int)$stat['u'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Pentadbir aktif</small><?= icon('key') ?></div><strong><?= (int)$stat['a'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Guru</small><?= icon('user') ?></div><strong><?= (int)$stat['g'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Jawatan</small><?= icon('clipboard') ?></div><strong><?= (int)$stat['j'] ?></strong></article></section>
 <?php if(in_array($s['status'],['menunggu','emel'],true)): ?><section class="panel padded spaced sch-pending"><h3>Pendaftaran <?= $s['status']==='emel'?'(e-mel belum disahkan)':'menunggu kelulusan' ?></h3>
 <dl class="sch-kv"><div><dt>Pegawai</dt><dd><?= e($s['pic_name']) ?></dd></div><div><dt>E-mel</dt><dd><?= e($s['pic_email']) ?></dd></div><div><dt>Telefon</dt><dd><?= e($s['pic_phone']) ?: '—' ?></dd></div><div><dt>Negeri</dt><dd><?= e($s['state']) ?: '—' ?></dd></div><div><dt>Didaftar</dt><dd><?= e(date('d/m/Y H:i',strtotime((string)$s['created_at']))) ?></dd></div></dl>
