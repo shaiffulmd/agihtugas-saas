@@ -1582,10 +1582,14 @@ body:has(.hb-modal){overflow:hidden}
 .sch-trial{margin-top:1rem;padding:1rem;border-radius:12px;background:color-mix(in srgb,var(--dark) 3%,var(--surface))}.sch-trial h4{margin:0 0 .3rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}.sch-trial .form-grid{margin-top:.6rem}
 .btn.danger-text{color:var(--danger)}
 .sch-pay{margin-top:1rem;border:1px solid var(--line);border-radius:12px}
-.sch-pay>summary{cursor:pointer;padding:.75rem 1rem;font-weight:700;color:var(--fg-dark)}
+.sch-pay>summary{cursor:pointer;padding:1rem 1.25rem;font-weight:700;color:var(--fg-dark);border-radius:12px}
 .sch-pay>summary::marker{color:var(--muted)}
-.sch-pay[open]>summary{border-bottom:1px solid var(--line)}
-.sch-pay>form{padding:.25rem 0 .25rem}
+.sch-pay>summary:hover{background:color-mix(in srgb,var(--dark) 3%,var(--surface))}
+.sch-pay[open]>summary{border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}
+/* .sch-pay>form.form-grid mengatasi .padded .form-grid (padding:.25rem 0 0) supaya medan tidak rapat ke tepi kotak */
+.sch-pay>form.form-grid{padding:1.25rem;gap:1.1rem 1.25rem}
+.sch-pay>form .button-group{grid-column:1/-1;justify-content:flex-start;padding-top:.25rem}
+@media(max-width:600px){.sch-pay>summary{padding:.9rem 1rem}.sch-pay>form.form-grid{padding:1rem;gap:1rem}}
 .sch-h4{margin:1.25rem 0 .5rem;font-size:.92rem}
 .sch-admins{list-style:none;margin:0;padding:0 1.25rem 1rem}
 .sch-admins li{display:flex;align-items:center;gap:.85rem;padding:.85rem 0;border-top:1px solid var(--line)}
