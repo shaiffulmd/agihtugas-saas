@@ -1595,6 +1595,7 @@ body:has(.hb-modal){overflow:hidden}
 .sch-admins{list-style:none;margin:0;padding:0 1.25rem 1rem}
 .sch-admins li{display:flex;align-items:center;gap:.85rem;padding:.85rem 0;border-top:1px solid var(--line)}
 .sch-admins li:first-child{border-top:0}
+.sch-logins{padding:0 1.25rem 1.1rem;border-top:1px solid var(--line)}.sch-logins ul{list-style:none;margin:0;padding:0;display:grid;gap:.45rem;font-size:.85rem}.sch-logins li{overflow-wrap:anywhere}
 .sch-av{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--teal) 14%,var(--surface));color:var(--teal);font-weight:800}
 .sch-adm-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:.15rem}
 .sch-adm-main>small{overflow-wrap:anywhere}

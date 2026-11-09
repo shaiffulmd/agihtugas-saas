@@ -255,13 +255,15 @@ function platform_action(string $action): never {
         $uid=(int)input('user_id'); $pw=platform_temp_password();
         $n=query('UPDATE users SET password_hash=?,must_change=1,auth_version=auth_version+1,totp_secret=NULL,last_totp_step=-1,active=1 WHERE id=? AND school_id=? AND role="admin"',[hash_password($pw),$uid,$s['id']])->rowCount();
         if(!$n) throw new DomainException('Pentadbir sekolah tidak dijumpai.');
+        $saved=(string)query('SELECT password_hash FROM users WHERE id=? AND school_id=?',[$uid,$s['id']])->fetchColumn();
+        if(!password_verify($pw,$saved)) throw new DomainException('Kata laluan tidak tersimpan dengan betul (hash '.strlen($saved).' aksara). Semak lajur users.password_hash (VARCHAR 255) dan sql_mode pangkalan data.');
         query('DELETE FROM recovery_codes WHERE school_id=? AND user_id=?',[$s['id'],$uid]);
         $email=(string)query('SELECT email FROM users WHERE id=? AND school_id=?',[$uid,$s['id']])->fetchColumn();
         // Buka kunci perisai log masuk akaun ini (biasanya reset diminta selepas banyak cubaan gagal; tanpa ini kata laluan baharu
         // ditolak sehingga 15 minit). Kunci baldi guna subkunci sekolah, jadi mesti dalam konteks sekolah.
         with_school($s,function() use($uid,$email){ query('DELETE FROM rate_limits WHERE bucket=?',[rate_key('login-fail-user',strtolower($email))]); audit('platform_admin_reset','users',$uid); });
         platform_log('school_admin_reset',(int)$s['id'],'user '.$uid);
-        $_SESSION['p_reset']=['user'=>$uid,'email'=>$email,'password'=>$pw];
+        $_SESSION['p_reset']=['user'=>$uid,'email'=>$email,'password'=>$pw,'url'=>school_url($s['code'],'/')];
     }
     elseif($action==='p_demo_reset'){
         if(!demo_env()) throw new DomainException('Reset demo hanya dibenarkan apabila DEMO_MODE=1.');
@@ -359,7 +361,7 @@ function platform_page_school(array $s): void {
 </section>
 <nav class="sch-tabs" aria-label="Bahagian halaman"><?php foreach($nav as $k=>$l): ?><a class="chip<?= $k==='bahaya'?' chip-danger':'' ?>" href="#<?= $k ?>"><?= e($l) ?></a><?php endforeach; ?></nav>
 <?php if($created && $created['code']===$s['code']): ?><div class="notice success" role="status"><strong>Sekolah dicipta.</strong> Log masuk Pentadbir Utama: <code><?= e($created['email']) ?></code> · kata laluan sementara (dipaparkan sekali sahaja):<?= temp_password_field((string)$created['password'],'created-pw') ?><?= $created['demo']?' Data demo dijana (akaun demo: admin@demo.test / Demo-Admin-2026).':'' ?></div><?php endif; ?>
-<?php if($reset): ?><div class="notice success" role="status"><div>Kata laluan sementara baharu untuk <strong><?= e((string)($reset['email']??'')) ?></strong> — log masuk dengan e-mel ini di laman sekolah. 2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja.<?= temp_password_field((string)$reset['password'],'reset-pw') ?></div></div><?php endif; ?>
+<?php if($reset): ?><div class="notice success" role="status"><div>Kata laluan sementara baharu untuk <strong><?= e((string)($reset['email']??'')) ?></strong> — log masuk dengan e-mel ini di <a class="text-link" href="<?= e((string)($reset['url']??'')) ?>" target="_blank" rel="noopener"><?= e((string)($reset['url']??'laman sekolah')) ?></a>. 2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja.<?= temp_password_field((string)$reset['password'],'reset-pw') ?></div></div><?php endif; ?>
 <section class="stats-grid stats-4 sch-stats"><article class="stat-card"><div class="stat-top"><small>Pengguna</small><?= icon('users') ?></div><strong><?= (int)$stat['u'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Pentadbir aktif</small><?= icon('key') ?></div><strong><?= (int)$stat['a'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Guru</small><?= icon('user') ?></div><strong><?= (int)$stat['g'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Jawatan</small><?= icon('clipboard') ?></div><strong><?= (int)$stat['j'] ?></strong></article></section>
 <?php if(in_array($s['status'],['menunggu','emel'],true)): ?><section class="panel padded spaced sch-pending"><h3>Pendaftaran <?= $s['status']==='emel'?'(e-mel belum disahkan)':'menunggu kelulusan' ?></h3>
 <dl class="sch-kv"><div><dt>Pegawai</dt><dd><?= e($s['pic_name']) ?></dd></div><div><dt>E-mel</dt><dd><?= e($s['pic_email']) ?></dd></div><div><dt>Telefon</dt><dd><?= e($s['pic_phone']) ?: '—' ?></dd></div><div><dt>Negeri</dt><dd><?= e($s['state']) ?: '—' ?></dd></div><div><dt>Didaftar</dt><dd><?= e(date('d/m/Y H:i',strtotime((string)$s['created_at']))) ?></dd></div></dl>
@@ -385,7 +387,10 @@ function platform_page_school(array $s): void {
 <span class="sch-av" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($a['name'],0,1))) ?></span>
 <div class="sch-adm-main"><strong><?= e($a['name']) ?></strong><small><?= e($a['email']) ?></small><span class="sch-adm-tags"><?= $a['active']?($a['must_change']?'<span class="badge warn">Kata laluan sementara</span>':'<span class="badge green">Aktif</span>'):'<span class="badge">Tidak aktif</span>' ?><?= $a['twofa']?'<span class="badge green">2FA ✓</span>':'<span class="badge">Tiada 2FA</span>' ?></span><small class="muted">Log masuk terakhir: <?= $a['last_login_at']?e(date('d/m/Y H:i',strtotime($a['last_login_at']))):'Belum pernah' ?></small></div>
 <form method="post" class="delete-form" data-confirm="Jana kata laluan sementara baharu untuk <?= e($a['email']) ?>?"><?= $hidden ?><input type="hidden" name="user_id" value="<?= (int)$a['id'] ?>"><button class="btn sm outline" name="action" value="p_admin_reset">Reset</button></form>
-</li><?php endforeach; ?></ul><?php endif; ?></section>
+</li><?php endforeach; ?></ul><?php endif; ?>
+<?php $cubaan=query('SELECT action,entity_id,detail,created_at FROM audit_logs WHERE school_id=? AND action IN ("login_failed","login_blocked","login_inactive","login_ip_denied","login") ORDER BY id DESC LIMIT 8',[$s['id']])->fetchAll();
+ $lbl=['login'=>'Berjaya','login_failed'=>'Gagal','login_blocked'=>'Dikunci','login_inactive'=>'Tidak aktif','login_ip_denied'=>'IP ditolak']; $nm=array_column($admins,'email','id'); ?>
+<div class="sch-logins"><h4 class="sch-h4">Cubaan log masuk terkini</h4><?php if(!$cubaan): ?><p class="muted">Tiada rekod.</p><?php else: ?><ul><?php foreach($cubaan as $c): ?><li><span class="badge<?= $c['action']==='login'?' green':' warn' ?>"><?= e($lbl[$c['action']]??$c['action']) ?></span> <small class="muted"><?= e(date('d/m H:i',strtotime((string)$c['created_at']))) ?></small> <?= e(implode(' · ',array_filter([$c['entity_id']&&isset($nm[(int)$c['entity_id']])?$nm[(int)$c['entity_id']]:'',(string)$c['detail']]))) ?></li><?php endforeach; ?></ul><?php endif; ?></div></section>
 </div>
 <div class="sch-col">
 <?php if($boleh_masuk): ?><section class="panel padded sch-support" id="sokongan"><h3>Masuk sebagai pentadbir sekolah</h3><p class="muted">Sesi sokongan maksimum 60 minit. Alasan, mula dan tamat dilog di Log platform dan Log audit sekolah; setiap tindakan direkod "melalui platform". Kata laluan &amp; 2FA akaun itu tidak boleh diubah. Log keluar platform menamatkan sesi ini.</p>

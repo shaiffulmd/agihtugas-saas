@@ -1,12 +1,14 @@
 <?php
 function login_user(array $u): never { session_regenerate_id(true); $_SESSION=['uid'=>(int)$u['id'],'auth_version'=>(int)$u['auth_version'],'csrf'=>bin2hex(random_bytes(32)),'started'=>time(),'last'=>time()]; query('UPDATE users SET last_login_at=NOW() WHERE id=? AND school_id='.sid(),[(int)$u['id']]); audit('login','users',(int)$u['id']); redirect(!empty($u['must_change'])?'/?page=security':'/?page=dashboard'); }
+/** E-mel bertopeng untuk log: ad***@sekolah.edu.my */
+function mask_email(string $e): string { [$u,$d]=array_pad(explode('@',$e,2),2,''); return mb_substr($u,0,2).'***'.($d!==''?'@'.$d:''); }
 function handle_auth(string $action): void {
  if($action==='logout'){ $imp=function_exists('impersonating')?impersonating():null; if(function_exists('imp_end_log')) imp_end_log(); if(isset($_SESSION['uid'])) audit('logout','users',(int)$_SESSION['uid']); $_SESSION=[]; session_regenerate_id(true); if($imp) imp_exit_page(sid()); redirect('/'); } // sesi sokongan: kembali ke panel platform
  if($action==='login'){
   $email=mb_substr(strtolower(trim(input('email'))),0,190); $ip=rate_key('login-ip',client_ip());
   if(!rate_allowed($ip,30)){ audit('login_blocked','users'); ip_block_auto(client_ip(),sid(),'Terlalu banyak cubaan log masuk sekolah'); throw new DomainException('Terlalu banyak cubaan. Cuba semula selepas 15 minit.'); }
   // Perisai (DELIMa): akaun dikunci 15 minit selepas 10 gagal merentas IP — kecuali peranti yang pernah berjaya log masuk.
-  if(shield_locked($email)){ audit('login_blocked','users'); http_response_code(429); throw new DomainException('Terlalu banyak percubaan gagal untuk akaun ini. Cuba lagi dalam 15 minit.'); }
+  if(shield_locked($email)){ audit('login_blocked','users',null,'akaun dikunci perisai: '.mask_email($email)); http_response_code(429); throw new DomainException('Terlalu banyak percubaan gagal untuk akaun ini. Cuba lagi dalam 15 minit.'); }
   rate_hit($ip);
   // CAPTCHA selepas 3 gagal (IP atau e-mel) / 15 gagal keseluruhan, atau sentiasa — ikut tetapan. + perangkap bot.
   if(login_captcha_needed($email) || !empty($_SESSION['login_cap'])){ $_SESSION['login_cap']=true; form_guard('login'); } elseif(input('website')!=='') throw new DomainException('Permintaan tidak dapat diproses. Cuba semula.');
@@ -15,7 +17,10 @@ function handle_auth(string $action): void {
   $hash=$u['password_hash']??'$argon2id$v=19$m=65536,t=3,p=1$YWJjZGVmZ2hpamtsbW5vcA$X61Nhx+pvNQyLdlNsgmbY3DfiY1vYD+L0G5QOIoVr/0';
   // Kata laluan yang disalin kadangkala membawa ruang/baris baharu di hujung: cuba versi dipangkas hanya jika berbeza.
   $pwIn=input('password'); $pwOk=password_verify($pwIn,$hash) || (($pwT=trim($pwIn))!==$pwIn && $pwT!=='' && password_verify($pwT,$hash));
-  if(!$pwOk || !$u){ shield_fail($email); if(login_captcha_needed($email)) $_SESSION['login_cap']=true; audit('login_failed','users',$u?(int)$u['id']:null); throw new DomainException('E-mel atau kata laluan tidak sah.'); }
+  if(!$pwOk || !$u){ shield_fail($email); if(login_captcha_needed($email)) $_SESSION['login_cap']=true;
+   // Sebab untuk diagnosis pentadbir platform (Panel Platform → sekolah → Pentadbir). Tiada kata laluan direkod.
+   $why=$u?'kata laluan salah · '.mb_strlen($pwIn).' aksara'.($pwIn!==trim($pwIn)?' (ada ruang di hujung)':''):'tiada akaun dengan e-mel '.mask_email($email);
+   audit('login_failed','users',$u?(int)$u['id']:null,$why); throw new DomainException('E-mel atau kata laluan tidak sah.'); }
   // Mesej status akaun hanya selepas kata laluan betul (tiada pendedahan akaun).
   if(!(int)$u['active']){
    audit('login_inactive','users',(int)$u['id']);
