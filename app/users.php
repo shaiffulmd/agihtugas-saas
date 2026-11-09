@@ -49,6 +49,8 @@ function handle_user_admin(string $action): never {
         if($self) throw new DomainException('Gunakan halaman Profil & Keselamatan untuk menukar kata laluan sendiri.');
         $password=input('password'); if(!valid_password($password)) throw new DomainException('Kata laluan sementara mesti 12 hingga 128 aksara.');
         query('UPDATE users SET password_hash=?,must_change=1,auth_version=auth_version+1 WHERE id=? AND school_id='.sid(),[hash_password($password),$id]);
+        $em=(string)query('SELECT email FROM users WHERE id=? AND school_id='.sid(),[$id])->fetchColumn();
+        query('DELETE FROM rate_limits WHERE bucket=?',[rate_key('login-fail-user',strtolower($em))]); // buka kunci perisai log masuk akaun ini
         audit('admin_password_reset','users',$id); flash('Kata laluan sementara ditetapkan. Pengguna wajib menukarnya selepas log masuk.');
     } elseif($action==='user_reset_2fa'){
         if($self) throw new DomainException('Reset 2FA akaun sendiri hanya melalui CLI pelayan.');

@@ -252,8 +252,12 @@ function platform_action(string $action): never {
         $n=query('UPDATE users SET password_hash=?,must_change=1,auth_version=auth_version+1,totp_secret=NULL,last_totp_step=-1,active=1 WHERE id=? AND school_id=? AND role="admin"',[hash_password($pw),$uid,$s['id']])->rowCount();
         if(!$n) throw new DomainException('Pentadbir sekolah tidak dijumpai.');
         query('DELETE FROM recovery_codes WHERE school_id=? AND user_id=?',[$s['id'],$uid]);
-        with_school($s,fn()=>audit('platform_admin_reset','users',$uid)); platform_log('school_admin_reset',(int)$s['id'],'user '.$uid);
-        $_SESSION['p_reset']=['user'=>$uid,'password'=>$pw];
+        $email=(string)query('SELECT email FROM users WHERE id=? AND school_id=?',[$uid,$s['id']])->fetchColumn();
+        // Buka kunci perisai log masuk akaun ini (biasanya reset diminta selepas banyak cubaan gagal; tanpa ini kata laluan baharu
+        // ditolak sehingga 15 minit). Kunci baldi guna subkunci sekolah, jadi mesti dalam konteks sekolah.
+        with_school($s,function() use($uid,$email){ query('DELETE FROM rate_limits WHERE bucket=?',[rate_key('login-fail-user',strtolower($email))]); audit('platform_admin_reset','users',$uid); });
+        platform_log('school_admin_reset',(int)$s['id'],'user '.$uid);
+        $_SESSION['p_reset']=['user'=>$uid,'email'=>$email,'password'=>$pw];
     }
     elseif($action==='p_demo_reset'){
         if(!demo_env()) throw new DomainException('Reset demo hanya dibenarkan apabila DEMO_MODE=1.');
@@ -351,7 +355,7 @@ function platform_page_school(array $s): void {
 </section>
 <nav class="sch-tabs" aria-label="Bahagian halaman"><?php foreach($nav as $k=>$l): ?><a class="chip<?= $k==='bahaya'?' chip-danger':'' ?>" href="#<?= $k ?>"><?= e($l) ?></a><?php endforeach; ?></nav>
 <?php if($created && $created['code']===$s['code']): ?><div class="notice success" role="status"><strong>Sekolah dicipta.</strong> Log masuk Pentadbir Utama: <code><?= e($created['email']) ?></code> · kata laluan sementara <code class="secret"><?= e($created['password']) ?></code> (dipaparkan sekali sahaja).<?= $created['demo']?' Data demo dijana (akaun demo: admin@demo.test / Demo-Admin-2026).':'' ?></div><?php endif; ?>
-<?php if($reset): ?><div class="notice success" role="status">Kata laluan sementara baharu: <code class="secret"><?= e($reset['password']) ?></code> (2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja).</div><?php endif; ?>
+<?php if($reset): ?><div class="notice success" role="status">Kata laluan sementara baharu untuk <strong><?= e((string)($reset['email']??'')) ?></strong>: <code class="secret"><?= e($reset['password']) ?></code> (2FA akaun itu juga dikosongkan; dipaparkan sekali sahaja).</div><?php endif; ?>
 <section class="stats-grid stats-4 sch-stats"><article class="stat-card"><div class="stat-top"><small>Pengguna</small><?= icon('users') ?></div><strong><?= (int)$stat['u'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Pentadbir aktif</small><?= icon('key') ?></div><strong><?= (int)$stat['a'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Guru</small><?= icon('user') ?></div><strong><?= (int)$stat['g'] ?></strong></article><article class="stat-card"><div class="stat-top"><small>Jawatan</small><?= icon('clipboard') ?></div><strong><?= (int)$stat['j'] ?></strong></article></section>
 <?php if(in_array($s['status'],['menunggu','emel'],true)): ?><section class="panel padded spaced sch-pending"><h3>Pendaftaran <?= $s['status']==='emel'?'(e-mel belum disahkan)':'menunggu kelulusan' ?></h3>
 <dl class="sch-kv"><div><dt>Pegawai</dt><dd><?= e($s['pic_name']) ?></dd></div><div><dt>E-mel</dt><dd><?= e($s['pic_email']) ?></dd></div><div><dt>Telefon</dt><dd><?= e($s['pic_phone']) ?: '—' ?></dd></div><div><dt>Negeri</dt><dd><?= e($s['state']) ?: '—' ?></dd></div><div><dt>Didaftar</dt><dd><?= e(date('d/m/Y H:i',strtotime((string)$s['created_at']))) ?></dd></div></dl>
