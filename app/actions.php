@@ -2,6 +2,13 @@
 function login_user(array $u): never { session_regenerate_id(true); $_SESSION=['uid'=>(int)$u['id'],'auth_version'=>(int)$u['auth_version'],'csrf'=>bin2hex(random_bytes(32)),'started'=>time(),'last'=>time()]; query('UPDATE users SET last_login_at=NOW() WHERE id=? AND school_id='.sid(),[(int)$u['id']]); audit('login','users',(int)$u['id']); redirect(!empty($u['must_change'])?'/?page=security':'/?page=dashboard'); }
 /** E-mel bertopeng untuk log: ad***@sekolah.edu.my */
 function mask_email(string $e): string { [$u,$d]=array_pad(explode('@',$e,2),2,''); return mb_substr($u,0,2).'***'.($d!==''?'@'.$d:''); }
+/** Sebab "tiada akaun": jika e-mel ditaip hampir sama (≤4 aksara beza) dengan akaun sekolah ini — biasanya salah taip atau
+ *  autofill pelayar daripada sekolah lain di domain yang sama — rekod kedua-duanya supaya pentadbir platform nampak bezanya. */
+function login_email_hint(string $email): string {
+    $best=null; $bd=5;
+    foreach(query('SELECT email FROM users WHERE school_id='.sid().' AND role="admin"')->fetchAll(PDO::FETCH_COLUMN) as $e){ $d=levenshtein($email,strtolower((string)$e)); if($d<$bd){ $bd=$d; $best=(string)$e; } }
+    return $best!==null?'tiada akaun dengan e-mel "'.$email.'" — hampir sama dengan '.$best.' (beza '.$bd.' aksara; salah taip atau autofill pelayar?)':'tiada akaun dengan e-mel '.mask_email($email);
+}
 function handle_auth(string $action): void {
  if($action==='logout'){ $imp=function_exists('impersonating')?impersonating():null; if(function_exists('imp_end_log')) imp_end_log(); if(isset($_SESSION['uid'])) audit('logout','users',(int)$_SESSION['uid']); $_SESSION=[]; session_regenerate_id(true); if($imp) imp_exit_page(sid()); redirect('/'); } // sesi sokongan: kembali ke panel platform
  if($action==='login'){
@@ -19,7 +26,7 @@ function handle_auth(string $action): void {
   $pwIn=input('password'); $pwOk=password_verify($pwIn,$hash) || (($pwT=trim($pwIn))!==$pwIn && $pwT!=='' && password_verify($pwT,$hash));
   if(!$pwOk || !$u){ shield_fail($email); if(login_captcha_needed($email)) $_SESSION['login_cap']=true;
    // Sebab untuk diagnosis pentadbir platform (Panel Platform → sekolah → Pentadbir). Tiada kata laluan direkod.
-   $why=$u?'kata laluan salah · '.mb_strlen($pwIn).' aksara'.($pwIn!==trim($pwIn)?' (ada ruang di hujung)':''):'tiada akaun dengan e-mel '.mask_email($email);
+   $why=$u?'kata laluan salah · '.mb_strlen($pwIn).' aksara'.($pwIn!==trim($pwIn)?' (ada ruang di hujung)':''):login_email_hint($email);
    audit('login_failed','users',$u?(int)$u['id']:null,$why); throw new DomainException('E-mel atau kata laluan tidak sah.'); }
   // Mesej status akaun hanya selepas kata laluan betul (tiada pendedahan akaun).
   if(!(int)$u['active']){
