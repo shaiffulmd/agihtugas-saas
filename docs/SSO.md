@@ -22,7 +22,7 @@ Pilihan dan dimatikan secara lalai. Bila diaktifkan, halaman log masuk sekolah m
 | Padanan pengguna | `users(school_id, email)`. Pengguna mesti sudah wujud dan aktif dalam UrusTugas. Peranan (Pentadbir/PK/Ketua/Guru) kekal dalam UrusTugas. |
 | 2FA | Jika portal mengesahkan 2FA (`amr: otp`), 2FA tempatan dilangkau. Jika tidak, aliran 2FA UrusTugas biasa terpakai. |
 | Tukar kata laluan wajib | Dilangkau untuk sesi SSO kerana kata laluan tempatan tidak digunakan. |
-| Langganan | Portal menghantar status ke `/sso-hook` dan dalam setiap log masuk, lalu `schools.expires_on` dikemas kini. Pro = tarikh tamat; Free/tiada = `NULL`. `school_plan()`, had Free dan `subscription_gate()` terus berfungsi tanpa diubah. |
+| Langganan | Portal menghantar status ke `/sso-hook` dan dalam setiap log masuk, tetapi hanya **melanjutkan** `schools.expires_on`: Pro → `max(semasa, tarikh portal)`. Free, tiada atau digantung dalam portal **tidak memendekkan** langganan yang dibayar melalui gerbang UrusTugas. Portal sendiri sudah menolak log masuk SSO bagi sekolah yang tidak melanggan. `school_plan()`, had Free dan `subscription_gate()` terus berfungsi tanpa diubah. |
 | Log keluar | Sesi SSO: selepas log keluar, pengguna dihantar ke `PORTAL/logout` supaya sesi portal turut tamat. |
 | Had IP / perisai | `user_ip_ok()` disemak. Log masuk SSO yang berjaya mengosongkan kiraan perisai. |
 | Audit | `login_sso`, `login_sso_pwd` (portal tanpa 2FA → 2FA tempatan), `login_sso_failed` (dengan sebab). Perubahan langganan: `school_sso_subscription` dalam log platform. |

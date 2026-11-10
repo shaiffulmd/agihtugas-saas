@@ -134,16 +134,17 @@ function sso_logout_redirect(): never {
     exit;
 }
 
-/** Status langganan daripada portal → schools.expires_on (pro: tarikh; free/none: NULL). Gate sedia ada (school_plan) terus terpakai. */
+/** Status langganan daripada portal hanya melanjutkan schools.expires_on (pro: max(semasa, portal); free/none: tiada perubahan), supaya bayaran terus dalam UrusTugas tidak dipendekkan. Gate sedia ada (school_plan) terus terpakai. */
 function sso_apply_subscription(array $sub,?int $schoolId=null): ?string {
     $plan=(string)($sub['plan']??''); if(!in_array($plan,['pro','free','none'],true)) return null;
-    $exp=null;
-    if($plan==='pro'){ $exp=(string)($sub['expires_on']??''); $d=DateTime::createFromFormat('!Y-m-d',$exp); if(!$d || $d->format('Y-m-d')!==$exp) return null; }
+    if($plan!=='pro') return $plan;
+    $exp=(string)($sub['expires_on']??''); $d=DateTime::createFromFormat('!Y-m-d',$exp); if(!$d || $d->format('Y-m-d')!==$exp) return null;
     $id=$schoolId??sid(); $cur=query('SELECT expires_on FROM schools WHERE id=?',[$id])->fetchColumn();
     if($cur===false) return null;
-    if(($cur?:null)!==$exp){
+    $cur=$cur?substr((string)$cur,0,10):'';
+    if($cur==='' || $cur<$exp){
         query('UPDATE schools SET expires_on=? WHERE id=?',[$exp,$id]);
-        if(function_exists('platform_log')) try { platform_log('school_sso_subscription',$id,$plan.($exp?' hingga '.$exp:'')); } catch(Throwable) {}
+        if(function_exists('platform_log')) try { platform_log('school_sso_subscription',$id,'pro hingga '.$exp.($cur!==''?' (sebelum: '.$cur.')':'')); } catch(Throwable) {}
     }
     return $plan;
 }
