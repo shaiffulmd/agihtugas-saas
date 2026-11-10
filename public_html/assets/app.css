@@ -1828,3 +1828,9 @@ body:has(.hb-modal){overflow:hidden}
 .pd-sec .notice{margin:.5rem 0 0}.pd-top{margin:.75rem 0 0!important;font-size:.85rem}
 @media(max-width:700px){.pd-toc ol{columns:1}.pd-table td:first-child{white-space:normal}}
 @media print{.pd-toc,.pd-top{display:none}.pd-sec{break-inside:avoid-page;border:0;box-shadow:none}}
+
+/* Log masuk tunggal melalui Portal Akaun (app/sso.php) */
+.sso-login{display:flex;flex-direction:column;gap:12px;margin:4px 0 14px}
+.sso-btn{width:100%;justify-content:center}
+.sso-or{display:flex;align-items:center;gap:10px;margin:0;font-size:.82rem}
+.sso-or::before,.sso-or::after{content:"";flex:1;height:1px;background:var(--line,#e3e6ee)}

@@ -5,10 +5,19 @@ if((string)($_GET['page']??'')==='sandaran_oauth' || (string)($_GET['p']??'')===
 // Kembali dari gerbang bayaran & callback gerbang: tanpa sesi (kuki SameSite=Strict tidak dihantar dari tapak gerbang; sesi baharu akan menimpa sesi pentadbir).
 // API v1 sekolah (/KOD/api/… atau kod.domain/api/…): JSON tanpa sesi/kuki.
 elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/api(/|$)#',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))){ define('URUS_API',true); define('NO_SESSION',true); }
+// Jubin "Aplikasi Saya" di Portal Akaun (domain lain) → /?page=sso_mula: kuki sesi SameSite=Strict tidak dihantar dari tapak lain.
+// Lantun sekali dari origin sendiri (tanpa memulakan sesi) supaya sesi sedia ada dikenali dan tidak ditimpa.
+elseif((string)($_GET['page']??'')==='sso_mula' && ($_SERVER['HTTP_SEC_FETCH_SITE']??'')==='cross-site' && ($_SERVER['REQUEST_METHOD']??'GET')==='GET'){
+ header('Content-Type: text/html; charset=utf-8'); header("Content-Security-Policy: default-src 'none'; base-uri 'none'"); header('Cache-Control: no-store'); header('Referrer-Policy: no-referrer');
+ $self=htmlspecialchars((string)($_SERVER['REQUEST_URI']??'/'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+ echo '<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url='.$self.'"><title>Membuka…</title></head><body><p><a href="'.$self.'">Teruskan →</a></p></body></html>'; exit;
+}
+// Webhook langganan daripada Portal Akaun (HMAC, JSON): tanpa sesi.
+elseif(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/sso-hook') define('NO_SESSION',true);
 elseif((string)($_GET['page']??'')==='bayar_kembali' || parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/bayar-callback') define('NO_SESSION',true);
 // robots.txt / sitemap.xml (platform, /KOD/ atau KOD.domain): tanpa sesi — perangkak tidak perlu kuki.
 elseif(preg_match('#^(/[A-Za-z]{3}[0-9]{4})?/(robots\.txt|sitemap\.xml)$#D',(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH))) define('NO_SESSION',true);
-$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi','enjin_actions','seo','panduan'] as $f) require $app.$f.'.php';
+$app=dirname(__DIR__).'/app/'; foreach(['bootstrap','actions','settings','users','install','integrity','images','pdf','mailer','captcha','accounts','richtext','avatars','addons','demo','changelog','hebahan','backup','impersonate','subscription','support','enjin','tugas_auto','kelulusan','surat_lantikan','organisasi','enjin_actions','seo','panduan','sso'] as $f) require $app.$f.'.php';
 // Webhook kemas kini daripada GitHub Actions (HMAC; sebelum semakan pemasangan supaya kemas kini skema juga boleh berjalan).
 if(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/kemaskini-hook'){ require_once dirname(__DIR__).'/app/updater.php'; upd_webhook(); }
 // Sistem belum dipasang / perlu naik taraf: jangan proses permintaan biasa.
@@ -21,6 +30,7 @@ if($appStatus!=='ready'){
  $msg=['not_installed'=>['Sistem belum dipasang','Pentadbir pelayan perlu menjalankan pemasang (php bin/install.php atau /install.php).'],'needs_upgrade'=>['Penyelenggaraan sedang berjalan','Pangkalan data perlu dinaik taraf. Pentadbir: jalankan php bin/upgrade.php atau buka /install.php.'],'broken'=>['Konfigurasi tidak lengkap','Fail kunci pemasangan wujud tetapi pangkalan data kosong. Semak tetapan DB dalam .env.']][$appStatus];
  error_page(503,$msg[1],['title'=>$msg[0],'no_db'=>true]);
 }
+if(parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH)==='/sso-hook') sso_hook(); // Portal Akaun → status langganan (app/sso.php)
 demo_maybe_reset(); // DEMO_MODE=1 sahaja: data dijana semula sekali sehari
 if(defined('URUS_API')){ require dirname(__DIR__).'/app/api.php'; api_main(); } // semakan IP, kecemasan & langganan dalam api_main() (respons JSON)
 // URL yang tidak wujud (cth. /abc atau /fail-hilang.png) → 404, bukan laman utama.
@@ -37,6 +47,10 @@ if(input('page','get')==='bayar_kembali') pay_return_page(); // tanpa sesi: stat
 emergency_guard(); // mod kecemasan platform: baca sahaja / tutup laman sekolah
 // Sesi sokongan platform: token sekali guna → sesi pentadbir; semakan semula setiap permintaan.
 if(input('page','get')==='masuk_platform') imp_enter();
+// Log masuk tunggal melalui Portal Akaun (app/sso.php): mula → portal → panggil balik; keluar → tamatkan sesi portal juga.
+if(input('page','get')==='sso_mula') sso_start();
+if(input('page','get')==='sso') sso_callback();
+if(input('page','get')==='sso_keluar') sso_logout_redirect();
 imp_check();
 if(!in_array($reqPath,['/','/index.php'],true)) error_page(404);
 // Halaman ralat untuk ErrorDocument Apache (.htaccess).
@@ -78,9 +92,9 @@ if($user && $page==='avatar') serve_avatar((int)input('id','get'));
 if($user && in_array($page,['users','settings','system','urus_akaun','sandaran'],true)) require_admin();
 // Edisi multi: integriti fail & sandaran ialah urusan platform (fail & pangkalan data dikongsi semua sekolah).
 if($user && in_array($page,['system','sandaran'],true)) error_page(403,'Integriti fail dan sandaran diurus oleh pentadbir platform.');
-if($user && !impersonating() && !empty($user['must_change']) && $page!=='security') redirect('/?page=security');
+if($user && !impersonating() && !sso_session() && !empty($user['must_change']) && $page!=='security') redirect('/?page=security'); // sesi SSO: kata laluan tempatan tidak digunakan
 // Dasar 2FA diketatkan selepas pengguna log masuk: wajib daftar sebelum meneruskan.
-if($user && !impersonating() && empty($user['must_change']) && !$user['totp_secret'] && twofa_required((string)$user['role']) && !in_array($page,['enroll','recovery'],true)) redirect('/?page=enroll');
+if($user && !impersonating() && !sso_mfa() && empty($user['must_change']) && !$user['totp_secret'] && twofa_required((string)$user['role']) && !in_array($page,['enroll','recovery'],true)) redirect('/?page=enroll');
 if($user && $page==='enroll' && $user['totp_secret']) redirect('/?page=security');
 header('X-Robots-Tag: noindex, nofollow'); // sistem dalaman & halaman log masuk sekolah: jangan diindeks
 require dirname(__DIR__).'/app/views.php';

@@ -907,6 +907,7 @@ app/
 app/platform.php
 app/tenant.php
 app/impersonate.php
+app/sso.php
 app/subscription.php
 app/registration.php
 app/legal.php

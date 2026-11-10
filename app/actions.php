@@ -10,7 +10,7 @@ function login_email_hint(string $email): string {
     return $best!==null?'tiada akaun dengan e-mel "'.$email.'" — hampir sama dengan '.$best.' (beza '.$bd.' aksara; salah taip atau autofill pelayar?)':'tiada akaun dengan e-mel '.mask_email($email);
 }
 function handle_auth(string $action): void {
- if($action==='logout'){ $imp=function_exists('impersonating')?impersonating():null; if(function_exists('imp_end_log')) imp_end_log(); if(isset($_SESSION['uid'])) audit('logout','users',(int)$_SESSION['uid']); $_SESSION=[]; session_regenerate_id(true); if($imp) imp_exit_page(sid()); redirect('/'); } // sesi sokongan: kembali ke panel platform
+ if($action==='logout'){ $imp=function_exists('impersonating')?impersonating():null; if(function_exists('imp_end_log')) imp_end_log(); if(isset($_SESSION['uid'])) audit('logout','users',(int)$_SESSION['uid']); $sso=function_exists('sso_session') && sso_session() && !$imp; $_SESSION=[]; session_regenerate_id(true); if($imp) imp_exit_page(sid()); redirect($sso?'/?page=sso_keluar':'/'); } // sesi sokongan: kembali ke panel platform
  if($action==='login'){
   $email=mb_substr(strtolower(trim(input('email'))),0,190); $ip=rate_key('login-ip',client_ip());
   if(!rate_allowed($ip,30)){ audit('login_blocked','users'); ip_block_auto(client_ip(),sid(),'Terlalu banyak cubaan log masuk sekolah'); throw new DomainException('Terlalu banyak cubaan. Cuba semula selepas 15 minit.'); }
