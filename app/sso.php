@@ -22,7 +22,6 @@ const SSO_FLOW_TTL=600, SSO_HOOK_SKEW=300;
 function sso_portal(): string { return rtrim(env('SSO_PORTAL_URL'),'/'); }
 function sso_enabled(): bool { return sso_portal()!=='' && env('SSO_CLIENT_ID')!=='' && env('SSO_CLIENT_SECRET')!==''; }
 function sso_b64url(string $raw): string { return rtrim(strtr(base64_encode($raw),'+/','-_'),'='); }
-function sso_redirect_uri(): string { return school_url(school()['code'],'/?page=sso'); }
 /** Sesi semasa dibuka melalui portal; ['mfa'=>bool] atau null. */
 function sso_session(): ?array { return isset($_SESSION['sso']) && is_array($_SESSION['sso'])?$_SESSION['sso']:null; }
 function sso_mfa(): bool { return !empty(sso_session()['mfa']); }
@@ -64,7 +63,7 @@ function sso_start(): never {
     if(current_user()) redirect('/?page=dashboard');
     $state=sso_b64url(random_bytes(24)); $verifier=sso_b64url(random_bytes(32));
     sso_flow_set(['state'=>$state,'verifier'=>$verifier,'school'=>sid(),'at'=>time()]);
-    $q=['response_type'=>'code','client_id'=>env('SSO_CLIENT_ID'),'redirect_uri'=>sso_redirect_uri(),'state'=>$state,
+    $q=['response_type'=>'code','client_id'=>env('SSO_CLIENT_ID'),'state'=>$state,
         'code_challenge'=>sso_b64url(hash('sha256',$verifier,true)),'code_challenge_method'=>'S256','school'=>school()['code']];
     header('Location: '.sso_portal().'/authorize?'.http_build_query($q)); exit;
 }
@@ -93,8 +92,7 @@ function sso_callback(): never {
     if(!$flow || !hash_equals((string)($flow['state']??''),input('state','get')))
         sso_fail('Permintaan log masuk tamat tempoh atau tidak sah. Cuba semula dari halaman log masuk.','state tidak sepadan / tamat',400);
     $code=input('code','get'); if($code==='' || strlen($code)>200) sso_fail('Kod log masuk tiada.','tiada kod',400);
-    [$status,$raw]=sso_http_post(sso_portal().'/token',['grant_type'=>'authorization_code','code'=>$code,'redirect_uri'=>sso_redirect_uri(),
-        'code_verifier'=>(string)$flow['verifier'],'client_id'=>env('SSO_CLIENT_ID'),'client_secret'=>env('SSO_CLIENT_SECRET')]);
+    [$status,$raw]=sso_http_post(sso_portal().'/token',['grant_type'=>'authorization_code','code'=>$code,'code_verifier'=>(string)$flow['verifier'],'client_id'=>env('SSO_CLIENT_ID'),'client_secret'=>env('SSO_CLIENT_SECRET')]);
     $t=json_decode($raw,true);
     if($status!==200 || !is_array($t)) sso_fail('Portal Akaun tidak dapat mengesahkan log masuk.','token HTTP '.$status.' '.(is_array($t)?($t['error']??''):mb_substr($raw,0,80)),502);
     // Semak respons ditujukan kepada aplikasi & sekolah ini.
