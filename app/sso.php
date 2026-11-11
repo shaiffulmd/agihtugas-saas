@@ -158,6 +158,11 @@ function sso_hook(): never {
     if(!ctype_digit($ts) || abs(time()-(int)$ts)>SSO_HOOK_SKEW) $out(401,['error'=>'stale']);
     if(!hash_equals(hash_hmac('sha256',$ts.'.'.$body,env('SSO_CLIENT_SECRET')),$sig)) $out(401,['error'=>'signature']);
     $d=json_decode($body,true);
+    if(is_array($d) && ($d['event']??'')==='members.list'){ // Portal Akaun → Import ahli: pengguna aktif sekolah ini (ditandatangani seperti webhook langganan)
+        $id=preg_match('/^[A-Z]{3}[0-9]{4}$/D',strtoupper((string)($d['school']??'')))?query('SELECT id FROM schools WHERE code=?',[strtoupper((string)$d['school'])])->fetchColumn():false;
+        if($id===false) $out(404,['error'=>'school_not_found']);
+        $out(200,['ok'=>true,'members'=>array_map(fn($r)=>['email'=>$r['email'],'name'=>$r['name'],'role'=>$r['role']==='admin'?'admin':'ahli','label'=>$r['role']],query("SELECT name,email,role FROM users WHERE school_id=? AND active=1 AND approval='approved' AND email<>''",[(int)$id])->fetchAll())]);
+    }
     if(!is_array($d) || ($d['event']??'')!=='subscription.updated' || !preg_match('/^[A-Z]{3}[0-9]{4}$/D',strtoupper((string)($d['school']??'')))) $out(400,['error'=>'payload']);
     $id=query('SELECT id FROM schools WHERE code=?',[strtoupper((string)$d['school'])])->fetchColumn();
     if($id===false) $out(404,['error'=>'school_not_found']);
