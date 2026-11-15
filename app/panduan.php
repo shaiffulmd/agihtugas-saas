@@ -16,7 +16,7 @@ function pd_link(string $page,string $label,string $role): string {
 /** Halaman bukan enjin yang boleh dibuka setiap peranan (selaras dengan menu dalam views.php). */
 function pd_role_pages(string $role): array {
     $all=['security','hebahan','versi','panduan'];
-    return $role==='admin'?array_merge($all,['dashboard','users','settings','urus_akaun','langganan','sokongan','ipsekat']):array_merge($all,$role==='pk'?['dashboard']:[]);
+    return $role==='admin'?array_merge($all,['dashboard','users','settings','tema','urus_akaun','langganan','sokongan','ipsekat']):array_merge($all,$role==='pk'?['dashboard']:[]);
 }
 
 /** Bahagian panduan: [id, tajuk, peranan yang melihat, fungsi kandungan]. */
@@ -54,7 +54,8 @@ function pd_sections(string $role): array {
 <?php }],
     ['sekolah','Profil sekolah, surat & sesi baharu',['admin'],function() use($L){ ?>
 <ul class="pd-list">
-<li><?= $L('settings','Tetapan & Tema') ?>: nama sekolah, jenis <strong>SK</strong> (Guru Besar) atau <strong>SMK</strong> (Pengetua), warna tema dan dasar 2FA.</li>
+<li><?= $L('settings','Tetapan') ?>: nama sekolah, logo, jenis <strong>SK</strong> (Guru Besar) atau <strong>SMK</strong> (Pengetua), dasar 2FA dan teks paparan.</li>
+<li><?= $L('tema','Tema') ?>: warna tema (pratetap atau tersuai) dan mod paparan cerah / gelap, dengan pratonton langsung.</li>
 <li><?= $L('sekolah','Profil Sekolah & Surat') ?>: alamat, rujukan surat, logo sekolah, gaya kepala surat (logo + Jata Negara) dan teks surat. Maklumat ini dicetak pada surat lantikan.</li>
 <li><strong>Mula sesi baharu</strong> (hujung/awal tahun, di Profil Sekolah & Surat): pilih tahun, kekalkan atau kosongkan lantikan tahun lepas, lepaskan lantikan guru bertukar keluar. Surat sesi lepas kekal boleh dicetak.</li>
 </ul>

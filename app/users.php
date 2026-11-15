@@ -68,7 +68,7 @@ const AUDIT_LABELS = [
     '2fa_failed'=>'Kod 2FA gagal','2fa_enabled'=>'2FA diaktifkan','2fa_disabled'=>'2FA dimatikan','password_changed'=>'Tukar kata laluan','admin_confirm_failed'=>'Pengesahan pentadbir gagal',
     'create'=>'Cipta','update'=>'Kemas kini','delete'=>'Padam','save'=>'Simpan','export'=>'Eksport CSV','download_pdf'=>'Muat turun PDF',
     'user_updated'=>'Kemas kini pengguna','user_access_changed'=>'Tukar akses pengguna','user_deactivated'=>'Nyahaktif pengguna','user_ips'=>'Had IP akaun',
-    'admin_password_reset'=>'Reset kata laluan (pentadbir)','admin_2fa_reset'=>'Reset 2FA (pentadbir)','settings_saved'=>'Simpan tetapan & tema',
+    'admin_password_reset'=>'Reset kata laluan (pentadbir)','admin_2fa_reset'=>'Reset 2FA (pentadbir)','settings_saved'=>'Simpan tetapan','theme_saved'=>'Simpan tema',
     'theme_reset'=>'Reset tema','logo_removed'=>'Buang logo','install'=>'Pemasangan','upgrade'=>'Naik taraf',
     'register'=>'Daftar kendiri','register_duplicate'=>'Cubaan daftar e-mel sedia ada','register_approved'=>'Lulus pendaftaran','register_rejected'=>'Tolak pendaftaran','email_verified'=>'Sahkan e-mel',
     'password_reset_requested'=>'Minta reset kata laluan','password_reset'=>'Reset kata laluan (e-mel)','login_inactive'=>'Log masuk akaun tidak aktif','login_ip_denied'=>'Log masuk ditolak (IP)','session_ip_denied'=>'Sesi ditolak (IP)','bot_blocked'=>'Bot disekat',

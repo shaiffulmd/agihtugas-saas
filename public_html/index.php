@@ -76,7 +76,7 @@ $user=current_user();
 if($user && !impersonating() && !user_ip_ok($user)){ audit('session_ip_denied','users',(int)$user['id']); $_SESSION=[]; error_page(403,'Akaun anda tidak dibenarkan dari alamat IP ini ('.client_ip().').'); }
 if(!$user){ if(isset($_SESSION['pending_uid'])) $page=$page==='enroll'?'enroll':'verify'; elseif(!in_array($page,ACCOUNT_PAGES,true)) $page='login'; }
 elseif(in_array($page,ACCOUNT_PAGES,true) || in_array($page,['login','verify'],true)) redirect('/?page=dashboard'); // sudah log masuk
-elseif(!in_array($page,['dashboard','security','users','enroll','recovery','settings','system','avatar','urus_akaun','versi','langganan','sokongan','bayar_qr','ipsekat','hebahan','sandaran','aset','panduan',...array_keys(ENGINE_PAGES)],true)) error_page(404);
+elseif(!in_array($page,['dashboard','security','users','enroll','recovery','settings','tema','system','avatar','urus_akaun','versi','langganan','sokongan','bayar_qr','ipsekat','hebahan','sandaran','aset','panduan',...array_keys(ENGINE_PAGES)],true)) error_page(404);
 // Halaman enjin mengikut peranan; GB/Pengetua & guru tiada dashboard perancangan.
 if($user && isset(ENGINE_PAGES[$page]) && !in_array($page,engine_pages((string)$user['role']),true)) error_page(403,'Peranan anda tidak membenarkan halaman ini.');
 if($user && $page==='dashboard' && in_array($user['role'],['head','teacher'],true) && empty($user['must_change'])) redirect($user['role']==='head'?'/?page=kelulusan':'/?page=tugas_saya');
@@ -89,7 +89,7 @@ if($user && isset($_GET['pdf'])) download_document_pdf($page);
 if($user && $page==='bayar_qr') pay_serve_qr();
 if($user && $page==='langganan' && (int)input('resit','get')>0){ require_admin(); $rp=payment_get((int)input('resit','get')); if(!$rp || (int)$rp['school_id']!==sid()) error_page(404); pay_receipt_page($rp); }
 if($user && $page==='avatar') serve_avatar((int)input('id','get'));
-if($user && in_array($page,['users','settings','system','urus_akaun','sandaran'],true)) require_admin();
+if($user && in_array($page,['users','settings','tema','system','urus_akaun','sandaran'],true)) require_admin();
 // Edisi multi: integriti fail & sandaran ialah urusan platform (fail & pangkalan data dikongsi semua sekolah).
 if($user && in_array($page,['system','sandaran'],true)) error_page(403,'Integriti fail dan sandaran diurus oleh pentadbir platform.');
 if($user && !impersonating() && !sso_session() && !empty($user['must_change']) && $page!=='security') redirect('/?page=security'); // sesi SSO: kata laluan tempatan tidak digunakan

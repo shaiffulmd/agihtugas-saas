@@ -478,7 +478,7 @@ function tugas_saya_page(array $user): void {
 
 /* ---------- Profil sekolah & surat (pentadbir) ---------- */
 function sekolah_page(): void { $b=branding_profile(); ?>
-<div class="page-heading"><div><span class="eyebrow teal">PENGURUSAN SEKOLAH</span><h1>Profil Sekolah &amp; Surat</h1><p class="muted">Maklumat ini dicetak pada surat lantikan. Nama & jenis sekolah diurus di <a class="text-link" href="/?page=settings">Tetapan &amp; Tema</a>.</p></div></div>
+<div class="page-heading"><div><span class="eyebrow teal">PENGURUSAN SEKOLAH</span><h1>Profil Sekolah &amp; Surat</h1><p class="muted">Maklumat ini dicetak pada surat lantikan. Nama & jenis sekolah diurus di <a class="text-link" href="/?page=settings">Tetapan</a>.</p></div></div>
 <section class="panel padded"><h3>Profil untuk surat</h3><form method="post" class="form-grid"><?= csrf_field() ?><input type="hidden" name="action" value="sekolah_profil">
 <label class="field">Nama <?= e(head_title()) ?><input name="principal" value="<?= e(setting('principal')) ?>" required maxlength="160"></label><label class="field">Label sesi / tahun<input name="session_year" type="number" value="<?= e(setting('session_year')?:date('Y')) ?>" required min="2020" max="2100"></label>
 <label class="field">Awalan nombor rujukan surat<input name="letter_reference" value="<?= e(setting('letter_reference')) ?>" required maxlength="160"></label>

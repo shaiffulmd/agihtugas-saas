@@ -52,7 +52,7 @@ function directory_search_form(string $q,string $state,string $layout,array $sta
 <button class="lx-btn lx-btn-primary lx-btn-lg" type="submit">Cari sekolah <?= icon('arrow','lx-go') ?></button>
 </form>
 <?php }
-/** Logo sekolah (Tetapan & Tema sekolah) untuk direktori; tiada logo = ikon sekolah. */
+/** Logo sekolah (Tetapan sekolah) untuk direktori; tiada logo = ikon sekolah. */
 function directory_logo_url(array $s): ?string { return !empty($s['has_logo'])?'/?page=sch-logo&kod='.rawurlencode((string)$s['code']).'&v='.rawurlencode((string)($s['logo_v']??'')):null; }
 function directory_school_mark(array $s,string $class='dir-school-icon'): string {
     $u=directory_logo_url($s); return '<span class="'.$class.($u?' has-logo':'').'">'.($u?'<img src="'.e($u).'" alt="" loading="lazy" decoding="async">':icon('school')).'</span>';

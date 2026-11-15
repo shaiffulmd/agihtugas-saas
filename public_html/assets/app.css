@@ -389,6 +389,9 @@ dd{margin:.2rem 0 0;white-space:pre-wrap}
 .settings-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
 .settings-preview{position:sticky;top:20px}
 .settings-actions{margin-top:14px}
+.theme-link-card{display:flex;flex-direction:column;gap:10px;color:var(--ink);text-decoration:none}
+.theme-link-card:hover{border-color:var(--primary)}
+.theme-link-card strong{font-size:13px}
 .settings-actions .btn{width:100%;padding:14px}
 .settings-form .form-grid{padding:18px 0 0}
 .settings-form .panel>.muted{margin-top:6px}

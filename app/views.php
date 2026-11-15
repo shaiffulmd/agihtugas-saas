@@ -8,11 +8,11 @@ foreach(['Perancangan'=>['guru','subjek','jawatan','agihan','analisis','organisa
 if($role!=='admin') $nav['Utama'][]=['hebahan','info','Hebahan',function_exists('hebahan_unread_count')?hebahan_unread_count():0];
 if($role==='admin'){
  $nav['Utama'][]=['hebahan','info','Hebahan Guru'];
- $nav['Sistem']=[['users','key','Pengguna & Audit'],['sekolah','school','Profil Sekolah & Surat'],['settings','sliders','Tetapan & Tema'],['api','link','API & Integrasi'.(page_pro_feature('api')?' · Pro':'')],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
+ $nav['Sistem']=[['users','key','Pengguna & Audit'],['sekolah','school','Profil Sekolah & Surat'],['settings','sliders','Tetapan'],['tema','palette','Tema'],['api','link','API & Integrasi'.(page_pro_feature('api')?' · Pro':'')],['urus_akaun','link','Pendaftaran & E-mel'],['ipsekat','ban','Sekatan IP']];
  $nav['Langganan & bantuan']=[['langganan','card','Langganan'],['sokongan','help','Sokongan']];
 } // Integriti & Sandaran: peringkat pelayan → panel platform
 $nav['Akaun']=[['security','user','Profil & Keselamatan'],['panduan','book','Panduan Penggunaan']];
-const PAGE_TITLES=['dashboard'=>'Dashboard','panduan'=>'Panduan Penggunaan','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan & Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
+const PAGE_TITLES=['dashboard'=>'Dashboard','panduan'=>'Panduan Penggunaan','security'=>'Profil & Keselamatan','ipsekat'=>'Sekatan IP','users'=>'Pengguna & Audit','settings'=>'Tetapan','tema'=>'Tema','recovery'=>'Kod Pemulihan','urus_akaun'=>'Pendaftaran & E-mel','versi'=>'Versi & Perubahan','langganan'=>'Langganan','sokongan'=>'Sokongan','hebahan'=>'Hebahan'];
 $pageTitle=PAGE_TITLES[$page]??ENGINE_PAGES[$page]??'Halaman';
 function notice(string $text,string $class='info'): void { echo '<div role="status" class="notice '.e($class).'">'.e($text).'</div>'; }
 function field(string $key,array $f,mixed $value=''): void {
@@ -78,6 +78,7 @@ function badge(mixed $text): string { $good=in_array($text,['Aktif','Selesai','M
 <?php elseif($page==='recovery'): ?><div class="page-heading"><div><h1>Simpan kod pemulihan anda.</h1><p class="muted">Setiap kod boleh digunakan sekali sebagai ganti TOTP.</p></div></div><section class="panel padded"><?php if(isset($_SESSION['recovery'])): ?><p>Kod ini dipaparkan sekali sahaja. Salin dan simpan dalam pengurus kata laluan anda.</p><div class="recovery-grid"><?php foreach($_SESSION['recovery'] as $code): ?><code><?= e($code) ?></code><?php endforeach; ?></div><?php unset($_SESSION['recovery']); else: notice('Kod telah dipaparkan. Gunakan salinan yang anda simpan.'); endif; ?><a class="btn primary" href="/">Teruskan ke dashboard →</a></section>
 <?php elseif($page==='users'): users_page(); ?>
 <?php elseif($page==='settings'): settings_page(); ?>
+<?php elseif($page==='tema'): tema_page(); ?>
 <?php else: ?><div class="empty"><h1>Halaman tidak dijumpai</h1><a href="/">Kembali ke dashboard</a></div><?php endif; ?>
 <footer class="footer"><span><strong><?= e(app_name()) ?></strong> <span>· <?= e(school_name()) ?></span> <a class="app-version" href="/?page=versi" data-version="<?= e(APP_VERSION) ?>" title="Lihat perubahan terkini"><?= e(app_version_label()) ?></a></span><span>◈ &nbsp; Data sekolah anda, dalam jagaan anda.</span></footer></main></div>
 <?php endif; ?></body></html>

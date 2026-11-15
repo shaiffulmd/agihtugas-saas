@@ -125,9 +125,17 @@ function handle_settings(string $action): never {
     require_admin();
     if($action==='settings_reset_theme'){
         $p=THEME_PRESETS['delima']; save_settings(['theme_preset'=>'delima','color_primary'=>$p['primary'],'color_dark'=>$p['dark'],'color_accent'=>$p['accent'],'theme_mode'=>'light']);
-        audit('theme_reset','settings'); flash('Tema dikembalikan kepada tetapan asal.'); redirect('/?page=settings');
+        audit('theme_reset','settings'); flash('Tema dikembalikan kepada tetapan asal.'); redirect('/?page=tema');
+    }
+    if($action==='settings_tema'){ // halaman Tema: warna & mod paparan sahaja
+        $preset=input('theme_preset');
+        $colors=theme_validate($preset,input('color_primary'),input('color_dark'),input('color_accent'));
+        $mode=input('theme_mode'); if(!isset(THEME_MODES[$mode])) throw new DomainException('Mod paparan tidak sah.');
+        save_settings(['theme_preset'=>$preset,'color_primary'=>$colors['primary'],'color_dark'=>$colors['dark'],'color_accent'=>$colors['accent'],'theme_mode'=>$mode]);
+        audit('theme_saved','settings',null,$preset.' · '.THEME_MODES[$mode]); flash('Tema berjaya disimpan.'); redirect('/?page=tema');
     }
     if($action==='settings_remove_logo'){ save_settings(['logo'=>'']); audit('logo_removed','settings'); flash('Logo dibuang.'); redirect('/?page=settings'); }
+    if($action!=='settings_save') error_page(400);
     $text=['app_name'=>[60,true],'school_name'=>[150,true],'school_tagline'=>[80,false],'login_headline'=>[90,true],'login_text'=>[240,false],'banner_title'=>[90,true],'banner_text'=>[240,false]];
     $out=[];
     foreach($text as $k=>[$max,$required]){
@@ -139,19 +147,9 @@ function handle_settings(string $action): never {
         if($k==='school_name' ? seo_has_link($v) : seo_too_many_links($v)) throw new DomainException('Medan "'.setting_label($k).'" mengandungi pautan yang tidak dibenarkan.');
         $out[$k]=$v;
     }
-    $preset=input('theme_preset');
-    if($preset!=='custom' && !isset(THEME_PRESETS[$preset])) throw new DomainException('Pilihan tema tidak sah.');
-    $colors=$preset==='custom'
-        ? ['primary'=>strtolower(input('color_primary')),'dark'=>strtolower(input('color_dark')),'accent'=>strtolower(input('color_accent'))]
-        : THEME_PRESETS[$preset];
-    foreach(['primary','dark','accent'] as $c) if(!valid_hex($colors[$c])) throw new DomainException('Kod warna mesti dalam format #rrggbb.');
-    if(contrast($colors['primary'],'#ffffff')<4.5) throw new DomainException('Warna utama terlalu cerah: teks putih pada butang sukar dibaca (kontras '.number_format(contrast($colors['primary'],'#ffffff'),1).':1, minimum 4.5:1). Pilih warna lebih gelap.');
-    if(contrast($colors['dark'],'#ffffff')<7) throw new DomainException('Warna gelap (banner & halaman log masuk) perlu lebih gelap untuk teks putih (minimum 7:1).');
-    $mode=input('theme_mode'); if(!isset(THEME_MODES[$mode])) throw new DomainException('Mod paparan tidak sah.');
     $tp=input('twofa_policy'); if(!in_array($tp,['admin','all'],true)) throw new DomainException('Pilihan 2FA tidak sah.');
     $out['twofa_policy']=$tp;
     $out['school_type']=input('school_type')==='SK'?'SK':'SMK';
-    $out+=['theme_preset'=>$preset,'color_primary'=>$colors['primary'],'color_dark'=>$colors['dark'],'color_accent'=>$colors['accent'],'theme_mode'=>$mode];
     $f=$_FILES['logo']??null;
     if($f && is_array($f) && ($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){
         if(is_array($f['error']) || $f['error']!==UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) throw new DomainException('Muat naik logo gagal. Had saiz 2 MB.');
@@ -161,7 +159,16 @@ function handle_settings(string $action): never {
     // Nama & jenis sekolah masuk ke snapshot revisi: hanya boleh diubah ketika agihan dalam Draf.
     if(($out['school_name']!==school_name() || $out['school_type']!==school_type()) && workflow_state()['status']!=='draft') throw new DomainException('Nama dan jenis sekolah dikunci semasa semakan / kelulusan. Kembalikan agihan kepada draf dahulu.');
     save_settings($out); audit('settings_saved','settings');
-    flash('Tetapan & tema berjaya disimpan.'); redirect('/?page=settings');
+    flash('Tetapan berjaya disimpan.'); redirect('/?page=settings');
+}
+/** Sahkan pilihan tema: pratetap atau warna tersuai, dengan semakan kontras teks putih. Pulang [primary,dark,accent]. */
+function theme_validate(string $preset,string $primary,string $dark,string $accent): array {
+    if($preset!=='custom' && !isset(THEME_PRESETS[$preset])) throw new DomainException('Pilihan tema tidak sah.');
+    $c=$preset==='custom' ? ['primary'=>strtolower($primary),'dark'=>strtolower($dark),'accent'=>strtolower($accent)] : THEME_PRESETS[$preset];
+    foreach(['primary','dark','accent'] as $k) if(!valid_hex($c[$k])) throw new DomainException('Kod warna mesti dalam format #rrggbb.');
+    if(contrast($c['primary'],'#ffffff')<4.5) throw new DomainException('Warna utama terlalu cerah: teks putih pada butang sukar dibaca (kontras '.number_format(contrast($c['primary'],'#ffffff'),1).':1, minimum 4.5:1). Pilih warna lebih gelap.');
+    if(contrast($c['dark'],'#ffffff')<7) throw new DomainException('Warna gelap (banner & halaman log masuk) perlu lebih gelap untuk teks putih (minimum 7:1).');
+    return ['primary'=>$c['primary'],'dark'=>$c['dark'],'accent'=>$c['accent']];
 }
 function setting_label(string $k): string {
     return ['app_name'=>'Nama aplikasi','school_name'=>'Nama sekolah','school_tagline'=>'Slogan sekolah','login_headline'=>'Tajuk halaman log masuk','login_text'=>'Teks halaman log masuk','banner_title'=>'Tajuk banner dashboard','banner_text'=>'Teks banner dashboard'][$k]??$k;
