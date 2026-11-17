@@ -685,6 +685,28 @@ function subject_save(int $id,array $d): array {
     }
     return [$id,$n];
 }
+/** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */
+function subject_set_teachers(int $subjectId,array $ids): array {
+    $s=subject_find($subjectId); if(!$s) throw new EngineError('Mata pelajaran tidak ditemui.',404,'not_found');
+    $want=array_flip(array_map('intval',$ids)); $key=mb_strtolower($s['name']); $add=0; $del=0;
+    foreach(query('SELECT id,name,specialty FROM teachers WHERE school_id='.sid())->fetchAll() as $t){
+        $tok=specialty_tokens((string)$t['specialty']); $has=in_array($key,array_map('mb_strtolower',$tok),true); $on=isset($want[(int)$t['id']]);
+        if($on===$has) continue;
+        $new=$on?[...$tok,$s['name']]:array_values(array_filter($tok,fn($x)=>mb_strtolower($x)!==$key)); $sp=implode(', ',$new);
+        if(mb_strlen($sp)>160) throw new EngineError('Kepakaran '.$t['name'].' melebihi 160 aksara jika '.$s['name'].' ditambah. Kemas kini kepakaran guru itu di Pengurusan Guru.');
+        query('UPDATE teachers SET specialty=? WHERE id=? AND school_id='.sid(),[$sp,(int)$t['id']]); $on?$add++:$del++;
+    }
+    return [$add,$del];
+}
+/** Jawatan dengan perkataan berulang berturut-turut (cth. "Ketua Panitia Panitia Kimia"): [{id,old,new}]. */
+function positions_repeated_words(): array {
+    $out=[]; foreach(query('SELECT id,name FROM positions WHERE school_id='.sid().' ORDER BY name')->fetchAll() as $p){
+        $new=trim((string)preg_replace('/\b(\p{L}[\p{L}\p{N}\.]*)(\s+\1\b)+/iu','$1',$p['name']));
+        if($new!==$p['name'] && $new!=='') $out[]=['id'=>(int)$p['id'],'old'=>$p['name'],'new'=>$new];
+    }
+    return $out;
+}
+function positions_fix_repeated_words(): int { $n=0; foreach(positions_repeated_words() as $r) $n+=query('UPDATE positions SET name=? WHERE id=? AND school_id='.sid(),[$r['new'],$r['id']])->rowCount(); return $n; }
 /** Padam MP daripada katalog. Kepakaran guru tidak diubah (dipaparkan sebagai teks bebas). */
 function subject_delete(int $id): array {
     $s=subject_find($id); if(!$s) throw new EngineError('Mata pelajaran tidak ditemui.',404,'not_found');

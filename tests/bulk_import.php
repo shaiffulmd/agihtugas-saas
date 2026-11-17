@@ -130,6 +130,12 @@ with_school($S,function()use(&$tmp){
     query('UPDATE teachers SET capacity=1 WHERE id=?',[$fx2]); query('UPDATE positions SET weight=3 WHERE school_id='.sid().' AND name="AJK T6 Ujian"'); $t=array_values(array_filter(allocation_compliance()['teachers'],fn($t)=>$t['id']===$fx2));
     check($t && str_contains(implode(' ',$t[0]['issues']),'melebihi kapasiti'),'guru melebihi kapasiti dilaporkan');
     query('UPDATE teachers SET capacity=25,units="t6" WHERE id=?',[$fx2]);
+    echo "Guru MP & nama jawatan berulang\n";
+    [$sk]=subject_save(0,['name'=>'Kimia Ujian','grp'=>'STEM']); $g1=$fx2; $g2=(int)query('SELECT id FROM teachers WHERE school_id='.sid().' AND name="Guru D"')->fetchColumn();
+    check(subject_set_teachers($sk,[$g1,$g2])===[2,0] && str_contains(teacher_find($g1)['specialty'],'Kimia Ujian'),'MP ditambah pada kepakaran guru yang ditanda');
+    check(subject_set_teachers($sk,[$g2])===[0,1] && !str_contains(teacher_find($g1)['specialty'],'Kimia Ujian'),'guru dinyahtanda: MP dibuang daripada kepakaran');
+    $pk=position_save(0,['name'=>'Ketua Panitia Panitia Kimia (1/2)','category'=>'Kurikulum','weight'=>5]); $rw=array_column(positions_repeated_words(),'new','id');
+    check(($rw[$pk]??'')==='Ketua Panitia Kimia (1/2)' && positions_fix_repeated_words()>=1 && position_find($pk)['name']==='Ketua Panitia Kimia (1/2)','perkataan berulang dalam nama jawatan dikemaskan');
     echo "Kemas kini maklumat guru pukal\n";
     $r=bulk_guru_update_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['set']===['teaching_periods'=>28,'exam_class'=>1] && $r[1]['set']===[],'tajuk dikenali; sel kosong = kekal');

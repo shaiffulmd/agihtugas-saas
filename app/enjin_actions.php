@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
+const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','subjek_guru','jawatan_kemas_nama','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -21,7 +21,7 @@ function handle_engine_action(string $action): never {
     $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal','guru_masa_preview'=>'pukal','guru_masa_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
+    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','subjek_guru'=>'subjek','jawatan_kemas_nama'=>'jawatan','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
@@ -69,6 +69,10 @@ function handle_engine_action(string $action): never {
                 [$sid,$n]=subject_save($id,['name'=>input('name'),'grp'=>input('grp')]); audit($id?'subject_update':'subject_create','subjects',$sid,mb_substr(input('name'),0,120));
                 $msg='Mata pelajaran disimpan.'.($n?' Kepakaran '.$n.' guru dikemas kini dengan nama baharu.':''); break;
             case 'subjek_delete': $s=subject_delete($id); audit('subject_delete','subjects',$id,(string)$s['name']); $msg='Mata pelajaran "'.$s['name'].'" dipadam daripada senarai. Kepakaran guru tidak diubah.'; break;
+            case 'subjek_guru':
+                $ids=array_filter(is_array($_POST['teacher_ids']??null)?$_POST['teacher_ids']:[],'is_string'); [$na,$nd]=subject_set_teachers($id,$ids); $s=subject_find($id);
+                audit('subject_teachers','subjects',$id,(string)$s['name'].": +$na −$nd"); $msg='Guru '.$s['name'].' dikemas kini'.($na||$nd?" ($na ditambah, $nd dibuang).":': tiada perubahan.'); break;
+            case 'jawatan_kemas_nama': $n=positions_fix_repeated_words(); audit('position_rename','positions',null,$n.' nama dikemaskan'); $msg=$n.' nama jawatan dikemaskan (perkataan berulang dibuang).'; break;
             case 'subjek_import':
                 $tpl=input('template'); $n=subjects_import($tpl,array_filter((array)($_POST['names']??[]),'is_string')); audit('subject_import','subjects',null,$tpl.': '.$n);
                 $msg=$n.' mata pelajaran ditambah daripada senarai standard.'; $anchor='&templat='.rawurlencode($tpl); break;
