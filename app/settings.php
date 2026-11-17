@@ -36,6 +36,7 @@ function setting_defaults(): array {
         // Surat lantikan (Profil Sekolah & Surat). Logo surat & Jata Negara = id aset dalam school_assets.
         'principal' => '', 'session_year' => '', 'leadership' => '', // leadership: jawatan utama sekolah (JSON, app/organisasi.php)
          'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual',
+        'index_ketua_bidang' => '1', // Ketua Bidang dikira dalam indeks beban (Carta Organisasi)
         'unit_ppki' => '0', 'unit_t6' => '0', // unit jawatan PPKI / Tingkatan 6 (label pada jawatan, app/enjin.php POSITION_UNITS)
         'school_address' => '', 'school_tel' => '', 'school_fax' => '', 'letter_mode' => 'satu', 'letter_effective' => '',
         'letter_para' => 'Kerjasama dan komitmen tuan/puan dalam melaksanakan tanggungjawab ini amat dihargai. Sebarang perubahan tugas akan dimaklumkan oleh pihak pentadbiran sekolah.', 'letter_slogan' => "\"MALAYSIA MADANI\"\n\"BERKHIDMAT UNTUK NEGARA\"", 'school_logo_id' => '', 'national_crest_id' => '',

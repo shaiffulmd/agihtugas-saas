@@ -26,9 +26,13 @@ with_school($A,function(){
     echo "Simpan\n";
     $n=leadership_save(['pengetua'=>(string)$t['Aminah'],'pk_pentadbiran'=>(string)$t['Badrul'],'pk_hem'=>(string)$t['Chong'],'pk_koku'=>'','pk_t6'=>null],[['Bahasa',(string)$t['Devi']],['  Sains  &  Matematik ',(string)$t['Ezani']],['',(string)$t['Farah']],['Kemanusiaan','']]);
     $l=leadership();
-    check($n===5 && $l['posts']['pengetua']===$t['Aminah'] && $l['posts']['pk_koku']===null,'jawatan disimpan; 5 guru ditanda Pentadbir');
+    check($n===3 && $l['posts']['pengetua']===$t['Aminah'] && $l['posts']['pk_koku']===null,'jawatan disimpan; Pengetua & 2 PK ditanda Pentadbir');
     check(array_column($l['bidang'],0)===['Bahasa','Sains & Matematik','Kemanusiaan'] && $l['bidang'][1][1]===$t['Ezani'],'bidang: ruang dikemaskan, nama kosong dibuang');
-    check((int)teacher_find($t['Devi'])['index_exempt']===1 && (int)teacher_find($t['Farah'])['index_exempt']===0,'Ketua Bidang ditanda Pentadbir; guru bidang dibuang tidak');
+    check((int)teacher_find($t['Devi'])['index_exempt']===0 && (int)teacher_find($t['Farah'])['index_exempt']===0,'lalai: Ketua Bidang dikira dalam indeks beban; guru bidang dibuang tidak ditanda');
+    $l0=leadership(); leadership_save(array_map(fn($v)=>$v!==null?(string)$v:null,$l0['posts']),array_map(fn($b)=>[$b[0],$b[1]!==null?(string)$b[1]:null],$l0['bidang']),false);
+    check((int)teacher_find($t['Devi'])['index_exempt']===1 && setting('index_ketua_bidang')==='0','pilihan dinyahtanda: Ketua Bidang ditanda Pentadbir');
+    leadership_save(array_map(fn($v)=>$v!==null?(string)$v:null,$l0['posts']),array_map(fn($b)=>[$b[0],$b[1]!==null?(string)$b[1]:null],$l0['bidang']),true);
+    check((int)teacher_find($t['Devi'])['index_exempt']===0 && (int)teacher_find($t['Aminah'])['index_exempt']===1 && setting('index_ketua_bidang')==='1','ditanda semula: Ketua Bidang dikira; Pengetua kekal Pentadbir');
     check(setting('principal')==='Cikgu Aminah','nama Pengetua mengisi nama pada surat');
     check((int)query('SELECT COUNT(*) FROM assignments WHERE school_id='.sid())->fetchColumn()===0 && (int)query('SELECT COUNT(*) FROM positions WHERE school_id='.sid())->fetchColumn()===0,'jawatan utama bukan lantikan / jawatan katalog — tiada surat lantikan (dilantik JPN)');
     check(leadership_by_teacher()[$t['Chong']]==='PK HEM' && leadership_by_teacher()[$t['Devi']]==='Ketua Bidang Bahasa','lencana jawatan utama setiap guru (label pendek PK …)');

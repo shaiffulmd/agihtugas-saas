@@ -3,7 +3,8 @@ declare(strict_types=1);
 /* Jawatan utama sekolah (Pengetua / Guru Besar, Penolong Kanan, Ketua Bidang) & carta organisasi ikut bidang.
  * Jawatan utama BUKAN jawatan dalam katalog (tiada pemberat, tidak diagih): disimpan sebagai JSON dalam tetapan sekolah 'leadership':
  *   {"posts":{"pengetua":12,"pk_pentadbiran":34,…},"bidang":[["Bahasa",56],["Sains & Matematik",null],…]}
- * Guru yang ditanda ditetapkan "Pentadbir" (index_exempt) supaya tidak dikira dalam indeks beban. Nama Pengetua mengisi nama pada surat.
+ * Pengetua & PK ditetapkan "Pentadbir" (index_exempt) supaya tidak dikira dalam indeks beban. Ketua Bidang mengajar & memegang jawatan,
+ * jadi dikira secara lalai (tetapan 'index_ketua_bidang' = 1; 0 = Ketua Bidang turut ditanda Pentadbir). Nama Pengetua mengisi nama pada surat.
  * Disunting semasa Draf sahaja (index_exempt & nama Pengetua turut dinilai dalam semakan / surat). */
 
 /** Jawatan utama: kunci => [label penuh (carta), bidang tugas yang dipimpin dalam carta, SMK sahaja?, label pendek (borang & lencana)].
@@ -34,8 +35,9 @@ function leadership(): array {
     return ['posts'=>$posts,'bidang'=>$bidang];
 }
 /** Simpan jawatan utama. $posts: kunci => ID guru|null; $bidang: [[nama, ID guru|null], …] (nama kosong dibuang).
- *  Seorang guru hanya satu jawatan utama. Pulangkan bilangan guru yang baru ditanda Pentadbir. */
-function leadership_save(array $posts,array $bidang): int {
+ *  Seorang guru hanya satu jawatan utama. $countKB: Ketua Bidang dikira dalam indeks beban (null = ikut tetapan semasa).
+ *  Pulangkan bilangan guru yang baru ditanda Pentadbir. */
+function leadership_save(array $posts,array $bidang,?bool $countKB=null): int {
     $valid=leader_posts(); $used=[]; $outPosts=[];
     $teacher=function(mixed $v,string $label)use(&$used): ?int {
         if($v===null || $v==='' || $v===0) return null;
@@ -56,7 +58,12 @@ function leadership_save(array $posts,array $bidang): int {
     if(count($outB)>12) throw new EngineError('Maksimum 12 bidang.');
     engine_setting_set(['leadership'=>json_encode(['posts'=>$outPosts,'bidang'=>$outB],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
     if($outPosts['pengetua']) engine_setting_set(['principal'=>(string)teacher_find($outPosts['pengetua'])['name']]); // nama pada surat lantikan
-    $n=0; foreach(array_keys($used) as $id) $n+=query('UPDATE teachers SET index_exempt=1 WHERE school_id='.sid().' AND id=? AND index_exempt=0',[$id])->rowCount();
+    $countKB??=setting('index_ketua_bidang')!=='0'; engine_setting_set(['index_ketua_bidang'=>$countKB?'1':'0']);
+    $kb=array_flip(array_filter(array_column($outB,1))); $n=0;
+    foreach(array_keys($used) as $id){
+        if(isset($kb[$id]) && $countKB){ query('UPDATE teachers SET index_exempt=0 WHERE school_id='.sid().' AND id=?',[$id]); continue; }
+        $n+=query('UPDATE teachers SET index_exempt=1 WHERE school_id='.sid().' AND id=? AND index_exempt=0',[$id])->rowCount();
+    }
     return $n;
 }
 /** Jawatan utama setiap guru: ID guru => label (cth. "Penolong Kanan HEM", "Ketua Bidang Bahasa"). */

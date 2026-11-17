@@ -58,8 +58,8 @@ function handle_engine_action(string $action): never {
                 $posts=$_POST['post']??[]; $bn=$_POST['bidang_nama']??[]; $bt=$_POST['bidang_guru']??[];
                 if(!is_array($posts) || !is_array($bn) || !is_array($bt)) throw new EngineError('Borang jawatan utama tidak sah.');
                 $bidang=[]; foreach(array_values($bn) as $i=>$n) if(is_string($n)) $bidang[]=[$n,is_string($bt[$i]??null)?$bt[$i]:null];
-                $n=leadership_save(array_map(fn($v)=>is_string($v)?$v:null,$posts),$bidang); audit('leadership','settings');
-                $msg='Jawatan utama sekolah disimpan.'.($n?' '.$n.' guru ditanda Pentadbir (tidak dikira dalam indeks beban).':''); break;
+                $n=leadership_save(array_map(fn($v)=>is_string($v)?$v:null,$posts),$bidang,input('kb_dikira')==='1'); audit('leadership','settings');
+                $msg='Jawatan utama sekolah disimpan.'.($n?' '.$n.' guru ditanda Pentadbir (tidak dikira dalam indeks beban).':'').(input('kb_dikira')==='1'?' Ketua Bidang dikira dalam indeks beban.':''); break;
             case 'tanda_selesai':
                 $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru'); $done=input('done')==='1'; workflow_flag_resolve($tid,$done,$me);
                 audit($done?'flag_resolved':'flag_reopened','teachers',$tid,(string)(teacher_find($tid)['name']??''));
