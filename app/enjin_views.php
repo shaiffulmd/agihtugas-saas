@@ -11,9 +11,11 @@ function index_badge(array $t): string {
     return '<span class="index-cell">'.($t['index']!==null?'<strong>'.number_format($t['index'],2).'</strong> ':'').'<span class="badge'.($cls!==''?' '.$cls:'').'">'.e($label).'</span></span>';
 }
 /** Amaran indeks guru (selain label utama) dalam bahasa biasa. */
+/** Label amaran indeks; "Banyak jawatan" disertakan bilangan jawatan guru, cth. "Banyak jawatan (13)". */
+function index_warning_label(string $k,array $t): string { return INDEX_WARNINGS[$k].($k==='banyak'?' ('.(int)$t['task_count'].')':''); }
 function index_warnings_html(array $t): string {
     $w=array_values(array_diff($t['warnings'],['terbeban','kurang'])); if(!$w) return '';
-    return '<small class="cell-sub warning-text">'.e(implode(' · ',array_map(fn($k)=>INDEX_WARNINGS[$k],$w))).'</small>';
+    return '<small class="cell-sub warning-text">'.e(implode(' · ',array_map(fn($k)=>index_warning_label($k,$t),$w))).'</small>';
 }
 function engine_delete_button(string $action,int $id,string $msg='Padam rekod ini? Rekod yang masih mempunyai lantikan perlu dilepaskan dahulu.'): string {
     return '<form method="post" class="delete-form" data-confirm="'.e($msg).'">'.csrf_field().'<input type="hidden" name="action" value="'.e($action).'"><input type="hidden" name="id" value="'.$id.'"><button class="delete-btn" type="submit">Padam</button></form>';
@@ -340,7 +342,7 @@ function analisis_page(array $user): void {
 <p class="muted spaced">Guru biasa sekolah ini (<?= (int)$B['counted'] ?> guru dikira): <strong><?= $num($B['teaching']) ?></strong> masa mengajar seminggu (<?= e($B['teaching_basis']) ?>) · skor tugas <strong><?= $num($B['score']) ?></strong> (<?= e($B['score_basis']) ?>) · bahagian mengajar <strong><?= (int)round($B['share']*100) ?>%</strong>.</p>
 <?= units_on()?unit_load_panel():'' ?>
 <section class="panel spaced"><div class="panel-heading"><div><h3>Perlu perhatian <span class="count"><?= count($attention) ?></span></h3><p class="muted">Agihkan semula tugas daripada guru terbeban kepada guru yang masih ada ruang.</p></div><a class="text-link" href="/?page=agihan">Agihan Tugas →</a></div>
-<?php if($attention): ?><div class="table-wrap"><table><thead><tr><th>Guru</th><th>Indeks</th><th>Amaran / tindakan</th></tr></thead><tbody><?php foreach($attention as $t): ?><tr><td><strong><?= $edit($t) ?></strong><small class="cell-sub"><?= (int)$t['task_count'] ?> tugas · <?= (int)$t['teaching_periods'] ?> masa</small></td><td><?= index_badge($t) ?></td><td><?= e(implode(' · ',array_map(fn($k)=>['terbeban'=>'Pindahkan sebahagian tugas kepada guru yang ada ruang','kurang'=>'Boleh menerima tugas tambahan'][$k]??INDEX_WARNINGS[$k],$t['warnings']))) ?></td></tr><?php endforeach; ?></tbody></table></div>
+<?php if($attention): ?><div class="table-wrap"><table><thead><tr><th>Guru</th><th>Indeks</th><th>Amaran / tindakan</th></tr></thead><tbody><?php foreach($attention as $t): ?><tr><td><strong><?= $edit($t) ?></strong><small class="cell-sub"><?= (int)$t['task_count'] ?> tugas · <?= (int)$t['teaching_periods'] ?> masa</small></td><td><?= index_badge($t) ?></td><td><?= e(implode(' · ',array_map(fn($k)=>['terbeban'=>'Pindahkan sebahagian tugas kepada guru yang ada ruang','kurang'=>'Boleh menerima tugas tambahan'][$k]??index_warning_label($k,$t),$t['warnings']))) ?></td></tr><?php endforeach; ?></tbody></table></div>
 <?php else: ?><p class="empty">Tiada amaran. Agihan tugas seimbang.</p><?php endif; ?></section>
 <section class="panel spaced"><div class="panel-heading"><div><h3>Indeks setiap guru <span class="count"><?= count($all) ?></span></h3><p class="muted">Disusun daripada indeks tertinggi.</p></div></div><?= search_box('jadual-indeks','Cari nama guru…') ?>
 <div class="table-wrap"><table id="jadual-indeks"><thead><tr><th>Guru</th><th>Masa mengajar</th><th>Nisbah mengajar</th><th>Skor tugas</th><th>Nisbah tugas</th><th>Indeks beban</th></tr></thead><tbody>
@@ -368,7 +370,7 @@ function teacher_load_panel(array $t,array $idx,array $positions,array $ranked):
     $h='<section class="panel spaced load-focus" id="beban-guru"><div class="panel-heading"><div><span class="eyebrow teal">URUS BEBAN GURU</span><h3>'.e($t['name']).'</h3><p class="muted">'.(int)$t['task_count'].' tugas · '.(int)$t['load'].' / '.(int)$t['capacity'].' mata · masa mengajar '.((int)$t['teaching_periods']?:'—').'</p></div><div class="button-group">'.index_badge($t).'<a class="btn sm primary" href="#tambah-tugas">'.icon('plus').'Tambah tugas</a><a class="btn sm outline" href="/?page=guru&amp;edit='.$id.'#editor">Sunting profil</a><a class="btn sm outline" href="/?page=agihan">Tutup ×</a></div></div>';
     $ri=workflow_return_info(); if($ri && in_array($id,$ri['flags'],true)){ $r=$ri['resolved'][$id]??null;
         $h.='<div class="padded-x flag-row"><span class="badge '.($r?'green">✓ Selesai dibaiki':'warn">Ditanda oleh '.e(role_label((string)$ri['role'])).' untuk semakan semula').'</span>'.flag_resolve_button($id,!$r,'guru:'.$id).'</div>'; }
-    if($w=array_diff($t['warnings'],['terbeban','kurang'])) $h.='<p class="padded-x warning-text">'.e(implode(' · ',array_map(fn($k)=>INDEX_WARNINGS[$k],$w))).'</p>';
+    if($w=array_diff($t['warnings'],['terbeban','kurang'])) $h.='<p class="padded-x warning-text">'.e(implode(' · ',array_map(fn($k)=>index_warning_label($k,$t),$w))).'</p>';
     $h.='<div class="table-wrap"><table><thead><tr><th>Jawatan dipegang</th><th>Skor</th><th>Pindahkan kepada guru lain / lepaskan</th></tr></thead><tbody>';
     // Calon pindahan: 25 guru dikira dengan indeks terendah (sekolah besar: elak ribuan pilihan). Guru lain melalui "Tetapkan lantikan".
     // Jawatan yang menyebut MP (cth. Ketua Panitia Bahasa Melayu): guru yang mengajar MP itu (★) dan MP sekumpulan (☆) disenaraikan
