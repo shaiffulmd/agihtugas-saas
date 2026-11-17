@@ -77,6 +77,34 @@ function allocation_limits(array $t,array $p,array $rules): ?string {
     if(($t['categories'][$p['category']]??0)+1>$rules['category_limits'][$p['category']]) return 'Had bidang '.$p['category'];
     return null;
 }
+/** Semakan pematuhan agihan semasa terhadap Pusat Syarat (syarat hanya dikuatkuasakan oleh enjin automatik; lantikan manual
+ *  & import tidak disekat). Pulangkan teachers: [{id,name,issues[]}] (had melebihi), positions: [{position,teacher,issue}] (kelayakan). */
+function allocation_compliance(): array {
+    $state=allocation_state(); $rules=$state['rules']; $th=$rules['heavy_threshold'];
+    $T=[]; foreach($state['teachers'] as $t) $T[$t['id']]=$t+['load'=>0,'tasks'=>0,'heavy'=>0,'cats'=>array_fill_keys(CATEGORIES,0)];
+    $P=array_column($state['positions'],null,'id'); $pos=[];
+    foreach($state['assignments'] as $a){ $p=$P[$a['position_id']]??null; $tid=$a['teacher_id']; if(!$p || !isset($T[$tid])) continue; $t=&$T[$tid];
+        $t['load']+=$p['weight']; $t['tasks']++; if($p['weight']>=$th) $t['heavy']++; $t['cats'][$p['category']]++;
+        $rule=$state['position_rules'][$p['id']]??[]; $why=null;
+        if(($t['status']??'aktif')!=='aktif') $why=$t['status']==='bertukar'?'Guru bertukar keluar':'Guru bercuti';
+        elseif(!unit_allows($t,$p)) $why='Bukan guru '.(POSITION_UNITS[$p['unit']??'sekolah']??'');
+        elseif(($rule['fixed_teacher_id']??null)!==null && $tid!==$rule['fixed_teacher_id']) $why='Bukan penyandang tetap ('.(($T[$rule['fixed_teacher_id']]['name']??null)?:'guru lain').')';
+        elseif(!empty($rule['allowed_teachers']) && !in_array($tid,$rule['allowed_teachers'],true)) $why='Di luar senarai guru layak';
+        elseif(($rule['required_specialty']??'')!=='' && mb_stripos((string)$t['specialty'],$rule['required_specialty'])===false) $why='Kepakaran bukan '.$rule['required_specialty'];
+        if($why) $pos[]=['position'=>$p['name'],'position_id'=>(int)$p['id'],'teacher'=>$t['name'],'issue'=>$why];
+        unset($t);
+    }
+    $out=[];
+    foreach($T as $t){ if(!$t['tasks']) continue; $i=[];
+        if($rules['respect_capacity'] && $t['load']>$t['capacity']) $i[]=$t['load'].' / '.$t['capacity'].' mata (melebihi kapasiti)';
+        if($t['tasks']>$rules['max_tasks']) $i[]=$t['tasks'].' tugas (had '.$rules['max_tasks'].')';
+        if($t['heavy']>$rules['max_heavy']) $i[]=$t['heavy'].' tugas berat (had '.$rules['max_heavy'].')';
+        foreach($t['cats'] as $c=>$n) if($n>$rules['category_limits'][$c]) $i[]=$c.' '.$n.' (had '.$rules['category_limits'][$c].')';
+        if($i) $out[]=['id'=>$t['id'],'name'=>$t['name'],'issues'=>$i,'tasks'=>$t['tasks']];
+    }
+    usort($out,fn($a,$b)=>count($b['issues'])<=>count($a['issues']) ?: $b['tasks']<=>$a['tasks']);
+    return ['teachers'=>$out,'positions'=>$pos,'rules'=>$rules,'assigned'=>count($state['assignments'])];
+}
 function allocation_add(array &$t,array $p,int $threshold): void {
     $t['load']+=$p['weight']; $t['score']+=$p['score']; $t['task_count']++; if($p['weight']>=$threshold) $t['heavy']++; $t['categories'][$p['category']]++;
 }
