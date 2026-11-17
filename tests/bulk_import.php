@@ -65,6 +65,32 @@ with_school($S,function()use(&$tmp){
     $rows=''; for($i=1;$i<=502;$i++) $rows.='<row r="'.$i.'"><c r="A'.$i.'" t="inlineStr"><is><t>G'.$i.'</t></is></c><c r="C'.$i.'" t="inlineStr"><is><t>Sains</t></is></c><c r="D'.$i.'"><v>20</v></c></row>';
     $tmp[]=$p=xlsx_make($rows);
     rejects(fn()=>xlsx_text($p),'lebih 500 baris ditolak','500');
+
+    echo "Import agihan (guru + jawatan + lantikan)\n";
+    $root=dirname(__DIR__).'/public_html/assets/templat/';
+    $rows=bulk_agihan_parse(xlsx_text($root.'agihan.xlsx',BULK_AGIHAN_MAX));
+    check(count($rows)===5 && $rows[0]['teacher']==='Nur Aisyah Abdullah' && $rows[0]['weight']===3 && $rows[4]['weight']===null,'templat agihan.xlsx: tajuk dilangkau, pemberat kosong = null');
+    $plan=bulk_agihan_plan($rows);
+    check(count($plan['teachers_new'])===3 && count($plan['positions_new'])===5 && $plan['positions_new'][1]['name']==='AJK JK Disiplin (1/2)' && $plan['positions_new'][4]['weight']===1,
+        'rancangan: 3 guru & 5 jawatan baharu, jawatan berkongsi → (1/2), pemberat kosong ikut peranan (Guru Penasihat = 1)');
+    [$nt,$np,$na]=bulk_agihan_apply($plan);
+    check($nt===3 && $np===5 && $na===5 && engine_counts()['assigned']===5,'laksana: guru, jawatan & 5 lantikan dicipta');
+    $again=bulk_agihan_plan(bulk_agihan_parse("nur  aisyah ABDULLAH,Setiausaha JK Disiplin,hem,3\n".implode("\n",array_map(fn($r)=>$r['teacher'].','.$r['position'].','.$r['category'],array_slice($rows,1)))));
+    check(!$again['teachers_new'] && !$again['positions_new'] && !array_filter($again['items'],fn($i)=>$i['status']==='baharu'),'import semula: nama dipadan tanpa beza huruf/ruang, lantikan sedia ada dilangkau');
+    rejects(fn()=>bulk_agihan_plan(bulk_agihan_parse("Guru D,AJK JK Disiplin,HEM\n")),'jawatan sedia ada tanpa tempat kosong ditolak','kosong');
+    bulk_positions_insert(bulk_positions_validate([['name'=>'AJK Kebersihan','category'=>'HEM','weight'=>2,'count'=>2]]));
+    $p2=bulk_agihan_plan(bulk_agihan_parse("Guru D,AJK Kebersihan,HEM\nSiti Hajar Saad,AJK Kebersihan,HEM\nGuru D,AJK Kebersihan,HEM\n"));
+    check(!$p2['positions_new'] && $p2['reused']===2 && $p2['duplicates']===1 && $p2['items'][0]['position']==='AJK Kebersihan (1/2)' && count($p2['teachers_new'])===1,'tempat kosong jawatan sedia ada diisi; baris berulang dilangkau');
+    bulk_agihan_apply($p2);
+    check(engine_counts()['assigned']===7 && engine_counts()['teachers']===4,'tempat sedia ada dilantik tanpa jawatan pendua');
+    $p3=bulk_agihan_plan(bulk_agihan_parse("Guru D,AJK Rumah Biru,Kokurikulum\n,AJK Rumah Biru,Kokurikulum\nGuru E,AJK Rumah Biru,Kokurikulum\n"));
+    check(count($p3['positions_new'])===3 && $p3['items'][2]['status']==='kosong' && $p3['items'][2]['position']==='AJK Rumah Biru (3/3)' && count($p3['teachers_new'])===1,'nama guru kosong → tempat kosong dikira dalam (k/n), dicipta terakhir');
+    $before=engine_counts(); bulk_agihan_apply($p3); $after=engine_counts();
+    check($after['positions']-$before['positions']===3 && $after['assigned']-$before['assigned']===2 && $after['vacant']-$before['vacant']===1,'tempat kosong dicipta tanpa lantikan');
+    rejects(fn()=>bulk_agihan_plan(bulk_agihan_parse("A,Ketua X,HEM,3\nB,Ketua X,HEM,4\n")),'pemberat berbeza bagi jawatan sama ditolak','pemberat berbeza');
+    rejects(fn()=>bulk_agihan_parse("A,AJK X,PPKI\n"),'bidang tidak sah ditolak','bidang');
+    rejects(fn()=>bulk_agihan_parse("A,AJK X,HEM,11\n"),'pemberat di luar 1–10 ditolak','pemberat');
+    rejects(fn()=>bulk_agihan_parse(str_repeat("A,AJK X,HEM\n",2001)),'lebih 2,000 baris ditolak','2,000');
 });
 } finally { foreach($tmp as $f) @unlink($f); if($s=school_find('UJP9108')) school_delete($s); }
 echo "\n$checks semakan import pukal lulus.\n";

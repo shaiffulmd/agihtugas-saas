@@ -83,6 +83,7 @@ function pd_sections(string $role): array {
 <li>Setiap jawatan ada <strong>bidang</strong> (Pentadbiran, Kurikulum, HEM, Kokurikulum) dan <strong>pemberat 1–10</strong> mengikut beban sebenar. Jawatan standard: Berat 4–5, Sederhana 3, Ringan 1–2.</li>
 <li><?= $L('jawatan','Jawatan & Pemberat') ?> → <em>Jawatan standard</em> (SMK): tanda jawatan yang ada di sekolah dan tambah serentak. Jawatan berbilang (cth. Guru Tingkatan) ada medan bilangan.</li>
 <li><?= $L('pukal','Tambah Jawatan Pukal') ?>: tampal daripada Excel atau muat naik fail dengan lajur <code>nama, bidang, pemberat, bilangan</code>. Bilangan 3 menghasilkan "Nama (1/3)…(3/3)".</li>
+<li><?= $L('pukal','Tambah Jawatan Pukal') ?> → <em>Import agihan tugas</em>: satu fail dengan lajur <code>nama guru, jawatan, bidang, pemberat</code> (satu baris = satu lantikan) mencipta guru &amp; jawatan yang belum ada dan terus melantik guru. Sesuai untuk memindahkan analisis jawatankuasa sedia ada.</li>
 </ul>
 <?php }],
     ['organisasi','Carta organisasi',['admin','pk','head'],function() use($L,$head){ ?>

@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply',
+const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -19,9 +19,9 @@ function handle_engine_action(string $action): never {
     else require_planner();
     // Ciri Pro (pakej Free): disemak sebelum transaksi.
     $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
-        'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal'][$action]??null;
+        'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal',
+    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
@@ -97,6 +97,16 @@ function handle_engine_action(string $action): never {
                 $d=$_SESSION['jawatan_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new AllocationError('Pratonton pukal tidak sah. Jana semula.',409);
                 $ids=bulk_positions_insert(bulk_positions_validate(array_map(fn($r)=>$r+['count'=>1],$d['rows']))); unset($_SESSION['jawatan_pukal']);
                 audit('position_bulk','positions',null,count($ids).' jawatan'); $msg=count($ids).' jawatan ditambah secara pukal.'; break;
+            case 'agihan_bulk_preview':
+                $rows=bulk_agihan_parse(bulk_source('csv','bulk_text',BULK_AGIHAN_MAX,262144)); $plan=bulk_agihan_plan($rows);
+                $_SESSION['agihan_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'hash'=>hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)),'sid'=>sid()];
+                db()->commit(); redirect('/?page=pukal#agihan-hasil');
+            case 'agihan_bulk_apply':
+                $d=$_SESSION['agihan_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new EngineError('Pratonton import agihan tidak sah. Jana semula.',409);
+                $plan=bulk_agihan_plan($d['rows']); // dikira semula: guru / jawatan mungkin berubah sejak pratonton
+                if(!hash_equals($d['hash'],hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)))) throw new EngineError('Data guru atau jawatan telah berubah sejak pratonton. Semak semula senarai sebelum mengimport.',409);
+                [$nt,$np,$na]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
+                audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan"); $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan."; break;
             case 'agih':
                 $pid=post_int('position_id',1,PHP_INT_MAX,'Jawatan'); $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru');
                 $aid=assign_position($pid,$tid); audit('assign','assignments',$aid,'jawatan #'.$pid.' → guru #'.$tid); $msg='Agihan tugas dikemas kini.';

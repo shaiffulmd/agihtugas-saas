@@ -164,10 +164,96 @@ function bulk_teachers_validate(array $rows): array {
     }
     return $out;
 }
+/* ---------- Import agihan (lajur: nama_guru, jawatan, bidang[, pemberat]) ----------
+ * Satu fail → guru baharu, jawatan baharu & lantikan sekali gus (cth. salinan analisis jawatankuasa sekolah).
+ * - Guru dipadan ikut nama (tanpa beza huruf / ruang berganda); nama baharu dicipta dengan kapasiti 25.
+ * - Baris dengan jawatan + bidang yang sama dikumpul: seorang guru → "Nama", beberapa guru → "Nama (1/3)", "Nama (2/3)"…
+ * - Jawatan yang sudah wujud dalam katalog (nama asal atau "Nama (k/n)", bidang sama) diguna semula: guru yang sudah
+ *   memegangnya dilangkau, tempat kosong diisi mengikut susunan. Tempat kosong tidak cukup → ditolak (katalog tidak diubah).
+ * - Pemberat kosong → skor peranan yang sepadan dengan awalan nama jawatan (cth. "AJK …" = 1), jika tiada → 1.
+ * - Nama guru kosong → tempat lantikan dicipta tanpa penyandang (cth. guru yang telah bertukar); diabaikan jika jawatan sudah wujud. */
+const BULK_AGIHAN_COLS=[['nama_guru','nama','guru','teacher'],['jawatan','nama_jawatan','position'],['bidang','kategori','category'],['pemberat','mata','weight']];
+const BULK_AGIHAN_MAX=2000;
+function bulk_name_key(string $s): string { return mb_strtolower(trim((string)preg_replace('/\s+/u',' ',$s))); }
+function bulk_agihan_parse(string $text): array {
+    if(strlen($text)>262144) throw new EngineError('Fail / teks import agihan maksimum 256 KB.');
+    $cats=array_combine(array_map('mb_strtolower',CATEGORIES),CATEGORIES); $rows=[];
+    $clean=fn(string $v)=>trim((string)preg_replace('/\s+/u',' ',$v));
+    foreach(csv_rows($text,BULK_AGIHAN_COLS,3,4,BULK_AGIHAN_MAX) as $i=>$r){
+        $line=$i+1; $t=$clean($r[0]); $p=$clean($r[1]); $c=$cats[mb_strtolower($clean($r[2]))]??null; $w=$clean($r[3]??'');
+        if(mb_strlen($t)>160) throw new EngineError("Baris $line: nama guru maksimum 160 aksara.");
+        if($p==='' || mb_strlen($p)>145) throw new EngineError("Baris $line: nama jawatan diperlukan (maksimum 145 aksara).");
+        if($c===null) throw new EngineError("Baris $line: bidang mesti Pentadbiran, Kurikulum, HEM atau Kokurikulum.");
+        if($w!=='' && (!ctype_digit($w) || (int)$w<1 || (int)$w>10)) throw new EngineError("Baris $line: pemberat mesti nombor bulat 1–10 (atau kosong).");
+        $rows[]=['teacher'=>$t,'position'=>$p,'category'=>$c,'weight'=>$w===''?null:(int)$w];
+    }
+    if(!$rows) throw new EngineError('Tiada baris untuk diimport.');
+    return $rows;
+}
+/** Rancang import agihan tanpa mengubah data. Pulangkan:
+ *  items: [teacher, tkey, tid|null, position (nama akhir), category, weight, pid|null (tempat sedia ada), pnew|null (indeks positions_new), status baharu|sedia|kosong]
+ *  teachers_new: [tkey=>nama], positions_new: [[name,category,weight,role_id]], reused (tempat sedia ada diisi), duplicates (baris berulang dilangkau). */
+function bulk_agihan_plan(array $rows): array {
+    $T=[]; foreach(query('SELECT id,name FROM teachers WHERE school_id='.sid())->fetchAll() as $t) $T[bulk_name_key($t['name'])]=(int)$t['id'];
+    $groups=[]; $dup=0;
+    foreach($rows as $r){
+        $g=bulk_name_key($r['position']).'|'.$r['category'];
+        $groups[$g]??=['name'=>$r['position'],'category'=>$r['category'],'weight'=>null,'teachers'=>[],'vacant'=>0];
+        if($r['weight']!==null){
+            if($groups[$g]['weight']!==null && $groups[$g]['weight']!==$r['weight']) throw new EngineError('Jawatan "'.$r['position'].'" ('.$r['category'].'): pemberat berbeza dalam fail ('.$groups[$g]['weight'].' dan '.$r['weight'].').');
+            $groups[$g]['weight']=$r['weight'];
+        }
+        if($r['teacher']===''){ $groups[$g]['vacant']++; continue; }
+        $k=bulk_name_key($r['teacher']); if(isset($groups[$g]['teachers'][$k])){ $dup++; continue; }
+        $groups[$g]['teachers'][$k]=$r['teacher'];
+    }
+    $P=[];
+    foreach(query('SELECT p.id,p.name,p.category,p.weight,a.teacher_id FROM positions p LEFT JOIN assignments a ON a.position_id=p.id AND a.school_id=p.school_id WHERE p.school_id='.sid().' ORDER BY p.id')->fetchAll() as $p)
+        $P[bulk_name_key((string)preg_replace('/\s*\(\d+\/\d+\)$/u','',$p['name'])).'|'.$p['category']][]=$p;
+    $roles=roles_all(); $match=$roles?:array_map(fn($x)=>['id'=>null,'name'=>$x[0],'score'=>$x[1]],ROLE_STANDARD);
+    $items=[]; $newT=[]; $newP=[]; $reused=0;
+    $tref=function(string $k,string $name)use(&$T,&$newT): ?int { if(isset($T[$k])) return $T[$k]; $newT[$k]??=$name; return null; };
+    foreach($groups as $grp){
+        $existing=$P[bulk_name_key($grp['name']).'|'.$grp['category']]??[];
+        if($existing){
+            $held=[]; $vacant=[];
+            foreach($existing as $p){ if($p['teacher_id']!==null) $held[(int)$p['teacher_id']]=$p; else $vacant[]=$p; }
+            $need=[];
+            foreach($grp['teachers'] as $k=>$name){
+                $tid=$tref($k,$name);
+                if($tid!==null && isset($held[$tid])){ $p=$held[$tid]; $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$tid,'position'=>$p['name'],'category'=>$grp['category'],'weight'=>(int)$p['weight'],'pid'=>(int)$p['id'],'pnew'=>null,'status'=>'sedia']; }
+                else $need[]=[$k,$name,$tid];
+            }
+            if(count($need)>count($vacant)) throw new EngineError('Jawatan "'.$grp['name'].'" ('.$grp['category'].') sudah ada dalam katalog dengan '.count($existing).' tempat, '.count($vacant).' kosong — fail memerlukan '.count($need).' lagi. Tambah tempat lantikan di Jawatan & Pemberat atau buang baris berkenaan.');
+            foreach($need as $i=>[$k,$name,$tid]){ $p=$vacant[$i]; $reused++; $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$tid,'position'=>$p['name'],'category'=>$grp['category'],'weight'=>(int)$p['weight'],'pid'=>(int)$p['id'],'pnew'=>null,'status'=>'baharu']; }
+            continue;
+        }
+        $role=$grp['weight']===null?role_match($grp['name'],$match):null;
+        $weight=$grp['weight']??($role?(int)$role['score']:1); $n=count($grp['teachers'])+$grp['vacant']; $i=0;
+        foreach([...array_map(null,array_keys($grp['teachers']),array_values($grp['teachers'])),...array_fill(0,$grp['vacant'],['',''])] as [$k,$name]){
+            $i++; $title=$grp['name'].($n>1?" ($i/$n)":'');
+            $newP[]=['name'=>$title,'category'=>$grp['category'],'weight'=>$weight,'role_id'=>$role && $role['id']!==null?(int)$role['id']:null];
+            $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$name===''?null:$tref($k,$name),'position'=>$title,'category'=>$grp['category'],'weight'=>$weight,'pid'=>null,'pnew'=>count($newP)-1,'status'=>$name===''?'kosong':'baharu'];
+        }
+    }
+    return ['items'=>$items,'teachers_new'=>$newT,'positions_new'=>$newP,'reused'=>$reused,'duplicates'=>$dup];
+}
+/** Laksana rancangan bulk_agihan_plan() (dalam transaksi pemanggil). Pulangkan [guru baharu, jawatan baharu, lantikan baharu]. */
+function bulk_agihan_apply(array $plan): array {
+    free_guard('guru',count($plan['teachers_new'])); free_guard('jawatan',count($plan['positions_new']));
+    $tid=[]; foreach($plan['teachers_new'] as $k=>$name){ query('INSERT INTO teachers (school_id,name,email,specialty,capacity) VALUES ('.sid().',?,"","",25)',[$name]); $tid[$k]=(int)db()->lastInsertId(); }
+    $pid=[]; foreach($plan['positions_new'] as $i=>$p){ query('INSERT INTO positions (school_id,name,category,weight,role_id) VALUES ('.sid().',?,?,?,?)',[$p['name'],$p['category'],$p['weight'],$p['role_id']]); $pid[$i]=(int)db()->lastInsertId(); }
+    $n=0;
+    foreach($plan['items'] as $it){
+        if($it['status']!=='baharu') continue;
+        query('INSERT INTO assignments (school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$it['tid']??$tid[$it['tkey']],$it['pid']??$pid[$it['pnew']]]); $n++;
+    }
+    return [count($tid),count($pid),$n];
+}
 /** Normalkan tajuk lajur untuk padanan: "Masa Mengajar" / "masa-mengajar" → masa_mengajar. */
 function bulk_header_key(string $h): string { return trim((string)preg_replace('/[\s\-]+/u','_',mb_strtolower(trim($h))),'_'); }
-/** Baca CSV / lajur bertab. $cols: alias tajuk bagi setiap lajur (ikut kedudukan) — baris pertama dilangkau jika ia baris tajuk. Setiap baris mesti $min–$max lajur. */
-function csv_rows(string $text,array $cols,int $min,int $max): array {
+/** Baca CSV / lajur bertab. $cols: alias tajuk bagi setiap lajur (ikut kedudukan) — baris pertama dilangkau jika ia baris tajuk. Setiap baris mesti $min–$max lajur; maksimum $maxRows baris. */
+function csv_rows(string $text,array $cols,int $min,int $max,int $maxRows=500): array {
     $text=(string)preg_replace('/^\xEF\xBB\xBF/','',$text);
     $first=strtok($text,"\r\n"); $delim=str_contains((string)$first,"\t")?"\t":',';
     $s=fopen('php://temp','r+'); fwrite($s,$text); rewind($s); $rows=[]; $isFirst=true;
@@ -177,13 +263,13 @@ function csv_rows(string $text,array $cols,int $min,int $max): array {
             $row=array_map(fn($c)=>trim((string)$c),$row);
             if($isFirst){ $isFirst=false; $hit=count($row)>=$min && count($row)<=count($cols); foreach($row as $i=>$c) $hit=$hit && in_array(bulk_header_key($c),$cols[$i]??[],true); if($hit) continue; }
             if(count($row)<$min || count($row)>$max) throw new EngineError('Bilangan lajur tidak sah pada baris '.(count($rows)+1).'.');
-            $rows[]=$row; if(count($rows)>500) throw new EngineError('Maksimum 500 baris bagi satu import.');
+            $rows[]=$row; if(count($rows)>$maxRows) throw new EngineError('Maksimum '.number_format($maxRows).' baris bagi satu import.');
         }
     } finally { fclose($s); }
     return $rows;
 }
 /** Baca teks tampal atau fail CSV / Excel (.xlsx) yang dimuat naik (satu sumber sahaja). */
-function bulk_source(string $field='csv',string $textField='bulk_text'): string {
+function bulk_source(string $field='csv',string $textField='bulk_text',int $maxRows=500,int $csvBytes=131072): string {
     $text=input($textField); $f=$_FILES[$field]??null;
     if(is_array($f) && ($f['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){
         if(is_array($f['error']) || $f['error']!==UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) throw new EngineError('Muat naik fail gagal. Cuba sekali lagi.');
@@ -192,21 +278,21 @@ function bulk_source(string $field='csv',string $textField='bulk_text'): string 
         if($ext==='xls' || str_starts_with($magic,"\xD0\xCF\x11\xE0")) throw new EngineError('Format Excel lama (.xls) tidak disokong. Dalam Excel: Fail → Simpan Sebagai → Buku Kerja Excel (.xlsx) atau CSV.');
         if($ext==='xlsx' || str_starts_with($magic,"PK\x03\x04")){
             if($f['size']>2097152) throw new EngineError('Fail Excel maksimum 2 MB.');
-            return xlsx_text($tmp);
+            return xlsx_text($tmp,$maxRows);
         }
-        if($f['size']>131072) throw new EngineError('Fail CSV maksimum 128 KB.');
+        if($f['size']>$csvBytes) throw new EngineError('Fail CSV maksimum '.intdiv($csvBytes,1024).' KB.');
         $text=(string)file_get_contents($tmp);
     }
     return $text;
 }
 /** Helaian pertama fail .xlsx → teks bertab (setiap sel dipetik) untuk csv_rows(). Tanpa pustaka luar: ZipArchive + SimpleXML. */
-function xlsx_text(string $path): string {
+function xlsx_text(string $path,int $maxRows=500): string {
     if(!class_exists('ZipArchive')) throw new EngineError('Pelayan tidak menyokong fail Excel (sambungan PHP zip tiada). Simpan sebagai CSV atau tampal senarai.');
     $z=new ZipArchive(); if($z->open($path,ZipArchive::RDONLY)!==true) throw new EngineError('Fail Excel tidak dapat dibaca. Simpan semula sebagai .xlsx atau CSV.');
     $bad=fn()=>new EngineError('Fail Excel tidak sah atau rosak. Simpan semula sebagai .xlsx atau CSV.');
     try {
         // Had saiz XML selepas nyahmampat (elak bom zip); entiti luaran tidak dimuat (LIBXML_NONET).
-        $read=function(string $n)use($z): ?string { $st=$z->statName($n); if($st===false) return null; if($st['size']>8388608) throw new EngineError('Fail Excel terlalu besar (maksimum 500 baris).'); $x=$z->getFromName($n); return $x===false?null:$x; };
+        $read=function(string $n)use($z): ?string { $st=$z->statName($n); if($st===false) return null; if($st['size']>8388608) throw new EngineError('Fail Excel terlalu besar (maksimum '.number_format($maxRows).' baris).'); $x=$z->getFromName($n); return $x===false?null:$x; };
         $xml=function(?string $x)use($bad): ?SimpleXMLElement { if($x===null) return null; $e=simplexml_load_string($x,'SimpleXMLElement',LIBXML_NONET); if($e===false) throw $bad(); return $e; };
         $R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
         $sheet='xl/worksheets/sheet1.xml';
@@ -232,7 +318,7 @@ function xlsx_text(string $path): string {
             while($line && end($line)==='') array_pop($line); // lajur kosong di hujung (format sel) diabaikan
             if(!$line) continue;
             $out[]='"'.implode("\"\t\"",array_map(fn($x)=>str_replace('"','""',$x),$line)).'"';
-            if(count($out)>501) throw new EngineError('Maksimum 500 baris bagi satu import.');
+            if(count($out)>$maxRows+1) throw new EngineError('Maksimum '.number_format($maxRows).' baris bagi satu import.');
         }
         if(!$out) throw new EngineError('Helaian pertama fail Excel kosong.');
         return implode("\n",$out)."\n";
