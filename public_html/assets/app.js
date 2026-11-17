@@ -40,6 +40,8 @@ document.querySelectorAll('select[data-searchable]').forEach(select => {
  box.setAttribute('aria-label', 'Cari dalam senarai pilihan');
  select.before(box);
  const options = Array.from(select.options);
+ const auto = select.classList.contains('auto-submit');
+ box.addEventListener('keydown', e => { if (e.key !== 'Enter') return; e.preventDefault(); const f = box._first; if (f && box.value.trim()) { select.value = f.value; select.dispatchEvent(new Event('change', { bubbles: true })); } });
  box.addEventListener('input', () => {
   const q = box.value.trim().toLowerCase();
   let first = null, shown = 0;
@@ -48,7 +50,8 @@ document.querySelectorAll('select[data-searchable]').forEach(select => {
    option.hidden = !match;
    if(match && option.value) { shown++; first ??= option; }
   });
-  if(q && first && (select.selectedOptions[0]?.hidden || !select.value)) select.value = first.value;
+  if(!auto && q && first && (select.selectedOptions[0]?.hidden || !select.value)) select.value = first.value; // senarai auto-submit: nilai hanya berubah apabila dipilih / Enter
+  box._first = first;
   box.classList.toggle('no-match', q !== '' && shown === 0);
  });
 });

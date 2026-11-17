@@ -4,7 +4,7 @@ declare(strict_types=1);
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
 const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','subjek_guru','jawatan_kemas_nama','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
-    'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
+    'agih','agih_lepas','syarat_umum','syarat_jawatan','syarat_padam','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
     $n=filter_var(input($key),FILTER_VALIDATE_INT); if($n===false || $n<$min || $n>$max) throw new EngineError($label.' di luar julat yang dibenarkan ('.$min.'–'.$max.').'); return $n;
@@ -18,11 +18,11 @@ function handle_engine_action(string $action): never {
     elseif($adminOnly) require_admin();
     else require_planner();
     // Ciri Pro (pakej Free): disemak sebelum transaksi.
-    $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
+    $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','syarat_padam'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal','guru_masa_preview'=>'pukal','guru_masa_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
     $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','subjek_guru'=>'subjek','jawatan_kemas_nama'=>'jawatan','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
-        'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
+        'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','syarat_padam'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
         // Data perancangan dikunci selain Draf (kunci API tidak termasuk). Tetapan indeks turut dikunci supaya senarai guru terbeban
@@ -152,6 +152,9 @@ function handle_engine_action(string $action): never {
                 $pid=post_int('position_id',1,PHP_INT_MAX,'Jawatan');
                 allocation_save_position_rule($pid,['allowed_teachers'=>post_ids('allowed_teachers'),'fixed_teacher_id'=>input('fixed_teacher_id')===''?null:post_int('fixed_teacher_id',1,PHP_INT_MAX,'Penyandang tetap'),'required_specialty'=>input('required_specialty')]);
                 audit('position_rule','positions',$pid); $msg='Syarat khusus jawatan disimpan.'; $anchor='&jawatan='.$pid.'#syarat-jawatan'; break;
+            case 'syarat_padam':
+                $n=query('DELETE FROM position_rules WHERE school_id='.sid().' AND position_id=?',[$id])->rowCount(); audit('position_rule_deleted','positions',$id);
+                $msg=$n?'Syarat khusus jawatan dipadam.':'Tiada syarat khusus untuk dipadam.'; $anchor='&jawatan='.$id.'#syarat-jawatan'; break;
             case 'auto_preview':
                 $plan=allocation_preview(input('mode')); db()->commit(); $_SESSION['auto_plan']=['sid'=>sid(),'plan'=>$plan]; redirect('/?page=auto#auto-hasil');
             case 'auto_apply':
