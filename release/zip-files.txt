@@ -986,6 +986,8 @@ public_html/assets/shared/
 public_html/assets/shared/jata-negara.png
 public_html/assets/shared/SOURCES.md
 public_html/assets/templat/
+public_html/assets/templat/agihan.csv
+public_html/assets/templat/agihan.xlsx
 public_html/assets/templat/guru.csv
 public_html/assets/templat/guru.xlsx
 public_html/assets/templat/jawatan.csv
