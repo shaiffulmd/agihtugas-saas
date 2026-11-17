@@ -64,6 +64,17 @@ function teacher_accounts_create(array $ids,bool $link,bool $mail): array {
     if($made || $n) audit('teacher_accounts','users',null,count($made).' akaun dicipta, '.$n.' dipautkan');
     return [$made,$n];
 }
+/** Sahkan e-mel akaun baharu (unik dalam sekolah). Pulangkan e-mel huruf kecil. */
+function account_email_check(string $email,int $userId): string {
+    $e=strtolower(trim($email)); if(strlen($e)>190 || !filter_var($e,FILTER_VALIDATE_EMAIL)) throw new DomainException('Alamat e-mel tidak sah.');
+    if(query('SELECT 1 FROM users WHERE school_id='.sid().' AND email=? AND id<>?',[$e,$userId])->fetchColumn()) throw new DomainException('E-mel ini sudah digunakan oleh akaun lain.');
+    return $e;
+}
+/** E-mel akaun berubah → e-mel profil guru yang dipautkan turut dikemas kini jika ia kosong atau sama dengan e-mel lama. */
+function account_email_sync_teacher(?int $teacherId,string $old,string $new): void {
+    if(!$teacherId || $old===$new) return;
+    query('UPDATE teachers SET email=? WHERE id=? AND school_id='.sid().' AND (email="" OR LOWER(email)=?) AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM teachers WHERE school_id='.sid().' AND LOWER(email)=? AND id<>?) x)',[$new,$teacherId,$old,$new,$teacherId]);
+}
 function active_admin_count(): int { return (int)query('SELECT COUNT(*) FROM users WHERE school_id='.sid().' AND role="admin" AND active=1')->fetchColumn(); }
 function handle_user_admin(string $action): never {
     require_admin();
@@ -72,14 +83,15 @@ function handle_user_admin(string $action): never {
     $self=$id===(int)current_user()['id'];
     confirm_admin_password();
     if($action==='user_update'){
-        $name=trim(input('name')); $role=input('role'); $active=input('active')==='1'?1:0;
+        $name=trim(input('name')); $role=input('role'); $active=input('active')==='1'?1:0; $email=input('email')===''?(string)$target['email']:account_email_check(input('email'),$id);
         if($name==='' || mb_strlen($name)>120) throw new DomainException('Nama tidak sah.');
         if(!isset(ROLE_LABELS[$role])) throw new DomainException('Peranan tidak sah.');
         if($self && ($role!=='admin' || !$active)) throw new DomainException('Anda tidak boleh menurunkan peranan atau menyahaktifkan akaun sendiri.');
         if($target['role']==='admin' && (int)$target['active']===1 && ($role!=='admin' || !$active) && active_admin_count()<=1) throw new DomainException('Sekurang-kurangnya seorang pentadbir aktif diperlukan.');
         if($active===1 && (int)$target['active']===0) free_guard('pengguna',1);
-        $tid=user_teacher_link($role,$id); $changedAccess=$role!==$target['role'] || $active!==(int)$target['active'] || $tid!==($target['teacher_id']!==null?(int)$target['teacher_id']:null);
-        query('UPDATE users SET name=?,role=?,active=?,teacher_id=?'.($changedAccess?',auth_version=auth_version+1':'').' WHERE id=? AND school_id='.sid(),[$name,$role,$active,$tid,$id]);
+        $tid=user_teacher_link($role,$id); $changedAccess=$role!==$target['role'] || $active!==(int)$target['active'] || $tid!==($target['teacher_id']!==null?(int)$target['teacher_id']:null) || $email!==$target['email'];
+        query('UPDATE users SET name=?,email=?,role=?,active=?,teacher_id=?'.($changedAccess?',auth_version=auth_version+1':'').' WHERE id=? AND school_id='.sid(),[$name,$email,$role,$active,$tid,$id]);
+        account_email_sync_teacher($tid,strtolower((string)$target['email']),$email);
         audit($active?($changedAccess?'user_access_changed':'user_updated'):'user_deactivated','users',$id);
         flash($active?'Akaun dikemas kini.':'Akaun dinyahaktifkan. Sesi aktif pengguna ditamatkan.');
     } elseif($action==='user_ips'){
@@ -107,7 +119,7 @@ function handle_user_admin(string $action): never {
 
 const AUDIT_LABELS = [
     'login'=>'Log masuk','logout'=>'Log keluar','login_failed'=>'Log masuk gagal','login_blocked'=>'Log masuk disekat (had cubaan)',
-    '2fa_failed'=>'Kod 2FA gagal','2fa_enabled'=>'2FA diaktifkan','2fa_disabled'=>'2FA dimatikan','password_changed'=>'Tukar kata laluan','admin_confirm_failed'=>'Pengesahan pentadbir gagal',
+    '2fa_failed'=>'Kod 2FA gagal','2fa_enabled'=>'2FA diaktifkan','2fa_disabled'=>'2FA dimatikan','password_changed'=>'Tukar kata laluan','profile_updated'=>'Kemas kini profil sendiri','admin_confirm_failed'=>'Pengesahan pentadbir gagal',
     'create'=>'Cipta','update'=>'Kemas kini','delete'=>'Padam','save'=>'Simpan','export'=>'Eksport CSV','download_pdf'=>'Muat turun PDF',
     'user_updated'=>'Kemas kini pengguna','user_access_changed'=>'Tukar akses pengguna','user_deactivated'=>'Nyahaktif pengguna','user_ips'=>'Had IP akaun',
     'admin_password_reset'=>'Reset kata laluan (pentadbir)','admin_2fa_reset'=>'Reset 2FA (pentadbir)','settings_saved'=>'Simpan tetapan','theme_saved'=>'Simpan tema',

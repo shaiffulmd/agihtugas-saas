@@ -87,6 +87,17 @@ function handle_action(string $page,string $action): void {
   flash('2FA dimatikan. Anda boleh mengaktifkannya semula pada bila-bila masa.'); redirect('/?page=security');
  }
  if(!empty(current_user()['must_change'])) throw new DomainException('Tukar kata laluan sementara anda dahulu.');
+ if($action==='profile_update'){
+  $u=query('SELECT * FROM users WHERE id=? AND school_id='.sid(),[current_user()['id']])->fetch();
+  $name=trim((string)preg_replace('/\s+/u',' ',input('name'))); if($name==='' || mb_strlen($name)>120) throw new DomainException('Nama diperlukan (maksimum 120 aksara).');
+  $email=account_email_check(input('email'),(int)$u['id']); $changed=$email!==strtolower((string)$u['email']);
+  if($changed){ $rk=rate_key('profile_email',(string)$u['id']); if(!rate_allowed($rk)) throw new DomainException('Terlalu banyak cubaan. Cuba selepas 15 minit.'); rate_hit($rk);
+   if(!password_verify(input('current_password'),$u['password_hash'])) throw new DomainException('Masukkan kata laluan semasa yang betul untuk menukar e-mel.'); }
+  db()->beginTransaction(); query('UPDATE users SET name=?,email=? WHERE id=? AND school_id='.sid(),[$name,$email,$u['id']]);
+  account_email_sync_teacher($u['teacher_id']!==null?(int)$u['teacher_id']:null,strtolower((string)$u['email']),$email);
+  audit('profile_updated','users',(int)$u['id'],$changed?'e-mel ditukar':'nama'); db()->commit();
+  flash($changed?'Profil dikemas kini. Gunakan e-mel baharu untuk log masuk seterusnya.':'Profil dikemas kini.'); redirect('/?page=security');
+ }
  if($action==='demo_reset_now') handle_demo_reset_now();
  if(in_array($action,ENGINE_ACTIONS,true)) handle_engine_action($action);
  if(str_starts_with($action,'settings_')) handle_settings($action);
