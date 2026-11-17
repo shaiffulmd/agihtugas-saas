@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply',
+const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -19,9 +19,9 @@ function handle_engine_action(string $action): never {
     else require_planner();
     // Ciri Pro (pakej Free): disemak sebelum transaksi.
     $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
-        'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal'][$action]??null;
+        'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal','guru_masa_preview'=>'pukal','guru_masa_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan',
+    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
@@ -107,6 +107,25 @@ function handle_engine_action(string $action): never {
                 if(!hash_equals($d['hash'],hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)))) throw new EngineError('Data guru atau jawatan telah berubah sejak pratonton. Semak semula senarai sebelum mengimport.',409);
                 [$nt,$np,$na]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
                 audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan"); $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan."; break;
+            case 'guru_masa_save':
+                $m=$_POST['masa']??null; $x=$_POST['exam']??[]; if(!is_array($m) || !is_array($x)) throw new EngineError('Borang masa mengajar tidak sah.');
+                $ids=array_flip(array_map('intval',query('SELECT id FROM teachers WHERE school_id='.sid())->fetchAll(PDO::FETCH_COLUMN))); $set=[];
+                foreach($m as $id=>$v){
+                    $id=(int)$id; if(!isset($ids[$id])) throw new EngineError('Guru tidak ditemui. Muat semula halaman.',409);
+                    $v=trim((string)(is_string($v)?$v:'')); if($v==='') $v='0';
+                    if(!ctype_digit($v) || (int)$v>60) throw new EngineError('Masa mengajar mesti nombor bulat 0–60.');
+                    $set[$id]=[(int)$v,isset($x[$id])];
+                }
+                $n=teachers_periods_update($set); if($n) audit('teacher_periods','teachers',null,$n.' guru');
+                $msg=$n?"Masa mengajar $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
+            case 'guru_masa_preview':
+                $rows=bulk_masa_parse(bulk_source('csv','bulk_text',1000)); $_SESSION['masa_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'sid'=>sid()];
+                db()->commit(); redirect('/?page=guru&masa=1#masa-hasil');
+            case 'guru_masa_apply':
+                $d=$_SESSION['masa_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new EngineError('Pratonton tidak sah. Jana semula.',409);
+                $plan=bulk_masa_plan($d['rows']); $set=[]; foreach($plan['changes'] as $c) $set[$c['id']]=[$c['new'],(bool)$c['exam_new']];
+                $n=teachers_periods_update($set); unset($_SESSION['masa_pukal']); if($n) audit('teacher_periods','teachers',null,$n.' guru (import)');
+                $msg=$n?"Masa mengajar $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
             case 'agih':
                 $pid=post_int('position_id',1,PHP_INT_MAX,'Jawatan'); $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru');
                 $aid=assign_position($pid,$tid); audit('assign','assignments',$aid,'jawatan #'.$pid.' → guru #'.$tid); $msg='Agihan tugas dikemas kini.';

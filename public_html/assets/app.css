@@ -1837,3 +1837,4 @@ body:has(.hb-modal){overflow:hidden}
 .sso-btn{width:100%;justify-content:center}
 .sso-or{display:flex;align-items:center;gap:10px;margin:0;font-size:.82rem}
 .sso-or::before,.sso-or::after{content:"";flex:1;height:1px;background:var(--line,#e3e6ee)}
+.masa-input{width:96px;max-width:100%}

@@ -91,6 +91,21 @@ with_school($S,function()use(&$tmp){
     rejects(fn()=>bulk_agihan_parse("A,AJK X,PPKI\n"),'bidang tidak sah ditolak','bidang');
     rejects(fn()=>bulk_agihan_parse("A,AJK X,HEM,11\n"),'pemberat di luar 1–10 ditolak','pemberat');
     rejects(fn()=>bulk_agihan_parse(str_repeat("A,AJK X,HEM\n",2001)),'lebih 2,000 baris ditolak','2,000');
+
+    echo "Masa mengajar pukal\n";
+    $r=bulk_masa_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
+    check(count($r)===3 && $r[0]['periods']===28 && $r[0]['exam']===true && $r[1]['periods']===0 && $r[1]['exam']===null,'tajuk dilangkau; kosong = 0; peperiksaan kosong = kekal');
+    $plan=bulk_masa_plan($r);
+    check(count($plan['changes'])===1 && $plan['changes'][0]['new']===28 && $plan['changes'][0]['exam_new']===1 && $plan['same']===1 && $plan['missing']===['Tiada Orang'],'padan nama tanpa beza huruf; tiada perubahan dikira; nama tidak dijumpai disenaraikan');
+    $id=$plan['changes'][0]['id'];
+    check(teachers_periods_update([$id=>[28,true]])===1 && teachers_periods_update([$id=>[28,true]])===0,'kemas kini hanya baris berubah');
+    $t=teacher_find($id); check((int)$t['teaching_periods']===28 && (int)$t['exam_class']===1,'masa & kelas peperiksaan disimpan');
+    $plan=bulk_masa_plan(bulk_masa_parse("Nur Aisyah Abdullah\t30\n"));
+    check($plan['changes'][0]['exam_new']===1,'tampal bertab tanpa lajur peperiksaan: peperiksaan kekal');
+    rejects(fn()=>bulk_masa_parse("A,61\n"),'masa > 60 ditolak','0–60');
+    rejects(fn()=>bulk_masa_parse("A,10,mungkin\n"),'kelas peperiksaan tidak sah ditolak','Ya / Tidak');
+    rejects(fn()=>bulk_masa_parse("A,10\na,12\n"),'nama berulang ditolak','berulang');
+    rejects(fn()=>teachers_periods_update([$id=>[61,false]]),'grid: masa > 60 ditolak','0–60');
 });
 } finally { foreach($tmp as $f) @unlink($f); if($s=school_find('UJP9108')) school_delete($s); }
 echo "\n$checks semakan import pukal lulus.\n";

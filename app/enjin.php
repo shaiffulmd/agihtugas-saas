@@ -250,6 +250,51 @@ function bulk_agihan_apply(array $plan): array {
     }
     return [count($tid),count($pid),$n];
 }
+/* ---------- Masa mengajar pukal (guru sedia ada) ----------
+ * Grid di Pengurusan Guru (semua guru serentak) atau tampal / Excel: nama_guru, masa_mengajar[, kelas_peperiksaan].
+ * Guru dipadan ikut nama (bulk_name_key); nama tidak dijumpai disenaraikan, tidak dicipta. Kelas peperiksaan kosong = kekal. */
+const BULK_MASA_COLS=[['nama_guru','nama','guru','name'],['masa_mengajar','masa','waktu_mengajar','waktu','masa_seminggu','teaching_periods'],['kelas_peperiksaan','peperiksaan','kelas_peperiksaan_(ya/tidak)','exam_class']];
+function bulk_yes_no(string $v,int $line): ?bool {
+    $v=mb_strtolower(trim($v)); if($v==='') return null;
+    if(in_array($v,['1','ya','y','yes','true','benar','✓','/'],true)) return true;
+    if(in_array($v,['0','tidak','t','no','n','false','palsu','-','x'],true)) return false;
+    throw new EngineError("Baris $line: kelas peperiksaan mesti Ya / Tidak (atau kosong untuk kekal).");
+}
+function bulk_masa_parse(string $text): array {
+    if(strlen($text)>131072) throw new EngineError('Fail / teks maksimum 128 KB.');
+    $rows=[]; $seen=[];
+    foreach(csv_rows($text,BULK_MASA_COLS,2,3,1000) as $i=>$r){
+        $line=$i+1; $name=trim((string)preg_replace('/\s+/u',' ',$r[0])); $n=trim($r[1]);
+        if($name==='') throw new EngineError("Baris $line: nama guru diperlukan.");
+        if($n==='') $n='0';
+        if(!ctype_digit($n) || (int)$n>60) throw new EngineError("Baris $line: masa mengajar mesti nombor bulat 0–60.");
+        $k=bulk_name_key($name); if(isset($seen[$k])) throw new EngineError("Baris $line: nama '$name' berulang dalam senarai.");
+        $seen[$k]=true; $rows[]=['name'=>$name,'periods'=>(int)$n,'exam'=>bulk_yes_no($r[2]??'',$line)];
+    }
+    if(!$rows) throw new EngineError('Tiada baris untuk dikemas kini.');
+    return $rows;
+}
+/** Padankan baris dengan guru sedia ada. Pulangkan changes [{id,name,old,new,exam_old,exam_new}], same (tiada perubahan), missing (nama tidak dijumpai). */
+function bulk_masa_plan(array $rows): array {
+    $T=[]; foreach(query('SELECT id,name,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll() as $t) $T[bulk_name_key($t['name'])]=$t;
+    $changes=[]; $same=0; $missing=[];
+    foreach($rows as $r){
+        $t=$T[bulk_name_key($r['name'])]??null; if(!$t){ $missing[]=$r['name']; continue; }
+        $exam=$r['exam']===null?(int)$t['exam_class']:(int)$r['exam'];
+        if($r['periods']===(int)$t['teaching_periods'] && $exam===(int)$t['exam_class']){ $same++; continue; }
+        $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'old'=>(int)$t['teaching_periods'],'new'=>$r['periods'],'exam_old'=>(int)$t['exam_class'],'exam_new'=>$exam];
+    }
+    return ['changes'=>$changes,'same'=>$same,'missing'=>$missing];
+}
+/** Kemas kini masa mengajar & kelas peperiksaan: $set = [teacher_id => [periods, exam(0|1)]]. Hanya baris berubah. Pulangkan bilangan guru dikemas kini. */
+function teachers_periods_update(array $set): int {
+    $n=0;
+    foreach($set as $id=>[$p,$x]){
+        if(!is_int($p) || $p<0 || $p>60) throw new EngineError('Masa mengajar mesti integer 0–60 masa seminggu.');
+        $n+=query('UPDATE teachers SET teaching_periods=?,exam_class=? WHERE id=? AND school_id='.sid().' AND (teaching_periods<>? OR exam_class<>?)',[$p,$x?1:0,(int)$id,$p,$x?1:0])->rowCount();
+    }
+    return $n;
+}
 /** Normalkan tajuk lajur untuk padanan: "Masa Mengajar" / "masa-mengajar" → masa_mengajar. */
 function bulk_header_key(string $h): string { return trim((string)preg_replace('/[\s\-]+/u','_',mb_strtolower(trim($h))),'_'); }
 /** Baca CSV / lajur bertab. $cols: alias tajuk bagi setiap lajur (ikut kedudukan) — baris pertama dilangkau jika ia baris tajuk. Setiap baris mesti $min–$max lajur; maksimum $maxRows baris. */
