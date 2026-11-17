@@ -1,3 +1,16 @@
+// Padanan carian longgar: setiap perkataan dicari mesti wujud (susunan bebas), dan perkataan ≥ 4 huruf boleh
+// tersilap satu huruf (cth. "ketua panatia kimia" → "Ketua Panitia Panitia Kimia").
+window.utMatch = (() => {
+  const norm = s => (s || '').toLocaleLowerCase('ms').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}@.]+/gu, ' ').trim();
+  const near = (a, b) => { // jarak edit ≤ 1
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0, j = 0, d = 0;
+    while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++d > 1) return false; if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; } }
+    return d + (a.length - i) + (b.length - j) <= 1;
+  };
+  const hit = (tok, words, full) => full.includes(tok) || (tok.length >= 4 && words.some(w => near(tok, w) || (w.length > tok.length && near(tok, w.slice(0, tok.length)))));
+  return (text, q) => { const nq = norm(q); if (!nq) return true; const full = norm(text), words = full.split(' '); return nq.split(' ').every(t => hit(t, words, full)); };
+})();
 'use strict';
 // Menu sisi (mudah alih): buka/tutup dengan butang, latar gelap atau Escape.
 const sidebar = document.getElementById('sidebar'), toggle = document.querySelector('.mobile-toggle'), scrim = document.querySelector('.scrim');
@@ -31,7 +44,7 @@ document.querySelectorAll('select[data-searchable]').forEach(select => {
   const q = box.value.trim().toLowerCase();
   let first = null, shown = 0;
   options.forEach(option => {
-   const match = !option.value || (!option.disabled && option.text.toLowerCase().includes(q));
+   const match = !option.value || (!option.disabled && window.utMatch(option.text, q));
    option.hidden = !match;
    if(match && option.value) { shown++; first ??= option; }
   });

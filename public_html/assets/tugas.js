@@ -6,7 +6,8 @@ document.querySelectorAll('[data-search]').forEach(input => {
   input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => {
     rows ??= [...table.querySelectorAll('tbody tr')].map(row => [row, row.textContent.toLocaleLowerCase('ms')]);
     const q = input.value.trim().toLocaleLowerCase('ms'); let visible = 0;
-    rows.forEach(([row, text]) => { row.hidden = !text.includes(q); if (!row.hidden) visible++; });
+    const m = window.utMatch || ((t, x) => t.includes(x.toLocaleLowerCase('ms')));
+    rows.forEach(([row, text]) => { row.hidden = !m(text, q); if (!row.hidden) visible++; });
     const empty = table.parentElement.querySelector('.search-empty'); if (empty) empty.hidden = visible > 0;
   }, 80); });
 });
