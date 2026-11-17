@@ -293,7 +293,7 @@ function bulk_guru_update_parse(string $text): array {
     $raw=csv_rows($text,[],2,6,1001); if(!$raw) throw new EngineError('Tiada baris untuk dikemas kini.');
     $map=[]; foreach($raw[0] as $i=>$h){ $k=bulk_header_key($h); foreach(BULK_GURU_FIELDS as $f=>$alias) if(in_array($k,$alias,true)){ if(in_array($f,$map,true)) throw new EngineError("Lajur \"$h\" berulang."); $map[$i]=$f; } }
     if(($map[0]??null)==='name'){ array_shift($raw); foreach($raw[0]??[] as $i=>$c) if(!isset($map[$i]) && trim($c)!=='') throw new EngineError('Lajur ke-'.($i+1).' tiada tajuk yang dikenali.'); }
-    else { if(count($raw[0])>3) throw new EngineError('Sertakan baris tajuk (cth. Nama Guru, Emel, Masa mengajar) apabila lebih daripada 3 lajur.'); $map=['name','teaching_periods','exam_class']; }
+    else $map=bulk_guru_guess_columns($raw);
     if(count($map)<2) throw new EngineError('Tiada lajur untuk dikemas kini. Tajuk diterima: Emel, Kepakaran, Kapasiti, Masa mengajar, Kelas peperiksaan.');
     if(count($raw)>1000) throw new EngineError('Maksimum 1,000 baris bagi satu import.');
     $rows=[]; $seen=[]; $emails=[];
@@ -317,24 +317,63 @@ function bulk_guru_update_parse(string $text): array {
     }
     return $rows;
 }
+/** Tanpa baris tajuk: lajur pertama = nama; lajur lain diteka daripada isinya (e-mel / nombor = masa mengajar / Ya-Tidak = kelas peperiksaan). */
+function bulk_guru_guess_columns(array $raw): array {
+    $n=max(array_map('count',$raw)); $map=[0=>'name'];
+    for($c=1;$c<$n;$c++){
+        $vals=array_values(array_filter(array_map(fn($r)=>trim((string)($r[$c]??'')),$raw),fn($v)=>$v!=='')); if(!$vals) continue;
+        $all=fn(callable $f)=>count(array_filter($vals,$f))===count($vals);
+        $f=match(true){ $all(fn($v)=>str_contains($v,'@'))=>'email', $all('ctype_digit')=>'teaching_periods',
+            $all(fn($v)=>in_array(mb_strtolower($v),['1','0','ya','y','yes','tidak','t','no','n','true','false'],true))=>'exam_class', default=>null };
+        if($f===null || in_array($f,$map,true)) throw new EngineError('Lajur ke-'.($c+1).' tidak dapat dikenal pasti. Sertakan baris tajuk, cth. Nama Guru, Emel, Kepakaran, Kapasiti, Masa mengajar.');
+        $map[$c]=$f;
+    }
+    return $map;
+}
+/** Kunci padat nama untuk padanan longgar: tanpa BIN/BINTI/BT/A/P, tanda baca & ruang; ABD → ABDUL. Nama dengan "@ …" turut dikunci tanpa bahagian itu. */
+function teacher_name_keys(string $name): array {
+    $u=mb_strtoupper($name); $out=[];
+    foreach(array_unique([$u,(string)preg_replace('/\s*@.*$/u','',$u)]) as $v){
+        $v=(string)preg_replace('#\bA\s*/\s*[PL]\b#u',' ',$v); $v=(string)preg_replace("/[@'`’.,]/u",' ',$v);
+        $t=array_filter(preg_split('/\s+/u',trim($v))?:[],fn($w)=>!in_array($w,['BIN','BINTI','BT','BTE','BINTE','B'],true));
+        $k=(string)preg_replace('/[^\p{L}\p{N}]/u','',implode('',array_map(fn($w)=>$w==='ABD'?'ABDUL':$w,$t)));
+        if($k!=='') $out[]=$k;
+    }
+    return array_values(array_unique($out));
+}
+/** Pemadan nama guru: tepat (bulk_name_key) → kunci padat sama → hampir sama (≥ 90%, unik). Pulangkan fn(nama) => [guru|null, 'tepat'|'anggaran'|null]. */
+function teacher_matcher(array $teachers): callable {
+    $exact=[]; $compact=[]; $prim=[];
+    foreach($teachers as $t){ $exact[bulk_name_key($t['name'])]=$t; $ks=teacher_name_keys($t['name']); $prim[]=[$ks[0]??'',$t]; foreach($ks as $k) $compact[$k][(int)$t['id']]=$t; }
+    return function(string $name)use($exact,$compact,$prim): array {
+        if($t=$exact[bulk_name_key($name)]??null) return [$t,'tepat'];
+        $hit=[]; foreach(teacher_name_keys($name) as $k) foreach($compact[$k]??[] as $id=>$t) $hit[$id]=$t;
+        if(count($hit)===1) return [reset($hit),'anggaran']; if(count($hit)>1) return [null,null];
+        $k=teacher_name_keys($name)[0]??''; if(strlen($k)<10) return [null,null];
+        $best=0.0; $second=0.0; $bt=null;
+        foreach($prim as [$pk,$t]){ if($pk==='') continue; $r=1-levenshtein($k,$pk)/max(strlen($k),strlen($pk)); if($r>$best){ $second=$best; $best=$r; $bt=$t; } elseif($r>$second) $second=$r; }
+        return $best>=0.9 && $best-$second>=0.05?[$bt,'anggaran']:[null,null];
+    };
+}
 /** Padankan baris dengan guru sedia ada. Pulangkan changes [{id,name,old=>[medan=>nilai],new=>[medan=>nilai]}], same, missing, fields (lajur yang ada). */
 function bulk_guru_update_plan(array $rows): array {
-    $T=[]; $byEmail=[];
-    foreach(query('SELECT id,name,email,specialty,capacity,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll() as $t){ $T[bulk_name_key($t['name'])]=$t; if($t['email']!=='') $byEmail[strtolower($t['email'])]=(int)$t['id']; }
-    $changes=[]; $same=0; $missing=[]; $fields=[]; $newEmail=[];
+    $all=query('SELECT id,name,email,specialty,capacity,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll(); $byEmail=[];
+    foreach($all as $t) if($t['email']!=='') $byEmail[strtolower($t['email'])]=(int)$t['id'];
+    $match=teacher_matcher($all); $changes=[]; $same=0; $missing=[]; $fuzzy=[]; $fields=[]; $newEmail=[]; $used=[];
     foreach($rows as $r){
         foreach(array_keys($r['set']) as $f) $fields[$f]=true;
-        $t=$T[bulk_name_key($r['name'])]??null; if(!$t){ $missing[]=$r['name']; continue; }
+        [$t,$how]=$match($r['name']); if(!$t || isset($used[(int)$t['id']])){ $missing[]=$r['name']; continue; } $used[(int)$t['id']]=true;
+        if($how==='anggaran') $fuzzy[]=[$r['name'],$t['name']];
         $old=[]; $new=[];
         foreach($r['set'] as $f=>$v){ $cur=in_array($f,['capacity','teaching_periods','exam_class'],true)?(int)$t[$f]:(string)$t[$f]; if($cur!==$v){ $old[$f]=$cur; $new[$f]=$v; } }
         if(isset($new['email'])) $newEmail[$new['email']]=(int)$t['id'];
         if(!$new){ $same++; continue; }
-        $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'old'=>$old,'new'=>$new];
+        $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'file_name'=>$how==='anggaran'?$r['name']:null,'old'=>$old,'new'=>$new];
     }
     // E-mel tidak boleh dikongsi dua guru (selepas kemas kini).
     $leaving=[]; foreach($changes as $c) if(isset($c['new']['email'])) $leaving[$c['id']]=true;
     foreach($newEmail as $e=>$id){ $owner=$byEmail[$e]??null; if($owner!==null && $owner!==$id && !isset($leaving[$owner])) throw new EngineError("E-mel '$e' sudah digunakan oleh guru lain.",409); }
-    return ['changes'=>$changes,'same'=>$same,'missing'=>$missing,'fields'=>array_values(array_intersect(array_keys(BULK_GURU_LABELS),array_keys($fields)))];
+    return ['changes'=>$changes,'same'=>$same,'missing'=>$missing,'fuzzy'=>$fuzzy,'fields'=>array_values(array_intersect(array_keys(BULK_GURU_LABELS),array_keys($fields)))];
 }
 /** Laksana kemas kini maklumat guru (dalam transaksi pemanggil). Pulangkan bilangan guru dikemas kini. */
 function bulk_guru_update_apply(array $plan): int {

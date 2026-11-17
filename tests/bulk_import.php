@@ -133,8 +133,16 @@ with_school($S,function()use(&$tmp){
     rejects(fn()=>bulk_guru_update_parse("A,b@c.my,Sains,20\n"),'lebih 3 lajur tanpa tajuk ditolak','baris tajuk');
     rejects(fn()=>bulk_guru_update_parse("Nama,Emel,Hobi\nA,b@c.my,x\n"),'lajur tidak dikenali ditolak','tiada tajuk');
     rejects(fn()=>bulk_guru_update_parse("A,61\n"),'masa > 60 ditolak','0–60');
-    rejects(fn()=>bulk_guru_update_parse("A,10,mungkin\n"),'kelas peperiksaan tidak sah ditolak','Ya / Tidak');
+    rejects(fn()=>bulk_guru_update_parse("A,10,mungkin\n"),'tanpa tajuk: nilai peperiksaan tidak sah ditolak','dikenal pasti');
+    rejects(fn()=>bulk_guru_update_parse("Nama,Kelas peperiksaan\nA,mungkin\n"),'kelas peperiksaan tidak sah ditolak','Ya / Tidak');
     rejects(fn()=>bulk_guru_update_parse("A,10\na,12\n"),'nama berulang ditolak','berulang');
+    $r=bulk_guru_update_parse("Nur Aisyah Abdullah\tA@B.my\nSiti Hajar Saad\tsiti2@b.my\n");
+    check($r[0]['set']===['email'=>'a@b.my'],'tanpa tajuk: lajur e-mel diteka daripada isi (@)');
+    rejects(fn()=>bulk_guru_update_parse("A\tSains\nB\tFizik\n"),'tanpa tajuk: lajur teks tidak dikenal pasti → minta tajuk','baris tajuk');
+    $m=teacher_matcher([['id'=>1,'name'=>"NOR'AINI BINTI ABDULLAH"],['id'=>2,'name'=>'ABDUL AZIZ BIN JAMALUDDIN'],['id'=>3,'name'=>'MOHD ZUHAILI KAMARIDIN'],['id'=>4,'name'=>'NURRUL FAIRUZ BINTI SETOPA @ SETAPA'],['id'=>5,'name'=>'NOZIRA BINTI ABD RAHMAN'],['id'=>6,'name'=>'SHALELAWATE BINTI HUSSIN'],['id'=>7,'name'=>'SALMIAH BINTI BULIA'],['id'=>8,'name'=>'NAVAMANI A/P PARIASAMY'],['id'=>9,'name'=>'NURUL HAKIMAH BINTI ISMAIL'],['id'=>10,'name'=>'NURUL HAKIMAH BINTI ISMAIL (PPKI)']]);
+    $ok=true; foreach(["NOR' AINI BINTI ABDULLAH"=>1,'ABDUL AZIZ BIN JAMALUDIN'=>2,'MOHD ZUHAILI BIN KAMARIDIN'=>3,'NURRUL FAIRUZ BINTI SETOPA@SETAPA'=>4,'NOZIRA BINTI ABDUL RAHMAN'=>5,'SHALELAWATE BINTI HUSSIN @ MUKHTAR'=>6,'SALMIAH BT BULIA'=>7,'navamani a/p pariasamy'=>8,'NURUL HAKIMAH BINTI ISMAIL'=>9] as $n=>$want){ [$t,$how]=$m($n); $ok=$ok && $t && (int)$t['id']===$want; }
+    check($ok,'padanan nama longgar: apostrof, BT/BIN, ABD, @ alias, ejaan hampir sama, A/P');
+    check($m('NURUL HAKIMAH BINTI ISMAIL')[1]==='tepat' && $m('SALMIAH BT BULIA')[1]==='anggaran' && $m('SITI AMINAH BINTI OMAR')[0]===null,'tepat vs anggaran dibezakan; nama lain tidak dipadankan');
     check(teachers_periods_update([$id=>[12,false]])===1 && teachers_periods_update([$id=>[12,false]])===0,'grid masa mengajar: hanya baris berubah');
     rejects(fn()=>teachers_periods_update([$id=>[61,false]]),'grid: masa > 60 ditolak','0–60');
 });

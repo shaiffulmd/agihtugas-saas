@@ -515,3 +515,17 @@ document.querySelectorAll('[data-back]').forEach(btn => btn.addEventListener('cl
  pick.querySelectorAll('[data-hb-all]').forEach(b => b.addEventListener('click', () => { boxes.forEach(x => { if (!x.closest('label').classList.contains('is-hidden')) x.checked = b.dataset.hbAll === '1'; }); upd(); }));
  boxes.forEach(b => b.addEventListener('change', upd)); upd();
 })();
+// Tampal pukal → dihantar sebagai fail (bukan medan teks): firewall hosting (ModSecurity) menyekat POST yang mengandungi
+// nama seperti NOR' AINI / A/P sebagai cubaan suntikan (403). Kandungan fail muat naik tidak diperiksa dengan cara yang sama.
+document.querySelectorAll('form').forEach(form => {
+  const ta = form.querySelector('textarea[name="bulk_text"]'), file = form.querySelector('input[type="file"][name="csv"]');
+  if (!ta || !file || typeof DataTransfer === 'undefined') return;
+  form.addEventListener('submit', () => {
+    if (!ta.value.trim() || file.files.length) return;
+    try {
+      const dt = new DataTransfer(); dt.items.add(new File([ta.value], 'tampal.txt', { type: 'text/plain' }));
+      file.files = dt.files; ta.disabled = true;
+      addEventListener('pageshow', () => { ta.disabled = false; }, { once: true });
+    } catch (e) { /* pelayar lama: hantar sebagai teks seperti biasa */ }
+  });
+});
