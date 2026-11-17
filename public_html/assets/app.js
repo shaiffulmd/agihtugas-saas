@@ -529,3 +529,19 @@ document.querySelectorAll('form').forEach(form => {
     } catch (e) { /* pelayar lama: hantar sebagai teks seperti biasa */ }
   });
 });
+
+// Kotak "pilih semua" (data-select-all="nama[]") + Shift-klik untuk julat + kiraan (data-select-count="nama[]").
+document.querySelectorAll('[data-select-all]').forEach(all => {
+  const form = all.closest('form') || document, name = all.dataset.selectAll;
+  const boxes = () => [...form.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(name)}"]`)];
+  const sync = () => { const b = boxes(), n = b.filter(x => x.checked).length; all.checked = n === b.length && n > 0; all.indeterminate = n > 0 && n < b.length;
+    form.querySelectorAll(`[data-select-count="${CSS.escape(name)}"]`).forEach(el => { el.textContent = n; }); };
+  all.addEventListener('change', () => { boxes().forEach(x => { if (!x.closest('tr')?.hidden) x.checked = all.checked; }); sync(); });
+  let last = null;
+  boxes().forEach(x => x.addEventListener('click', e => {
+    const b = boxes();
+    if (e.shiftKey && last && last !== x) { const [i, j] = [b.indexOf(last), b.indexOf(x)].sort((p, q) => p - q); b.slice(i, j + 1).forEach(y => { y.checked = x.checked; }); }
+    last = x; sync();
+  }));
+  sync();
+});
