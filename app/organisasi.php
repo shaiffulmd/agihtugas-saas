@@ -78,13 +78,18 @@ function leadership_by_teacher(?array $l=null): array {
 function org_chart_data(): array {
     $l=leadership(); $names=array_column(query('SELECT id,name FROM teachers WHERE school_id='.sid())->fetchAll(),'name','id'); $labels=leader_posts();
     $who=fn(?int $id)=>$id?($names[$id]??null):null;
-    $byCat=array_fill_keys(CATEGORIES,[]); foreach(positions_with_holder() as $p) $byCat[$p['category']][]=['name'=>$p['name'],'teacher'=>$p['teacher_name']];
+    // Jawatan berunit PPKI / Tingkatan 6 dipaparkan di bawah PK unit itu (ikut bidang); jawatan lain di bawah PK bidang.
+    $unitPk=['ppki'=>'pk_ppki','t6'=>'pk_t6']; $byCat=array_fill_keys(CATEGORIES,[]); $byUnit=[]; $all=[];
+    foreach(positions_with_holder() as $p){ $row=['name'=>$p['name'],'teacher'=>$p['teacher_name']]; $all[]=$row; $u=$p['unit']??'sekolah';
+        if(isset($unitPk[$u]) && isset($labels[$unitPk[$u]])) $byUnit[$u][$p['category']][]=$row; else $byCat[$p['category']][]=$row; }
     $groups=[]; $placed=[];
     foreach(LEADER_POSTS as $k=>[,$cats]) if($cats && isset($labels[$k])){ $g=['key'=>$k,'label'=>$labels[$k],'teacher'=>$who($l['posts'][$k]),'cats'=>[]]; foreach($cats as $c){ $g['cats'][$c]=$byCat[$c]; $placed[$c]=true; } $groups[]=$g; }
+    foreach($unitPk as $u=>$k) if(!empty($byUnit[$u])){ $cats=[]; foreach(CATEGORIES as $c) if(!empty($byUnit[$u][$c])) $cats[$c]=$byUnit[$u][$c];
+        $groups[]=['key'=>$k,'label'=>$labels[$k],'teacher'=>$who($l['posts'][$k]),'cats'=>$cats]; }
     return ['head'=>['label'=>$labels['pengetua'],'teacher'=>$who($l['posts']['pengetua'])],
         'pk'=>array_values(array_filter(array_map(fn($k)=>['key'=>$k,'label'=>$labels[$k],'teacher'=>$who($l['posts'][$k])],array_keys(array_diff_key($labels,['pengetua'=>1]))),fn($p)=>$p['teacher'] || in_array($p['key'],['pk_pentadbiran','pk_hem','pk_koku'],true))),
         'bidang'=>array_map(fn($b)=>['label'=>'Ketua Bidang '.$b[0],'teacher'=>$who($b[1])],$l['bidang']),
-        'groups'=>$groups,'total'=>array_sum(array_map('count',$byCat)),'filled'=>count(array_filter(array_merge(...array_values($byCat)),fn($p)=>$p['teacher']!==null))];
+        'groups'=>$groups,'total'=>count($all),'filled'=>count(array_filter($all,fn($p)=>$p['teacher']!==null))];
 }
 /** Tetapkan kapasiti mata ikut had atas Panduan Julat Mata Sasaran: Pengetua & PK → had PK, Ketua Bidang → had GKMP, guru lain → had GAB.
  *  Guru berstatus bertukar keluar tidak diubah. Pulangkan bilangan guru yang kapasitinya berubah. */

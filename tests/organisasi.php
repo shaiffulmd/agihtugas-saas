@@ -53,6 +53,11 @@ with_school($A,function(){
     check(array_keys($g['pk_pentadbiran']['cats'])===['Pentadbiran','Kurikulum'] && array_keys($g['pk_hem']['cats'])===['HEM'] && array_keys($g['pk_koku']['cats'])===['Kokurikulum'],'bidang tugas di bawah PK masing-masing');
     check($g['pk_pentadbiran']['cats']['Pentadbiran'][0]===['name'=>'SU Kurikulum','teacher'=>'Cikgu Farah'] && $g['pk_pentadbiran']['cats']['Kurikulum'][0]['teacher']===null,'penyandang semasa / belum diisi');
     check($c['total']===4 && $c['filled']===2,'kiraan jawatan diisi');
+    $pu=position_save(0,['name'=>'AJK Kelab Rakan Muda PPU','category'=>'Kokurikulum','weight'=>1,'unit'=>'t6']); position_save(0,['name'=>'Setiausaha JK Pengurusan PPKI','category'=>'Pentadbiran','weight'=>3,'unit'=>'ppki']);
+    $c2=org_chart_data(); $g2=array_column($c2['groups'],null,'key');
+    check(isset($g2['pk_t6'],$g2['pk_ppki']) && array_keys($g2['pk_t6']['cats'])===['Kokurikulum'] && $g2['pk_t6']['cats']['Kokurikulum'][0]['name']==='AJK Kelab Rakan Muda PPU' && count($g2['pk_koku']['cats']['Kokurikulum'])===count($g['pk_koku']['cats']['Kokurikulum']),'jawatan unit Tingkatan 6 / PPKI di bawah PK unit itu, bukan PK bidang');
+    check($c2['total']===6,'kiraan termasuk jawatan berunit');
+    position_delete($pu); query('DELETE FROM positions WHERE school_id='.sid().' AND unit<>"sekolah"');
     check(array_column($c['pk'],'key')===['pk_pentadbiran','pk_hem','pk_koku'],'PK T6 & PPKI tidak dipaparkan jika kosong');
     teacher_delete($t['Ghani']); check(leadership()['posts']['pk_koku']===null,'guru dipadam → jawatan utama dikosongkan');
 });
