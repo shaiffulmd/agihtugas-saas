@@ -766,7 +766,8 @@ function load_index(): array {
     foreach(teachers_with_load() as $t){
         $id=(int)$t['id']; $t['score']=round($score[$id]??0,2); $t['teaching']=round((int)$t['teaching_periods']*((int)$t['exam_class']?$s['exam_factor']:1),2);
         $t['counted']=$t['status']==='aktif' && !(int)$t['index_exempt'];
-        if($t['counted']){ $T[]=$t['teaching']; $S[]=$t['score']; }
+        // Asas masa mengajar hanya daripada guru yang masanya sudah diisi (0 = belum diisi, bukan beban sifar).
+        if($t['counted']){ if($t['teaching']>0) $T[]=$t['teaching']; $S[]=$t['score']; }
         $rows[$id]=$t;
     }
     $div=function(array $xs): array { $m=median($xs); return $m>0?[$m,'median']:(($a=$xs?array_sum($xs)/count($xs):0)>0?[$a,'purata']:[0.0,'tiada']); };
@@ -775,7 +776,9 @@ function load_index(): array {
     foreach($rows as $id=>&$t){
         $tr=$dT>0?$t['teaching']/$dT:0.0; $kr=$dS>0?$t['score']/$dS:0.0;
         $t['teach_ratio']=$dT>0?round($tr,2):null; $t['task_ratio']=$dS>0?round($kr,2):null;
-        $t['index']=$t['counted'] && $ready?round($share*$tr+(1-$share)*$kr,2):null;
+        // Masa mengajar belum diisi → indeks ikut tugas sahaja (tidak dihukum sebagai "kurang beban" mengajar).
+        $sh=$t['teaching']>0?$share:($dS>0?0.0:$share);
+        $t['index']=$t['counted'] && $ready?round($sh*$tr+(1-$sh)*$kr,2):null;
         $t['label']=!$t['counted']?($t['status']!=='aktif'?'tidak_aktif':'dikecualikan'):($t['index']===null?'belum':($t['index']>$s['high']?'terbeban':($t['index']<$s['low']?'kurang':'seimbang')));
         $w=[]; if(in_array($t['label'],['terbeban','kurang'],true)) $w[]=$t['label'];
         if((int)$t['task_count']>$s['max_tasks']) $w[]='banyak';

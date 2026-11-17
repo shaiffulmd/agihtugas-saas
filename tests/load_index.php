@@ -55,7 +55,8 @@ with_school($S,function(){
     echo "Kelas peperiksaan, had jawatan & masa kosong\n";
     $T=fixture([['A',30,true,'aktif',false],['B',30,false,'aktif',false],['C',0,false,'aktif',false]],[['P1',5,'sokongan','tahunan',0],['P2',5,'sokongan','tahunan',0],['P3',5,'sokongan','tahunan',1],['P4',5,'sokongan','tahunan',2]]);
     $t=load_index()['teachers'];
-    check(near($t[$T[0]]['teaching'],36) && near($t[$T[0]]['teach_ratio'],1.2),'masa kelas peperiksaan × 1.2 (terlaras)');
+    check(near($t[$T[0]]['teaching'],36) && near($t[$T[0]]['teach_ratio'],round(36/33,2)),'masa kelas peperiksaan × 1.2; median masa (33) tanpa guru yang masanya belum diisi');
+    check(near($t[$T[2]]['index'],1.0),'masa belum diisi → indeks ikut tugas sahaja (5 ÷ median 5 = 1.00), tidak dihukum');
     check(in_array('banyak',$t[$T[0]]['warnings'],true) && !in_array('banyak',$t[$T[1]]['warnings'],true),'amaran Banyak jawatan melebihi had');
     check(in_array('tiada_masa',$t[$T[2]]['warnings'],true),'amaran masa mengajar belum diisi');
 
