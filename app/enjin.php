@@ -274,41 +274,74 @@ function bulk_agihan_apply(array $plan): array {
     }
     return [count($tid),count($pid),$n,count($plan['unit_updates']??[])];
 }
-/* ---------- Masa mengajar pukal (guru sedia ada) ----------
- * Grid di Pengurusan Guru (semua guru serentak) atau tampal / Excel: nama_guru, masa_mengajar[, kelas_peperiksaan].
- * Guru dipadan ikut nama (bulk_name_key); nama tidak dijumpai disenaraikan, tidak dicipta. Kelas peperiksaan kosong = kekal. */
-const BULK_MASA_COLS=[['nama_guru','nama','guru','name'],['masa_mengajar','masa','waktu_mengajar','waktu','masa_seminggu','teaching_periods'],['kelas_peperiksaan','peperiksaan','kelas_peperiksaan_(ya/tidak)','exam_class']];
+/* ---------- Kemas kini maklumat guru pukal (guru sedia ada) ----------
+ * Tampal / Excel dengan baris tajuk: Nama Guru + mana-mana lajur Emel, Kepakaran, Kapasiti, Masa mengajar, Kelas peperiksaan.
+ * Tanpa baris tajuk: Nama, Masa mengajar[, Kelas peperiksaan]. Guru dipadan ikut nama (bulk_name_key); nama tidak dijumpai
+ * disenaraikan, tidak dicipta. Sel kosong = kekal. Grid masa mengajar di Pengurusan Guru guna teachers_periods_update(). */
+const BULK_GURU_FIELDS=['name'=>['nama_guru','nama','guru','name'],'email'=>['emel','e_mel','e_mail','email','alamat_emel','alamat_e_mel'],
+    'specialty'=>['kepakaran','mata_pelajaran','mp','opsyen','specialty'],'capacity'=>['kapasiti','kapasiti_mata','capacity'],
+    'teaching_periods'=>['masa_mengajar','masa','waktu_mengajar','waktu','masa_seminggu','teaching_periods'],'exam_class'=>['kelas_peperiksaan','peperiksaan','exam_class']];
+const BULK_GURU_LABELS=['email'=>'E-mel','specialty'=>'Kepakaran','capacity'=>'Kapasiti','teaching_periods'=>'Masa mengajar','exam_class'=>'Kelas peperiksaan'];
 function bulk_yes_no(string $v,int $line): ?bool {
     $v=mb_strtolower(trim($v)); if($v==='') return null;
     if(in_array($v,['1','ya','y','yes','true','benar','✓','/'],true)) return true;
     if(in_array($v,['0','tidak','t','no','n','false','palsu','-','x'],true)) return false;
     throw new EngineError("Baris $line: kelas peperiksaan mesti Ya / Tidak (atau kosong untuk kekal).");
 }
-function bulk_masa_parse(string $text): array {
-    if(strlen($text)>131072) throw new EngineError('Fail / teks maksimum 128 KB.');
-    $rows=[]; $seen=[];
-    foreach(csv_rows($text,BULK_MASA_COLS,2,3,1000) as $i=>$r){
-        $line=$i+1; $name=trim((string)preg_replace('/\s+/u',' ',$r[0])); $n=trim($r[1]);
+function bulk_guru_update_parse(string $text): array {
+    if(strlen($text)>262144) throw new EngineError('Fail / teks maksimum 256 KB.');
+    $raw=csv_rows($text,[],2,6,1001); if(!$raw) throw new EngineError('Tiada baris untuk dikemas kini.');
+    $map=[]; foreach($raw[0] as $i=>$h){ $k=bulk_header_key($h); foreach(BULK_GURU_FIELDS as $f=>$alias) if(in_array($k,$alias,true)){ if(in_array($f,$map,true)) throw new EngineError("Lajur \"$h\" berulang."); $map[$i]=$f; } }
+    if(($map[0]??null)==='name'){ array_shift($raw); foreach($raw[0]??[] as $i=>$c) if(!isset($map[$i]) && trim($c)!=='') throw new EngineError('Lajur ke-'.($i+1).' tiada tajuk yang dikenali.'); }
+    else { if(count($raw[0])>3) throw new EngineError('Sertakan baris tajuk (cth. Nama Guru, Emel, Masa mengajar) apabila lebih daripada 3 lajur.'); $map=['name','teaching_periods','exam_class']; }
+    if(count($map)<2) throw new EngineError('Tiada lajur untuk dikemas kini. Tajuk diterima: Emel, Kepakaran, Kapasiti, Masa mengajar, Kelas peperiksaan.');
+    if(count($raw)>1000) throw new EngineError('Maksimum 1,000 baris bagi satu import.');
+    $rows=[]; $seen=[]; $emails=[];
+    foreach($raw as $i=>$r){
+        $line=$i+1; $set=[]; $name='';
+        foreach($map as $c=>$f){ $v=trim((string)preg_replace('/\s+/u',' ',(string)($r[$c]??'')));
+            if($f==='name'){ $name=$v; continue; } if($v==='') continue;
+            switch($f){
+                case 'email': $v=strtolower($v); if(strlen($v)>190 || !filter_var($v,FILTER_VALIDATE_EMAIL)) throw new EngineError("Baris $line: e-mel '$v' tidak sah.");
+                    if(isset($emails[$v])) throw new EngineError("Baris $line: e-mel '$v' berulang dalam senarai."); $emails[$v]=true; break;
+                case 'specialty': if(mb_strlen($v)>160) throw new EngineError("Baris $line: kepakaran maksimum 160 aksara."); break;
+                case 'capacity': if(!ctype_digit($v) || (int)$v<1 || (int)$v>100) throw new EngineError("Baris $line: kapasiti mesti nombor bulat 1–100."); $v=(int)$v; break;
+                case 'teaching_periods': if(!ctype_digit($v) || (int)$v>60) throw new EngineError("Baris $line: masa mengajar mesti nombor bulat 0–60."); $v=(int)$v; break;
+                case 'exam_class': $v=(int)bulk_yes_no($v,$line); break;
+            }
+            $set[$f]=$v;
+        }
         if($name==='') throw new EngineError("Baris $line: nama guru diperlukan.");
-        if($n==='') $n='0';
-        if(!ctype_digit($n) || (int)$n>60) throw new EngineError("Baris $line: masa mengajar mesti nombor bulat 0–60.");
         $k=bulk_name_key($name); if(isset($seen[$k])) throw new EngineError("Baris $line: nama '$name' berulang dalam senarai.");
-        $seen[$k]=true; $rows[]=['name'=>$name,'periods'=>(int)$n,'exam'=>bulk_yes_no($r[2]??'',$line)];
+        $seen[$k]=true; $rows[]=['name'=>$name,'set'=>$set];
     }
-    if(!$rows) throw new EngineError('Tiada baris untuk dikemas kini.');
     return $rows;
 }
-/** Padankan baris dengan guru sedia ada. Pulangkan changes [{id,name,old,new,exam_old,exam_new}], same (tiada perubahan), missing (nama tidak dijumpai). */
-function bulk_masa_plan(array $rows): array {
-    $T=[]; foreach(query('SELECT id,name,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll() as $t) $T[bulk_name_key($t['name'])]=$t;
-    $changes=[]; $same=0; $missing=[];
+/** Padankan baris dengan guru sedia ada. Pulangkan changes [{id,name,old=>[medan=>nilai],new=>[medan=>nilai]}], same, missing, fields (lajur yang ada). */
+function bulk_guru_update_plan(array $rows): array {
+    $T=[]; $byEmail=[];
+    foreach(query('SELECT id,name,email,specialty,capacity,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll() as $t){ $T[bulk_name_key($t['name'])]=$t; if($t['email']!=='') $byEmail[strtolower($t['email'])]=(int)$t['id']; }
+    $changes=[]; $same=0; $missing=[]; $fields=[]; $newEmail=[];
     foreach($rows as $r){
+        foreach(array_keys($r['set']) as $f) $fields[$f]=true;
         $t=$T[bulk_name_key($r['name'])]??null; if(!$t){ $missing[]=$r['name']; continue; }
-        $exam=$r['exam']===null?(int)$t['exam_class']:(int)$r['exam'];
-        if($r['periods']===(int)$t['teaching_periods'] && $exam===(int)$t['exam_class']){ $same++; continue; }
-        $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'old'=>(int)$t['teaching_periods'],'new'=>$r['periods'],'exam_old'=>(int)$t['exam_class'],'exam_new'=>$exam];
+        $old=[]; $new=[];
+        foreach($r['set'] as $f=>$v){ $cur=in_array($f,['capacity','teaching_periods','exam_class'],true)?(int)$t[$f]:(string)$t[$f]; if($cur!==$v){ $old[$f]=$cur; $new[$f]=$v; } }
+        if(isset($new['email'])) $newEmail[$new['email']]=(int)$t['id'];
+        if(!$new){ $same++; continue; }
+        $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'old'=>$old,'new'=>$new];
     }
-    return ['changes'=>$changes,'same'=>$same,'missing'=>$missing];
+    // E-mel tidak boleh dikongsi dua guru (selepas kemas kini).
+    $leaving=[]; foreach($changes as $c) if(isset($c['new']['email'])) $leaving[$c['id']]=true;
+    foreach($newEmail as $e=>$id){ $owner=$byEmail[$e]??null; if($owner!==null && $owner!==$id && !isset($leaving[$owner])) throw new EngineError("E-mel '$e' sudah digunakan oleh guru lain.",409); }
+    return ['changes'=>$changes,'same'=>$same,'missing'=>$missing,'fields'=>array_values(array_intersect(array_keys(BULK_GURU_LABELS),array_keys($fields)))];
+}
+/** Laksana kemas kini maklumat guru (dalam transaksi pemanggil). Pulangkan bilangan guru dikemas kini. */
+function bulk_guru_update_apply(array $plan): int {
+    $n=0; $cols=array_keys(BULK_GURU_LABELS);
+    foreach($plan['changes'] as $c){ $set=array_intersect_key($c['new'],array_flip($cols)); if(!$set) continue;
+        query('UPDATE teachers SET '.implode(',',array_map(fn($k)=>"$k=?",array_keys($set))).' WHERE id=? AND school_id='.sid(),[...array_values($set),$c['id']]); $n++; }
+    return $n;
 }
 /** Kemas kini masa mengajar & kelas peperiksaan: $set = [teacher_id => [periods, exam(0|1)]]. Hanya baris berubah. Pulangkan bilangan guru dikemas kini. */
 function teachers_periods_update(array $set): int {

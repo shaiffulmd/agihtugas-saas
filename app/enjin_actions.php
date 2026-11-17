@@ -119,13 +119,13 @@ function handle_engine_action(string $action): never {
                 $n=teachers_periods_update($set); if($n) audit('teacher_periods','teachers',null,$n.' guru');
                 $msg=$n?"Masa mengajar $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
             case 'guru_masa_preview':
-                $rows=bulk_masa_parse(bulk_source('csv','bulk_text',1000)); $_SESSION['masa_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'sid'=>sid()];
+                $rows=bulk_guru_update_parse(bulk_source('csv','bulk_text',1001,262144)); bulk_guru_update_plan($rows); $_SESSION['masa_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'sid'=>sid()];
                 db()->commit(); redirect('/?page=guru&masa=1#masa-hasil');
             case 'guru_masa_apply':
                 $d=$_SESSION['masa_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new EngineError('Pratonton tidak sah. Jana semula.',409);
-                $plan=bulk_masa_plan($d['rows']); $set=[]; foreach($plan['changes'] as $c) $set[$c['id']]=[$c['new'],(bool)$c['exam_new']];
-                $n=teachers_periods_update($set); unset($_SESSION['masa_pukal']); if($n) audit('teacher_periods','teachers',null,$n.' guru (import)');
-                $msg=$n?"Masa mengajar $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
+                $plan=bulk_guru_update_plan($d['rows']); $n=bulk_guru_update_apply($plan); unset($_SESSION['masa_pukal']);
+                if($n) audit('teacher_bulk_update','teachers',null,$n.' guru: '.implode(', ',$plan['fields']));
+                $msg=$n?"Maklumat $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
             case 'agih':
                 $pid=post_int('position_id',1,PHP_INT_MAX,'Jawatan'); $tid=post_int('teacher_id',1,PHP_INT_MAX,'Guru');
                 $aid=assign_position($pid,$tid); audit('assign','assignments',$aid,'jawatan #'.$pid.' → guru #'.$tid); $msg='Agihan tugas dikemas kini.';
