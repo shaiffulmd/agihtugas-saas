@@ -52,8 +52,8 @@ function allocation_state(): array {
     $int=fn(array $rows,array $cols)=>array_map(function($r)use($cols){ foreach($cols as $c) if(isset($r[$c])) $r[$c]=(int)$r[$c]; return $r; },$rows);
     $wf=query('SELECT status,revision_id,version FROM workflow_state WHERE school_id='.sid())->fetch()?:[];
     return ['workflow'=>$wf,'school'=>school_profile(),
-        'teachers'=>$int(query('SELECT id,name,email,specialty,capacity,external_id,status,teaching_periods,exam_class,index_exempt FROM teachers WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','capacity','teaching_periods','exam_class','index_exempt']),
-        'positions'=>$int(query('SELECT id,name,category,weight,level,term FROM positions WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','weight']),
+        'teachers'=>$int(query('SELECT id,name,email,specialty,capacity,external_id,status,teaching_periods,exam_class,index_exempt,units FROM teachers WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','capacity','teaching_periods','exam_class','index_exempt']),
+        'positions'=>$int(query('SELECT id,name,category,weight,level,term,unit FROM positions WHERE school_id='.sid().' ORDER BY id')->fetchAll(),['id','weight']),
         'index'=>index_settings(),
         'assignments'=>$int(query('SELECT position_id,teacher_id FROM assignments WHERE school_id='.sid().' ORDER BY position_id')->fetchAll(),['position_id','teacher_id']),
         'rules'=>allocation_rules(),'position_rules'=>allocation_position_rules(),
@@ -64,6 +64,7 @@ function allocation_eligible(array $t,array $p,array $rule,array $rules): ?strin
     if(in_array($t['id'],$rules['excluded_teachers'],true)) return 'Guru dikecualikan';
     if(($rules['head']??null)===$t['id']) return head_title().' tidak diberi tugas melalui agihan automatik';
     if(($t['status']??'aktif')!=='aktif') return 'Guru bercuti / bertukar keluar';
+    if(!unit_allows($t,$p)) return 'Bukan guru '.(POSITION_UNITS[$p['unit']??'sekolah']??'');
     if(($rule['fixed_teacher_id']??null)!==null && $t['id']!==$rule['fixed_teacher_id']) return 'Jawatan mempunyai penyandang tetap';
     if(!empty($rule['allowed_teachers']) && !in_array($t['id'],$rule['allowed_teachers'],true)) return 'Di luar senarai guru layak';
     if(($rule['required_specialty']??'')!=='' && mb_stripos($t['specialty'],$rule['required_specialty'])===false) return 'Kepakaran tidak sepadan';

@@ -74,7 +74,7 @@ function handle_engine_action(string $action): never {
                 $msg=$n.' mata pelajaran ditambah daripada senarai standard.'; $anchor='&templat='.rawurlencode($tpl); break;
             case 'guru_save':
                 $tid=teacher_save($id,['name'=>input('name'),'email'=>input('email'),'specialty'=>input('specialty'),'capacity'=>post_int('capacity',1,100,'Kapasiti'),
-                    'teaching_periods'=>input('teaching_periods')===''?0:post_int('teaching_periods',0,60,'Masa mengajar'),'exam_class'=>input('exam_class')==='1','status'=>input('status')?:'aktif','index_exempt'=>input('index_exempt')==='1']);
+                    'teaching_periods'=>input('teaching_periods')===''?0:post_int('teaching_periods',0,60,'Masa mengajar'),'exam_class'=>input('exam_class')==='1','status'=>input('status')?:'aktif','index_exempt'=>input('index_exempt')==='1']+(input('units_form')==='1'?['units'=>array_values(array_filter(is_array($_POST['units']??null)?$_POST['units']:[],'is_string'))]:[]));
                 audit($id?'teacher_update':'teacher_create','teachers',$tid,mb_substr(input('name'),0,120)); $msg='Maklumat guru disimpan.'; break;
             case 'guru_delete': $t=teacher_find($id); teacher_delete($id); audit('teacher_delete','teachers',$id,(string)($t['name']??'')); $msg='Rekod guru dipadam.'; break;
             case 'guru_bulk_preview':
@@ -116,8 +116,13 @@ function handle_engine_action(string $action): never {
                     if(!ctype_digit($v) || (int)$v>60) throw new EngineError('Masa mengajar mesti nombor bulat 0–60.');
                     $set[$id]=[(int)$v,isset($x[$id])];
                 }
-                $n=teachers_periods_update($set); if($n) audit('teacher_periods','teachers',null,$n.' guru');
-                $msg=$n?"Masa mengajar $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
+                $n=teachers_periods_update($set);
+                if(input('units_grid')==='1'){ $ug=is_array($_POST['unit']??null)?$_POST['unit']:[]; $nu=0;
+                    foreach(array_keys($set) as $id){ $v=teacher_units_value(array_values(array_filter(is_array($ug[$id]??null)?$ug[$id]:[],'is_string')));
+                        $nu+=query('UPDATE teachers SET units=? WHERE id=? AND school_id='.sid().' AND units<>?',[$v,$id,$v])->rowCount(); }
+                    $n=max($n,0)+$nu; }
+                if($n) audit('teacher_periods','teachers',null,$n.' guru');
+                $msg=$n?"Maklumat $n guru dikemas kini.":'Tiada perubahan.'; $anchor='&masa=1#masa'; break;
             case 'guru_masa_preview':
                 $rows=bulk_guru_update_parse(bulk_source('csv','bulk_text',1001,262144)); bulk_guru_update_plan($rows); $_SESSION['masa_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'sid'=>sid()];
                 db()->commit(); redirect('/?page=guru&masa=1#masa-hasil');

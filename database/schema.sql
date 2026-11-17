@@ -41,6 +41,7 @@ CREATE TABLE teachers (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL, email VARCHAR(190) NOT NULL DEFAULT '',
  specialty VARCHAR(160) NOT NULL DEFAULT '', capacity TINYINT UNSIGNED NOT NULL, external_id VARCHAR(160) NULL,
  teaching_periods TINYINT UNSIGNED NOT NULL DEFAULT 0, exam_class TINYINT NOT NULL DEFAULT 0, status ENUM('aktif','cuti','bertukar') NOT NULL DEFAULT 'aktif', index_exempt TINYINT NOT NULL DEFAULT 0,
+ units SET('ppki','t6') NOT NULL DEFAULT '',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  UNIQUE KEY school_row (school_id,id), UNIQUE KEY school_external (school_id,external_id), INDEX(school_id,name),
  CONSTRAINT teacher_capacity CHECK (capacity BETWEEN 1 AND 100), CONSTRAINT teacher_periods CHECK (teaching_periods<=60),

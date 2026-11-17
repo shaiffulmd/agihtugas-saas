@@ -17,6 +17,18 @@ function school_units(bool $refresh=false): array {
     return $cache[$sid]=array_values(array_filter(array_keys(POSITION_UNITS),fn($u)=>isset($on[$u])));
 }
 function units_on(): bool { return count(school_units())>1; }
+/** Unit guru (SET teachers.units) → senarai kunci, cth. ['t6']. */
+function teacher_units(array|string|null $t): array { $v=is_array($t)?(string)($t['units']??''):(string)$t; return array_values(array_filter(explode(',',$v),fn($u)=>isset(POSITION_UNITS[$u]) && $u!=='sekolah')); }
+/** Jawatan berunit PPKI / Tingkatan 6 hanya untuk guru unit itu; jawatan Sekolah untuk semua guru. */
+/** Nilai SET units yang sah daripada senarai kunci atau teks "ppki,t6". */
+function teacher_units_value(array|string $u): string {
+    $u=is_array($u)?$u:explode(',',$u); $u=array_values(array_unique(array_filter(array_map('trim',$u),fn($x)=>$x!=='')));
+    foreach($u as $x) if(!in_array($x,['ppki','t6'],true)) throw new EngineError('Unit guru mesti ppki atau t6.');
+    sort($u); return implode(',',$u);
+}
+function unit_allows(array $teacher,array $position): bool { $u=$position['unit']??'sekolah'; return $u==='sekolah' || in_array($u,teacher_units($teacher),true); }
+function unit_denied_message(array $position): string { $l=POSITION_UNITS[$position['unit']??'sekolah']??''; return 'Jawatan '.$l.' hanya untuk guru '.$l.'. Tandakan guru sebagai guru '.$l.' di Pengurusan Guru dahulu.'; }
+function teacher_units_badges(array $t): string { return implode('',array_map(fn($u)=>' <span class="badge unit-badge">'.e(POSITION_UNITS[$u]).'</span>',teacher_units($t))); }
 function unit_badge(?string $u): string { return $u && $u!=='sekolah' && isset(POSITION_UNITS[$u])?' <span class="badge unit-badge">'.e(POSITION_UNITS[$u]).'</span>':''; }
 /** Teks unit daripada import → kunci (null jika kosong). Diterima: Sekolah/Utama, PPKI/Pendidikan Khas, T6/Tingkatan 6/F6/Form 6/PPU/STPM. */
 function unit_from_text(string $v,string $where=''): ?string {
@@ -80,6 +92,7 @@ function teacher_validate(array $data): array {
     if(array_key_exists('teaching_periods',$data)){ $n=$data['teaching_periods']; if(!is_int($n) || $n<0 || $n>60) throw new EngineError('Masa mengajar mesti integer 0–60 masa seminggu.'); $out['teaching_periods']=$n; }
     foreach(['exam_class'=>'Kelas peperiksaan','index_exempt'=>'Pengecualian indeks'] as $k=>$label) if(array_key_exists($k,$data)){ if(!is_bool($data[$k])) throw new EngineError($label.' mesti benar/palsu.'); $out[$k]=(int)$data[$k]; }
     if(array_key_exists('status',$data)){ if(!isset(TEACHER_STATUSES[$data['status']])) throw new EngineError('Status guru mesti aktif, cuti atau bertukar.'); $out['status']=$data['status']; }
+    if(array_key_exists('units',$data)) $out['units']=teacher_units_value($data['units']);
     return $out;
 }
 /** Cipta (id 0) atau kemas kini guru. Pulangkan ID. */
@@ -138,7 +151,8 @@ function position_delete(int $id): void {
 /* ---------- Lantikan ---------- */
 /** Tetapkan penyandang jawatan (ganti penyandang sedia ada). Pulangkan ID lantikan. */
 function assign_position(int $positionId,int $teacherId): int {
-    if(!position_find($positionId) || !teacher_find($teacherId)) throw new EngineError('Pilih guru dan jawatan yang sah.',404,'not_found');
+    $p=position_find($positionId); $t=teacher_find($teacherId); if(!$p || !$t) throw new EngineError('Pilih guru dan jawatan yang sah.',404,'not_found');
+    if(!unit_allows($t,$p)) throw new EngineError(unit_denied_message($p),422,'unit_mismatch');
     query('INSERT INTO assignments (school_id,teacher_id,position_id) VALUES ('.sid().',?,?) ON DUPLICATE KEY UPDATE teacher_id=VALUES(teacher_id)',[$teacherId,$positionId]);
     return (int)query('SELECT id FROM assignments WHERE school_id='.sid().' AND position_id=?',[$positionId])->fetchColumn();
 }
@@ -269,8 +283,11 @@ function bulk_agihan_apply(array $plan): array {
     foreach($plan['unit_updates']??[] as $id=>$u) query('UPDATE positions SET unit=? WHERE id=? AND school_id='.sid(),[$u,(int)$id]);
     $n=0;
     foreach($plan['items'] as $it){
+        $teacher=$it['tid']??($tid[$it['tkey']]??null);
+        // Guru yang dilantik ke jawatan PPKI / Tingkatan 6 dalam fail ditanda sebagai guru unit itu.
+        if($teacher && in_array($it['unit']??'sekolah',['ppki','t6'],true)) query("UPDATE teachers SET units=CONCAT_WS(',',NULLIF(units,''),?) WHERE id=? AND school_id=".sid()." AND NOT FIND_IN_SET(?,units)",[$it['unit'],$teacher,$it['unit']]);
         if($it['status']!=='baharu') continue;
-        query('INSERT INTO assignments (school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$it['tid']??$tid[$it['tkey']],$it['pid']??$pid[$it['pnew']]]); $n++;
+        query('INSERT INTO assignments (school_id,teacher_id,position_id) VALUES ('.sid().',?,?)',[$teacher,$it['pid']??$pid[$it['pnew']]]); $n++;
     }
     return [count($tid),count($pid),$n,count($plan['unit_updates']??[])];
 }
@@ -280,8 +297,9 @@ function bulk_agihan_apply(array $plan): array {
  * disenaraikan, tidak dicipta. Sel kosong = kekal. Grid masa mengajar di Pengurusan Guru guna teachers_periods_update(). */
 const BULK_GURU_FIELDS=['name'=>['nama_guru','nama','guru','name'],'email'=>['emel','e_mel','e_mail','email','alamat_emel','alamat_e_mel'],
     'specialty'=>['kepakaran','mata_pelajaran','mp','opsyen','specialty'],'capacity'=>['kapasiti','kapasiti_mata','capacity'],
-    'teaching_periods'=>['masa_mengajar','masa','waktu_mengajar','waktu','masa_seminggu','teaching_periods'],'exam_class'=>['kelas_peperiksaan','peperiksaan','exam_class']];
-const BULK_GURU_LABELS=['email'=>'E-mel','specialty'=>'Kepakaran','capacity'=>'Kapasiti','teaching_periods'=>'Masa mengajar','exam_class'=>'Kelas peperiksaan'];
+    'teaching_periods'=>['masa_mengajar','masa','waktu_mengajar','waktu','masa_seminggu','teaching_periods'],'exam_class'=>['kelas_peperiksaan','peperiksaan','exam_class'],
+    'units'=>['unit','unit_guru','units']];
+const BULK_GURU_LABELS=['email'=>'E-mel','specialty'=>'Kepakaran','capacity'=>'Kapasiti','teaching_periods'=>'Masa mengajar','exam_class'=>'Kelas peperiksaan','units'=>'Unit guru'];
 function bulk_yes_no(string $v,int $line): ?bool {
     $v=mb_strtolower(trim($v)); if($v==='') return null;
     if(in_array($v,['1','ya','y','yes','true','benar','✓','/'],true)) return true;
@@ -308,6 +326,8 @@ function bulk_guru_update_parse(string $text): array {
                 case 'capacity': if(!ctype_digit($v) || (int)$v<1 || (int)$v>100) throw new EngineError("Baris $line: kapasiti mesti nombor bulat 1–100."); $v=(int)$v; break;
                 case 'teaching_periods': if(!ctype_digit($v) || (int)$v>60) throw new EngineError("Baris $line: masa mengajar mesti nombor bulat 0–60."); $v=(int)$v; break;
                 case 'exam_class': $v=(int)bulk_yes_no($v,$line); break;
+                case 'units': $us=[]; if(!in_array(mb_strtolower($v),['-','tiada','sekolah','none'],true)) foreach(preg_split('/[,;\/]+/u',$v) as $part){ $u=unit_from_text($part,"Baris $line: "); if($u && $u!=='sekolah') $us[]=$u; }
+                    $us=array_values(array_unique($us)); sort($us); $v=implode(',',$us); break;
             }
             $set[$f]=$v;
         }
@@ -357,7 +377,7 @@ function teacher_matcher(array $teachers): callable {
 }
 /** Padankan baris dengan guru sedia ada. Pulangkan changes [{id,name,old=>[medan=>nilai],new=>[medan=>nilai]}], same, missing, fields (lajur yang ada). */
 function bulk_guru_update_plan(array $rows): array {
-    $all=query('SELECT id,name,email,specialty,capacity,teaching_periods,exam_class FROM teachers WHERE school_id='.sid())->fetchAll(); $byEmail=[];
+    $all=query('SELECT id,name,email,specialty,capacity,teaching_periods,exam_class,units FROM teachers WHERE school_id='.sid())->fetchAll(); $byEmail=[];
     foreach($all as $t) if($t['email']!=='') $byEmail[strtolower($t['email'])]=(int)$t['id'];
     $match=teacher_matcher($all); $changes=[]; $same=0; $missing=[]; $fuzzy=[]; $fields=[]; $newEmail=[]; $used=[];
     foreach($rows as $r){
@@ -365,7 +385,9 @@ function bulk_guru_update_plan(array $rows): array {
         [$t,$how]=$match($r['name']); if(!$t || isset($used[(int)$t['id']])){ $missing[]=$r['name']; continue; } $used[(int)$t['id']]=true;
         if($how==='anggaran') $fuzzy[]=[$r['name'],$t['name']];
         $old=[]; $new=[];
-        foreach($r['set'] as $f=>$v){ $cur=in_array($f,['capacity','teaching_periods','exam_class'],true)?(int)$t[$f]:(string)$t[$f]; if($cur!==$v){ $old[$f]=$cur; $new[$f]=$v; } }
+        foreach($r['set'] as $f=>$v){ $cur=in_array($f,['capacity','teaching_periods','exam_class'],true)?(int)$t[$f]:(string)$t[$f];
+            if($f==='units'){ $c=teacher_units($cur); sort($c); $cur=implode(',',$c); }
+            if($cur!==$v){ $old[$f]=$cur; $new[$f]=$v; } }
         if(isset($new['email'])) $newEmail[$new['email']]=(int)$t['id'];
         if(!$new){ $same++; continue; }
         $changes[]=['id'=>(int)$t['id'],'name'=>$t['name'],'file_name'=>$how==='anggaran'?$r['name']:null,'old'=>$old,'new'=>$new];

@@ -43,7 +43,18 @@ function rankBySubject() {
   if (hint && !teacherSel.value) hint.textContent = !subj ? 'Calon disusun daripada indeks beban paling rendah. Pilih jawatan dan guru untuk melihat anggaran beban selepas lantikan.'
     : (n2 ? `${n2} guru mengajar ${pd.subject} (★)` : `Tiada guru dengan kepakaran ${pd.subject}`) + (n1 ? `, ${n1} guru mengajar MP berkaitan${grp ? ' (' + grp + ')' : ''} (☆)` : '') + ' — disusun di atas, indeks terendah dahulu.';
 }
+// Jawatan berunit PPKI / Tingkatan 6: hanya guru unit itu boleh dipilih.
+function filterByUnit() {
+  if (!posSel || !teacherSel) return;
+  const pd = posSel.selectedOptions[0]?.dataset || {}, unit = pd.unit || 'sekolah';
+  let n = 0;
+  teacherOpts.forEach(o => { const ok = unit === 'sekolah' || (o.dataset.units || '').split(',').includes(unit); o.disabled = !ok; o.hidden = !ok; if (ok) n++; });
+  if (teacherSel.selectedOptions[0]?.disabled) teacherSel.value = '';
+  const hint = document.getElementById('anggaran-beban');
+  if (hint && unit !== 'sekolah') hint.textContent = `Jawatan ${pd.unitLabel}: hanya guru ${pd.unitLabel} dipaparkan (${n} guru). Tanda guru unit di Pengurusan Guru → Masa mengajar.`;
+}
 posSel?.addEventListener('change', rankBySubject);
+posSel?.addEventListener('change', filterByUnit);
 posSel?.addEventListener('change', loadPreview); teacherSel?.addEventListener('change', loadPreview);
 document.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('click', () => {
   if (!posSel) return; posSel.value = btn.dataset.pick; posSel.dispatchEvent(new Event('change'));

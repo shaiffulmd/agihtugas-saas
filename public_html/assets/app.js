@@ -31,7 +31,7 @@ document.querySelectorAll('select[data-searchable]').forEach(select => {
   const q = box.value.trim().toLowerCase();
   let first = null, shown = 0;
   options.forEach(option => {
-   const match = !option.value || option.text.toLowerCase().includes(q);
+   const match = !option.value || (!option.disabled && option.text.toLowerCase().includes(q));
    option.hidden = !match;
    if(match && option.value) { shown++; first ??= option; }
   });

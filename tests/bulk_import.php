@@ -112,6 +112,17 @@ with_school($S,function()use(&$tmp){
     check(position_find($pid)['unit']==='t6','position_save menerima unit');
     rejects(fn()=>position_save(0,['name'=>'X','category'=>'HEM','weight'=>1,'unit'=>'asrama']),'unit tidak sah ditolak (position_validate)','Unit mesti');
 
+    echo "Guru unit (jawatan PPKI / Tingkatan 6 hanya untuk guru unit itu)\n";
+    $d=teacher_find((int)query('SELECT id FROM teachers WHERE school_id='.sid().' AND name="Guru D"')->fetchColumn());
+    check(in_array('t6',teacher_units($d),true) && in_array('ppki',teacher_units($d),true),'import agihan: guru dilantik ke jawatan unit ditanda guru unit itu');
+    $fx=teacher_save(0,['name'=>'Guru Biasa X','email'=>'','specialty'=>'','capacity'=>25]); $pt6=position_save(0,['name'=>'AJK T6 Ujian','category'=>'HEM','weight'=>1,'unit'=>'t6']);
+    rejects(fn()=>assign_position($pt6,$fx),'lantikan manual: guru bukan Tingkatan 6 ditolak','hanya untuk guru Tingkatan 6');
+    teacher_save($fx,['name'=>'Guru Biasa X','email'=>'','specialty'=>'','capacity'=>25,'units'=>['t6']]);
+    check(assign_position($pt6,$fx)>0 && teacher_find($fx)['units']==='t6','ditanda guru Tingkatan 6 → boleh dilantik');
+    check(allocation_eligible(['id'=>1,'status'=>'aktif','specialty'=>'','units'=>''],['unit'=>'ppki'],[],['excluded_teachers'=>[]])!==null && allocation_eligible(['id'=>1,'status'=>'aktif','specialty'=>'','units'=>'ppki'],['unit'=>'ppki'],[],['excluded_teachers'=>[]])===null,'agihan automatik: hanya guru unit sepadan layak');
+    $pu=bulk_guru_update_plan(bulk_guru_update_parse("Nama Guru,Unit\nGuru Biasa X,Tiada\nGuru E,\"T6, PPKI\"\n"));
+    check(count($pu['changes'])===2 && $pu['changes'][0]['new']['units']==='' && $pu['changes'][1]['new']['units']==='ppki,t6','kemas kini pukal: lajur Unit (Tiada / T6, PPKI)');
+    rejects(fn()=>teacher_units_value(['asrama']),'unit guru tidak sah ditolak','ppki atau t6');
     echo "Kemas kini maklumat guru pukal\n";
     $r=bulk_guru_update_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['set']===['teaching_periods'=>28,'exam_class'=>1] && $r[1]['set']===[],'tajuk dikenali; sel kosong = kekal');
