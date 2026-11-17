@@ -154,6 +154,12 @@ with_school($S,function()use(&$tmp){
     $ok=true; foreach(["NOR' AINI BINTI ABDULLAH"=>1,'ABDUL AZIZ BIN JAMALUDIN'=>2,'MOHD ZUHAILI BIN KAMARIDIN'=>3,'NURRUL FAIRUZ BINTI SETOPA@SETAPA'=>4,'NOZIRA BINTI ABDUL RAHMAN'=>5,'SHALELAWATE BINTI HUSSIN @ MUKHTAR'=>6,'SALMIAH BT BULIA'=>7,'navamani a/p pariasamy'=>8,'NURUL HAKIMAH BINTI ISMAIL'=>9] as $n=>$want){ [$t,$how]=$m($n); $ok=$ok && $t && (int)$t['id']===$want; }
     check($ok,'padanan nama longgar: apostrof, BT/BIN, ABD, @ alias, ejaan hampir sama, A/P');
     check($m('NURUL HAKIMAH BINTI ISMAIL')[1]==='tepat' && $m('SALMIAH BT BULIA')[1]==='anggaran' && $m('SITI AMINAH BINTI OMAR')[0]===null,'tepat vs anggaran dibezakan; nama lain tidak dipadankan');
+    echo "Akaun guru pukal\n";
+    $ap=teacher_accounts_plan(); $cands=array_column($ap['create'],'id');
+    check(in_array($id,array_map('intval',$cands),true) && in_array('Tiada e-mel',array_column($ap['skip'],1),true),'guru ber-e-mel tanpa akaun disenaraikan; tanpa e-mel dilangkau');
+    [$made,$nl]=teacher_accounts_create([$id],false,false); $u=query('SELECT * FROM users WHERE school_id='.sid().' AND teacher_id=?',[$id])->fetch();
+    check(count($made)===1 && $u && $u['role']==='teacher' && (int)$u['must_change']===1 && password_verify($made[0][2],$u['password_hash']) && strlen($made[0][2])===16,'akaun Guru dicipta, dipautkan, kata laluan sementara wajib ditukar');
+    check(!in_array($id,array_map('intval',array_column(teacher_accounts_plan()['create'],'id')),true),'guru yang sudah ada akaun tidak disenaraikan lagi');
     check(teachers_periods_update([$id=>[12,false]])===1 && teachers_periods_update([$id=>[12,false]])===0,'grid masa mengajar: hanya baris berubah');
     rejects(fn()=>teachers_periods_update([$id=>[61,false]]),'grid: masa > 60 ditolak','0–60');
 });

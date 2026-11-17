@@ -22,6 +22,48 @@ function user_teacher_link(string $role,int $userId): ?int {
     if(query('SELECT 1 FROM users WHERE school_id='.sid().' AND teacher_id=? AND id<>?',[$tid,$userId])->fetchColumn()) throw new DomainException('Profil guru telah dipautkan kepada akaun lain.');
     return $tid;
 }
+/* ---------- Akaun guru pukal ----------
+ * Cipta akaun log masuk (peranan Guru, dipautkan ke profil guru) bagi guru yang ada e-mel tetapi belum ada akaun.
+ * Kata laluan sementara rawak, wajib ditukar pada log masuk pertama; dipaparkan sekali sahaja (dan pilihan: dihantar melalui e-mel). */
+/** Pulangkan create (guru boleh dicipta akaun), link (akaun sedia ada dengan e-mel sama tetapi belum dipautkan), skip [guru, sebab]. */
+function teacher_accounts_plan(): array {
+    $users=query('SELECT id,name,email,role,teacher_id FROM users WHERE school_id='.sid())->fetchAll();
+    $byEmail=[]; $linked=[]; foreach($users as $u){ $byEmail[strtolower($u['email'])]=$u; if($u['teacher_id']!==null) $linked[(int)$u['teacher_id']]=true; }
+    $out=['create'=>[],'link'=>[],'skip'=>[]]; $seen=[];
+    foreach(query('SELECT id,name,email,status FROM teachers WHERE school_id='.sid().' ORDER BY name')->fetchAll() as $t){
+        if(isset($linked[(int)$t['id']])) continue;
+        $e=strtolower(trim((string)$t['email']));
+        if($e===''){ $out['skip'][]=[$t,'Tiada e-mel']; continue; }
+        if($t['status']==='bertukar'){ $out['skip'][]=[$t,'Bertukar keluar']; continue; }
+        if(!filter_var($e,FILTER_VALIDATE_EMAIL) || strlen($e)>190){ $out['skip'][]=[$t,'E-mel tidak sah']; continue; }
+        if(isset($seen[$e])){ $out['skip'][]=[$t,'E-mel sama dengan guru lain']; continue; } $seen[$e]=true;
+        if($u=$byEmail[$e]??null){ if($u['teacher_id']===null) $out['link'][]=[$t,$u]; else $out['skip'][]=[$t,'E-mel digunakan akaun '.$u['name']]; continue; }
+        $out['create'][]=$t;
+    }
+    return $out;
+}
+/** Kata laluan sementara 16 aksara tanpa aksara mengelirukan (sama seperti platform_temp_password). */
+function teacher_temp_password(int $n=16): string { $abc='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; $o=''; for($i=0;$i<$n;$i++) $o.=$abc[random_int(0,strlen($abc)-1)]; return $o; }
+/** Cipta akaun bagi guru terpilih (dikira semula) & pautkan akaun sedia ada. Pulangkan [dicipta [[nama,e-mel,kata laluan,dihantar]], dipautkan]. */
+function teacher_accounts_create(array $ids,bool $link,bool $mail): array {
+    $want=array_flip(array_map('intval',$ids)); $plan=teacher_accounts_plan();
+    $rows=array_values(array_filter($plan['create'],fn($t)=>isset($want[(int)$t['id']])));
+    if(!$rows && !($link && $plan['link'])) throw new DomainException('Tiada guru dipilih.');
+    free_guard('pengguna',count($rows));
+    $made=[]; $login=school_url((string)school()['code'],'/');
+    foreach($rows as $t){
+        $pw=teacher_temp_password(); $email=strtolower(trim($t['email'])); $name=mb_substr(trim($t['name']),0,120);
+        query('INSERT INTO users (school_id,name,email,password_hash,role,must_change,teacher_id) VALUES (?,?,?,?,"teacher",1,?)',[sid(),$name,$email,hash_password($pw),(int)$t['id']]);
+        audit('create','users',(int)db()->lastInsertId(),'Guru (pukal)'); $made[]=[$name,$email,$pw,false];
+    }
+    $n=0; if($link) foreach($plan['link'] as [$t,$u]) $n+=query('UPDATE users SET teacher_id=? WHERE id=? AND school_id='.sid().' AND teacher_id IS NULL',[(int)$t['id'],(int)$u['id']])->rowCount();
+    if($mail && function_exists('mail_ready') && mail_ready()) foreach($made as $i=>[$name,$email,$pw]){
+        $txt="Assalamualaikum dan salam sejahtera $name,\n\nAkaun UrusTugas anda di ".school_name()." telah dicipta.\n\nAlamat log masuk: $login\nE-mel: $email\nKata laluan sementara: $pw\n\nAnda wajib menukar kata laluan selepas log masuk pertama. Di menu Tugas Saya anda boleh melihat tugas dan surat lantikan anda.";
+        $made[$i][3]=send_mail($email,$name,'Akaun UrusTugas anda — '.school_name(),$txt);
+    }
+    if($made || $n) audit('teacher_accounts','users',null,count($made).' akaun dicipta, '.$n.' dipautkan');
+    return [$made,$n];
+}
 function active_admin_count(): int { return (int)query('SELECT COUNT(*) FROM users WHERE school_id='.sid().' AND role="admin" AND active=1')->fetchColumn(); }
 function handle_user_admin(string $action): never {
     require_admin();
@@ -74,7 +116,7 @@ const AUDIT_LABELS = [
     'password_reset_requested'=>'Minta reset kata laluan','password_reset'=>'Reset kata laluan (e-mel)','login_inactive'=>'Log masuk akaun tidak aktif','login_ip_denied'=>'Log masuk ditolak (IP)','session_ip_denied'=>'Sesi ditolak (IP)','bot_blocked'=>'Bot disekat',
     'reg_settings'=>'Tetapan pendaftaran & e-mel','mail_test'=>'Uji e-mel','avatar_saved'=>'Tukar gambar profil','avatar_removed'=>'Buang gambar profil','avatar_admin_removed'=>'Buang gambar profil (pentadbir)',
     'teacher_create'=>'Tambah guru','teacher_update'=>'Kemas kini guru','teacher_delete'=>'Padam guru','teacher_bulk'=>'Tambah guru pukal','teacher_sync'=>'Segerak guru (API)',
-    'position_create'=>'Tambah jawatan','position_update'=>'Kemas kini jawatan','position_delete'=>'Padam jawatan','position_bulk'=>'Tambah jawatan pukal','agihan_bulk'=>'Import agihan (guru, jawatan & lantikan)','teacher_periods'=>'Kemas kini masa mengajar pukal','teacher_bulk_update'=>'Kemas kini maklumat guru pukal','position_rule'=>'Syarat jawatan',
+    'position_create'=>'Tambah jawatan','position_update'=>'Kemas kini jawatan','position_delete'=>'Padam jawatan','position_bulk'=>'Tambah jawatan pukal','agihan_bulk'=>'Import agihan (guru, jawatan & lantikan)','teacher_periods'=>'Kemas kini masa mengajar pukal','teacher_bulk_update'=>'Kemas kini maklumat guru pukal','teacher_accounts'=>'Cipta akaun guru pukal','position_rule'=>'Syarat jawatan',
     'assign'=>'Lantik guru','unassign'=>'Lepaskan lantikan','allocation_rules'=>'Syarat agihan automatik','allocation_apply'=>'Simpan agihan automatik',
     'workflow_submit'=>'Hantar untuk semakan','workflow_approve'=>'Luluskan agihan','workflow_finalize'=>'Muktamadkan agihan','workflow_return'=>'Kembalikan kepada draf',
     'school_profile'=>'Profil sekolah (surat)','letter_logo'=>'Logo surat','letter_logo_removed'=>'Buang logo surat','letter_header'=>'Gaya kepala surat','letter_format'=>'Format surat','role_create'=>'Tambah peranan','role_update'=>'Kemas kini skor peranan','role_delete'=>'Padam peranan','role_standard'=>'Isi peranan standard','role_match'=>'Padan jawatan dengan peranan','flag_resolved'=>'Guru ditanda selesai dibaiki','flag_reopened'=>'Batal tanda selesai','subject_create'=>'Tambah mata pelajaran','subject_update'=>'Kemas kini mata pelajaran','subject_delete'=>'Padam mata pelajaran','subject_import'=>'Import senarai mata pelajaran','api_key_create'=>'Cipta kunci API','api_key_revoke'=>'Batal kunci API',

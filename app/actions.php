@@ -97,6 +97,13 @@ function handle_action(string $page,string $action): void {
  if(str_starts_with($action,'sec_')) handle_security_school($action);
  if(str_starts_with($action,'avatar_')) handle_avatar($action);
  if(str_starts_with($action,'reg_')) handle_registration_admin($action);
+ if($action==='user_bulk_teachers'){
+  require_admin(); confirm_admin_password(); $ids=is_array($_POST['teacher_ids']??null)?array_filter($_POST['teacher_ids'],'is_string'):[];
+  db()->beginTransaction(); try { [$made,$n]=teacher_accounts_create($ids,input('link')==='1',input('send_mail')==='1'); db()->commit(); } catch(Throwable $ex){ if(db()->inTransaction()) db()->rollBack(); throw $ex; }
+  $_SESSION['akaun_guru']=['sid'=>sid(),'rows'=>$made,'at'=>time()];
+  $sent=count(array_filter($made,fn($r)=>$r[3]));
+  flash(count($made).' akaun guru dicipta'.($n?', '.$n.' akaun sedia ada dipautkan':'').($sent?', '.$sent.' e-mel dihantar':'').'.'); redirect('/?page=users&akaun_guru=1#akaun-guru');
+ }
  if(str_starts_with($action,'user_') && $action!=='user_create') handle_user_admin($action);
  if($action==='user_create'){
   require_admin(); free_guard('pengguna',1); $name=trim(input('name')); $email=strtolower(trim(input('email'))); $password=input('password'); $role=input('role'); $tid=user_teacher_link($role,0);
