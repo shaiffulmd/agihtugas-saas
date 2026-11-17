@@ -12,9 +12,8 @@ permissions:
   contents: write
 concurrency:
   group: terbit
-  cancel-in-progress: true
+  cancel-in-progress: false   # jangan batalkan semasa memuat naik aset (Release separuh siap → kemas kini gagal)
 env:
-  ASSET: urustugas.zip
   TAG: terkini
 jobs:
   terbit:
@@ -40,6 +39,8 @@ jobs:
         run: find app bin public_html lib -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
       - name: Bina zip keluaran
         run: |
+          # Nama zip unik setiap binaan: manifest lama sentiasa menunjuk zip yang masih wujud semasa Release dikemas kini.
+          ASSET="urustugas-${GITHUB_SHA::12}.zip"; echo "ASSET=$ASSET" >> "$GITHUB_ENV"
           sh release/build-zip.sh
           Z=$(ls -t *.zip | head -1); mv "$Z" "$ASSET"
           V=$(sed -n "s/^const APP_VERSION = '\(.*\)';/\1/p" app/install.php)
@@ -53,7 +54,10 @@ jobs:
         run: |
           git tag -f "$TAG" "$GITHUB_SHA" && git push -f origin "refs/tags/$TAG"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Terkini (automatik)" --notes "Dibina automatik daripada main. Jangan muat naik fail secara manual ke Release ini." --prerelease
-          gh release upload "$TAG" "$ASSET" manifest.json --clobber
+          # Urutan atomik: zip baharu dahulu, kemudian manifest (fail kecil), kemudian buang zip lama.
+          gh release upload "$TAG" "$ASSET" --clobber
+          gh release upload "$TAG" manifest.json --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | grep -E '^urustugas.*\.zip$' | grep -vxF "$ASSET" | while read -r OLD; do gh release delete-asset "$TAG" "$OLD" -y || true; done
       - name: Maklumkan laman (webhook)
         if: ${{ env.HOOKS != '' && env.SECRET != '' }}
         run: |
