@@ -76,6 +76,7 @@ CREATE TABLE positions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, school_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL,
  category ENUM('Pentadbiran','Kurikulum','HEM','Kokurikulum') NOT NULL, weight TINYINT UNSIGNED NOT NULL,
  level ENUM('utama','sokongan','sampingan') NOT NULL DEFAULT 'sokongan', term ENUM('tahunan','bermusim','program') NOT NULL DEFAULT 'tahunan', role_id BIGINT UNSIGNED NULL,
+ unit ENUM('sekolah','ppki','t6') NOT NULL DEFAULT 'sekolah',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  UNIQUE KEY school_row (school_id,id), INDEX(school_id,category,name),
  CONSTRAINT position_weight CHECK (weight BETWEEN 1 AND 10),

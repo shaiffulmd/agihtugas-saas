@@ -188,7 +188,7 @@ function api_route(string $method,string $path): never {
         });
         api_respond(['id'=>$id,'deleted'=>true]);
     }
-    $fields=match($res){'teachers'=>['name','email','specialty','capacity','external_id','teaching_periods','exam_class','status','index_exempt'],'positions'=>['name','category','weight','level','term'],'assignments'=>['teacher_id','position_id']};
+    $fields=match($res){'teachers'=>['name','email','specialty','capacity','external_id','teaching_periods','exam_class','status','index_exempt'],'positions'=>['name','category','weight','level','term','unit'],'assignments'=>['teacher_id','position_id']};
     $body=api_body($fields);
     $newId=api_write(function()use($res,$id,$body){
         if($res==='assignments'){
@@ -203,7 +203,7 @@ function api_route(string $method,string $path): never {
         if($res==='teachers'){ $prev=$id?api_teacher($id):[]; $n=teacher_save((int)$id,api_teacher_fields($body,array_intersect_key($prev,array_flip(['name','email','specialty','capacity'])))); }
         else { $prev=$id?api_position($id):[]; $d=array_merge(array_intersect_key($prev,array_flip(['name','category','weight'])),$body);
             $v=['name'=>api_str($d['name']??null,'name'),'category'=>api_str($d['category']??null,'category'),'weight'=>api_int($d['weight']??null,'weight',1,10)];
-            foreach(['level','term'] as $k) if(array_key_exists($k,$body)){ if(!is_string($body[$k])) api_fail(422,'validation_error',"$k mesti teks."); $v[$k]=$body[$k]; }
+            foreach(['level','term','unit'] as $k) if(array_key_exists($k,$body)){ if(!is_string($body[$k])) api_fail(422,'validation_error',"$k mesti teks."); $v[$k]=$body[$k]; }
             $n=position_save((int)$id,$v); }
         api_audit(($res==='teachers'?'teacher_':'position_').($id?'update':'create'),$res,$n); return $n;
     });

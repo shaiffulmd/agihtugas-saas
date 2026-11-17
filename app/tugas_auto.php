@@ -179,35 +179,37 @@ function bulk_positions_validate(array $rows): array {
     $result=[];
     foreach($rows as $i=>$row){
         $line=$i+1;
-        if(!is_array($row) || array_diff(array_keys($row),['name','category','weight','count'])) throw new AllocationError("Baris $line: medan tidak sah.");
+        if(!is_array($row) || array_diff(array_keys($row),['name','category','weight','count','unit'])) throw new AllocationError("Baris $line: medan tidak sah.");
         $name=$row['name']??null; $category=$row['category']??null;
         if(!is_string($name) || trim($name)==='' || mb_strlen(trim($name))>145) throw new AllocationError("Baris $line: nama jawatan diperlukan (maksimum 145 aksara).");
         if(!in_array($category,CATEGORIES,true)) throw new AllocationError("Baris $line: bidang mesti Pentadbiran, Kurikulum, HEM atau Kokurikulum.");
         $weight=allocation_int($row['weight']??null,"Baris $line: pemberat",1,10);
         $count=allocation_int($row['count']??1,"Baris $line: bilangan",1,50);
+        $unit=$row['unit']??'sekolah'; if(!is_string($unit) || !isset(POSITION_UNITS[$unit])) throw new AllocationError("Baris $line: unit mesti Sekolah, PPKI atau Tingkatan 6.");
         for($n=1;$n<=$count;$n++){
             $title=trim($name).($count>1?" ($n/$count)":''); $key=mb_strtolower($title).'|'.$category;
             if(isset($seen[$key])) throw new AllocationError("Baris $line: jawatan '$title' sudah wujud atau berulang dalam senarai.");
-            $seen[$key]=true; $result[]=['name'=>$title,'category'=>$category,'weight'=>$weight];
+            $seen[$key]=true; $result[]=['name'=>$title,'category'=>$category,'weight'=>$weight,'unit'=>$unit];
             if(count($result)>1000) throw new AllocationError('Maksimum 1,000 tempat lantikan bagi satu import.');
         }
     }
     return $result;
 }
 /** Tajuk lajur jawatan pukal yang diterima (lihat bulk_header_key()). */
-const BULK_POSITION_COLS=[['nama','nama_jawatan','jawatan','name'],['bidang','kategori','category'],['pemberat','mata','weight'],['bilangan','bil','count']];
+const BULK_POSITION_COLS=[['nama','nama_jawatan','jawatan','name'],['bidang','kategori','category'],['pemberat','mata','weight'],['bilangan','bil','count'],['unit','unit_jawatan']];
 function bulk_positions_parse(string $text): array {
     if(strlen($text)>131072) throw new AllocationError('Fail / teks pukal maksimum 128 KB.');
-    try { $raw=csv_rows($text,BULK_POSITION_COLS,3,4); } catch(EngineError $ex){ throw new AllocationError($ex->getMessage().' Gunakan lajur nama, bidang, pemberat dan bilangan (pilihan).'); }
+    try { $raw=csv_rows($text,BULK_POSITION_COLS,3,5); } catch(EngineError $ex){ throw new AllocationError($ex->getMessage().' Gunakan lajur nama, bidang, pemberat dan bilangan (pilihan).'); }
     $rows=[]; $cats=array_combine(array_map('mb_strtolower',CATEGORIES),CATEGORIES);
     foreach($raw as $r){
         if(!ctype_digit($r[2]) || (isset($r[3]) && $r[3]!=='' && !ctype_digit($r[3]))) throw new AllocationError('Pemberat dan bilangan mesti nombor bulat.');
-        $rows[]=['name'=>$r[0],'category'=>$cats[mb_strtolower($r[1])]??$r[1],'weight'=>(int)$r[2],'count'=>isset($r[3]) && $r[3]!==''?(int)$r[3]:1]; // bidang tanpa beza huruf (hem → HEM)
+        try { $u=unit_from_text($r[4]??''); } catch(EngineError $ex){ throw new AllocationError('Jawatan "'.$r[0].'": '.$ex->getMessage()); }
+        $rows[]=['name'=>$r[0],'category'=>$cats[mb_strtolower($r[1])]??$r[1],'weight'=>(int)$r[2],'count'=>isset($r[3]) && $r[3]!==''?(int)$r[3]:1,'unit'=>$u??'sekolah']; // bidang tanpa beza huruf (hem → HEM)
     }
     return bulk_positions_validate($rows);
 }
 function bulk_positions_insert(array $validated): array {
     free_guard('jawatan',count($validated));
-    $ids=[]; foreach($validated as $p){ query('INSERT INTO positions (school_id,name,category,weight) VALUES ('.sid().',?,?,?)',[$p['name'],$p['category'],$p['weight']]); $ids[]=(int)db()->lastInsertId(); }
+    $ids=[]; foreach($validated as $p){ query('INSERT INTO positions (school_id,name,category,weight,unit) VALUES ('.sid().',?,?,?,?)',[$p['name'],$p['category'],$p['weight'],$p['unit']??'sekolah']); $ids[]=(int)db()->lastInsertId(); }
     return $ids;
 }

@@ -87,7 +87,7 @@ function handle_engine_action(string $action): never {
                 unset($_SESSION['guru_pukal']); audit('teacher_bulk','teachers',null,count($rows).' guru'); $msg=count($rows).' guru ditambah secara pukal.'; break;
             case 'jawatan_save':
                 $rid=input('role_id')===''?null:post_int('role_id',1,PHP_INT_MAX,'Peranan');
-                $pid=position_save($id,['name'=>input('name'),'category'=>input('category'),'weight'=>$rid?1:post_int('weight',1,10,'Pemberat'),'level'=>input('level')?:'sokongan','term'=>input('term')?:'tahunan','role_id'=>$rid]);
+                $pid=position_save($id,['name'=>input('name'),'category'=>input('category'),'weight'=>$rid?1:post_int('weight',1,10,'Pemberat'),'level'=>input('level')?:'sokongan','term'=>input('term')?:'tahunan','role_id'=>$rid]+(isset($_POST['unit'])?['unit'=>input('unit')]:[]));
                 audit($id?'position_update':'position_create','positions',$pid,mb_substr(input('name'),0,120)); $msg='Jawatan dan pemberat disimpan.'; break;
             case 'jawatan_delete': $p=position_find($id); position_delete($id); audit('position_delete','positions',$id,(string)($p['name']??'')); $msg='Rekod jawatan dipadam.'; break;
             case 'jawatan_bulk_preview':
@@ -105,8 +105,8 @@ function handle_engine_action(string $action): never {
                 $d=$_SESSION['agihan_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new EngineError('Pratonton import agihan tidak sah. Jana semula.',409);
                 $plan=bulk_agihan_plan($d['rows']); // dikira semula: guru / jawatan mungkin berubah sejak pratonton
                 if(!hash_equals($d['hash'],hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)))) throw new EngineError('Data guru atau jawatan telah berubah sejak pratonton. Semak semula senarai sebelum mengimport.',409);
-                [$nt,$np,$na]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
-                audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan"); $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan."; break;
+                [$nt,$np,$na,$nu]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
+                audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan".($nu?", $nu unit":'')); $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan".($nu?", $nu jawatan ditanda unit":'').'.'; break;
             case 'guru_masa_save':
                 $m=$_POST['masa']??null; $x=$_POST['exam']??[]; if(!is_array($m) || !is_array($x)) throw new EngineError('Borang masa mengajar tidak sah.');
                 $ids=array_flip(array_map('intval',query('SELECT id FROM teachers WHERE school_id='.sid())->fetchAll(PDO::FETCH_COLUMN))); $set=[];
@@ -155,7 +155,7 @@ function handle_engine_action(string $action): never {
                 if($p==='' || mb_strlen($p)>160 || $ref==='' || mb_strlen($ref)>160) throw new EngineError('Nama '.head_title().' dan rujukan surat diperlukan (maksimum 160 aksara).');
                 if(mb_strlen($addr)>300) throw new EngineError('Alamat maksimum 300 aksara.');
                 // Telefon & faks kepala surat kini disimpan bersama Format surat (halaman Surat Lantikan).
-                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref,'school_address'=>$addr]);
+                engine_setting_set(['principal'=>$p,'session_year'=>(string)post_int('session_year',2020,2100,'Tahun sesi'),'letter_reference'=>$ref,'school_address'=>$addr,'unit_ppki'=>input('unit_ppki')==='1'?'1':'0','unit_t6'=>input('unit_t6')==='1'?'1':'0']);
                 audit('school_profile','settings'); $msg='Profil sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo': engine_setting_set(['school_logo_id'=>branding_upload($_FILES['school_logo']??null)]); audit('letter_logo','settings'); $msg='Logo sekolah untuk surat disimpan.'; break;
             case 'sekolah_logo_buang': engine_setting_set(['school_logo_id'=>'']); audit('letter_logo_removed','settings'); $msg='Logo dibuang daripada draf. Surat muktamad terdahulu tidak berubah.'; break;

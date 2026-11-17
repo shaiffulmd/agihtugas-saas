@@ -92,6 +92,26 @@ with_school($S,function()use(&$tmp){
     rejects(fn()=>bulk_agihan_parse("A,AJK X,HEM,11\n"),'pemberat di luar 1–10 ditolak','pemberat');
     rejects(fn()=>bulk_agihan_parse(str_repeat("A,AJK X,HEM\n",2001)),'lebih 2,000 baris ditolak','2,000');
 
+    echo "Unit jawatan (Sekolah / PPKI / Tingkatan 6)\n";
+    check(unit_from_text('')===null && unit_from_text('F6')==='t6' && unit_from_text('tingkatan 6')==='t6' && unit_from_text('PPU')==='t6' && unit_from_text('Pendidikan Khas')==='ppki' && unit_from_text('sekolah')==='sekolah','alias unit dikenali');
+    rejects(fn()=>unit_from_text('asrama'),'unit tidak dikenali ditolak','unit mesti');
+    $r=bulk_positions_parse("Nama,Bidang,Pemberat,Bilangan,Unit\nAJK Kelab PPKI,Kokurikulum,1,2,PPKI\nAJK Kelab Sains,Kokurikulum,1,1,\n");
+    check($r[0]['unit']==='ppki' && $r[1]['unit']==='ppki' && $r[2]['unit']==='sekolah','jawatan pukal: lajur Unit (kosong = Sekolah)');
+    bulk_positions_insert($r); school_units(true);
+    check(units_on() && in_array('ppki',school_units(),true) && !in_array('t6',school_units(),true),'unit dipaparkan apabila sudah digunakan');
+    $p4=bulk_agihan_plan(bulk_agihan_parse("Nama Guru,Jawatan,Bidang,Pemberat,Unit\nGuru D,AJK Kelab Rakan Muda,Kokurikulum,1,Tingkatan 6\nGuru E,AJK Kelab Rakan Muda,Kokurikulum,1,\nGuru D,AJK Kelab PPKI,Kokurikulum,1,PPKI\n"));
+    check($p4['positions_new'][0]['unit']==='t6' && $p4['positions_new'][1]['unit']==='t6' && !$p4['unit_updates'],'import agihan: unit dikongsi kumpulan (baris kosong ikut kumpulan)');
+    bulk_agihan_apply($p4);
+    check((int)query('SELECT COUNT(*) FROM positions WHERE school_id='.sid().' AND unit="t6"')->fetchColumn()===2,'jawatan baharu disimpan dengan unit');
+    $p5=bulk_agihan_plan(bulk_agihan_parse("Siti Hajar Saad,AJK Kebersihan,HEM,,PPKI\n"));
+    check(count($p5['unit_updates'])===2 && !$p5['positions_new'],'jawatan sedia ada ditanda unit (import semula dengan lajur Unit)');
+    bulk_agihan_apply($p5);
+    check((int)query('SELECT COUNT(*) FROM positions WHERE school_id='.sid().' AND unit="ppki" AND name LIKE "AJK Kebersihan%"')->fetchColumn()===2,'unit jawatan sedia ada dikemas kini');
+    rejects(fn()=>bulk_agihan_plan(bulk_agihan_parse("A,AJK Y,HEM,,PPKI\nB,AJK Y,HEM,,T6\n")),'unit berbeza dalam kumpulan ditolak','unit berbeza');
+    $pid=position_save(0,['name'=>'Penyelaras T6','category'=>'Kurikulum','weight'=>3,'unit'=>'t6']);
+    check(position_find($pid)['unit']==='t6','position_save menerima unit');
+    rejects(fn()=>position_save(0,['name'=>'X','category'=>'HEM','weight'=>1,'unit'=>'asrama']),'unit tidak sah ditolak (position_validate)','Unit mesti');
+
     echo "Masa mengajar pukal\n";
     $r=bulk_masa_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['periods']===28 && $r[0]['exam']===true && $r[1]['periods']===0 && $r[1]['exam']===null,'tajuk dilangkau; kosong = 0; peperiksaan kosong = kekal');

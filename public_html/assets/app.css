@@ -1838,3 +1838,5 @@ body:has(.hb-modal){overflow:hidden}
 .sso-or{display:flex;align-items:center;gap:10px;margin:0;font-size:.82rem}
 .sso-or::before,.sso-or::after{content:"";flex:1;height:1px;background:var(--line,#e3e6ee)}
 .masa-input{width:96px;max-width:100%}
+.unit-badge{background:color-mix(in srgb,var(--primary,#c2410c) 12%,var(--surface,#fff));color:var(--primary,#c2410c)}
+fieldset.field{border:0;padding:0;margin:0;min-width:0}fieldset.field legend{font-weight:600;font-size:.88rem;margin-bottom:.35rem;padding:0}fieldset.field .check{display:inline-flex;margin-right:1.2rem}.unit-filter{flex-wrap:wrap}
