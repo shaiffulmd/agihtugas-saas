@@ -60,6 +60,15 @@ with_school($S,function(){
     check(in_array('banyak',$t[$T[0]]['warnings'],true) && !in_array('banyak',$t[$T[1]]['warnings'],true),'amaran Banyak jawatan melebihi had');
     check(in_array('tiada_masa',$t[$T[2]]['warnings'],true),'amaran masa mengajar belum diisi');
 
+    echo "Melebihi kapasiti mata → Terbeban\n";
+    $T=fixture([['A',20,false,'aktif',false],['B',20,false,'aktif',false],['C',20,false,'aktif',false]],[['P1',5,'sokongan','tahunan',0],['P2',5,'sokongan','tahunan',1],['P3',6,'sokongan','tahunan',2]]);
+    query('UPDATE teachers SET capacity=4 WHERE id=?',[$T[0]]); $t=load_index()['teachers'];
+    check($t[$T[0]]['over_capacity'] && $t[$T[0]]['label']==='terbeban' && $t[$T[0]]['index']<1.3 && in_array('terbeban',$t[$T[0]]['warnings'],true),'indeks seimbang tetapi 5 / 4 mata → Terbeban (lalai)');
+    check($t[$T[1]]['label']==='seimbang','guru dalam kapasiti kekal ikut indeks');
+    db()->beginTransaction(); index_settings_save(['teach_share'=>'60','high'=>'1.3','low'=>'0.7','exam_factor'=>'1.2','max_tasks'=>'1','over_cap'=>false]); db()->commit();
+    check(load_index()['teachers'][$T[0]]['label']==='seimbang' && index_settings()['over_cap']===false,'tetapan dimatikan → label ikut indeks sahaja');
+    db()->beginTransaction(); index_settings_save(['teach_share'=>'60','high'=>'1.3','low'=>'0.7','exam_factor'=>'1.2','max_tasks'=>'1','over_cap'=>true]); db()->commit();
+
     echo "Median sifar → purata; tiada masa → tugas sahaja\n";
     $T=fixture([['A',0,false,'aktif',false],['B',0,false,'aktif',false],['C',0,false,'aktif',false]],[['P1',6,'sokongan','tahunan',0]]);
     $x=load_index(); $t=$x['teachers'];

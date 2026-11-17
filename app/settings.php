@@ -32,7 +32,7 @@ function setting_defaults(): array {
         'theme_version'  => '1',
         'twofa_policy'   => 'admin', 'school_type' => 'SMK',
         // Indeks beban (Analisis Beban): bahagian mengajar %, ambang tinggi/rendah, faktor kelas peperiksaan, had bilangan jawatan.
-        'index_teach_share' => '60', 'index_high' => '1.30', 'index_low' => '0.70', 'index_exam_factor' => '1.0', 'index_max_tasks' => '8',
+        'index_teach_share' => '60', 'index_high' => '1.30', 'index_low' => '0.70', 'index_exam_factor' => '1.0', 'index_max_tasks' => '8', 'index_over_cap' => '1',
         // Surat lantikan (Profil Sekolah & Surat). Logo surat & Jata Negara = id aset dalam school_assets.
         'principal' => '', 'session_year' => '', 'leadership' => '', // leadership: jawatan utama sekolah (JSON, app/organisasi.php)
          'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual',

@@ -736,7 +736,7 @@ const INDEX_WARNINGS=['terbeban'=>'Terbeban','kurang'=>'Kurang beban','banyak'=>
 /** Tetapan indeks sekolah semasa (nilai rosak dalam settings → lalai). teach_share dalam pecahan 0–1. */
 function index_settings(): array {
     $f=fn(string $k,float $min,float $max,float $def)=>is_numeric($v=setting($k)) && (float)$v>=$min && (float)$v<=$max?(float)$v:$def;
-    $s=['teach_share'=>$f('index_teach_share',0,100,60)/100,'high'=>$f('index_high',1,3,1.3),'low'=>$f('index_low',0.1,1,0.7),'exam_factor'=>$f('index_exam_factor',1,2,1),'max_tasks'=>(int)$f('index_max_tasks',1,50,8)];
+    $s=['teach_share'=>$f('index_teach_share',0,100,60)/100,'high'=>$f('index_high',1,3,1.3),'low'=>$f('index_low',0.1,1,0.7),'exam_factor'=>$f('index_exam_factor',1,2,1),'max_tasks'=>(int)$f('index_max_tasks',1,50,8),'over_cap'=>setting('index_over_cap')!=='0'];
     if($s['low']>=$s['high']){ $s['low']=0.7; $s['high']=1.3; }
     return $s;
 }
@@ -746,7 +746,7 @@ function index_settings_save(array $d): void {
     $share=$num('teach_share',0,100,'Bahagian mengajar (%)'); $high=$num('high',1,3,'Ambang tinggi'); $low=$num('low',0.1,1,'Ambang rendah');
     $exam=$num('exam_factor',1,2,'Faktor kelas peperiksaan'); $max=$num('max_tasks',1,50,'Had bilangan jawatan');
     if($low>=$high) throw new EngineError('Ambang rendah mesti lebih kecil daripada ambang tinggi.');
-    engine_setting_set(['index_teach_share'=>(string)(int)$share,'index_high'=>number_format($high,2,'.',''),'index_low'=>number_format($low,2,'.',''),'index_exam_factor'=>number_format($exam,2,'.',''),'index_max_tasks'=>(string)(int)$max]);
+    engine_setting_set((array_key_exists('over_cap',$d)?['index_over_cap'=>$d['over_cap']?'1':'0']:[])+['index_teach_share'=>(string)(int)$share,'index_high'=>number_format($high,2,'.',''),'index_low'=>number_format($low,2,'.',''),'index_exam_factor'=>number_format($exam,2,'.',''),'index_max_tasks'=>(string)(int)$max]);
 }
 /** Anggaran indeks guru jika skor tugasnya berubah $delta (median sekolah dianggap tetap). null jika guru tidak dikira. */
 function index_after(array $t,float $delta,array $idx): ?float {
@@ -780,6 +780,9 @@ function load_index(): array {
         $sh=$t['teaching']>0?$share:($dS>0?0.0:$share);
         $t['index']=$t['counted'] && $ready?round($sh*$tr+(1-$sh)*$kr,2):null;
         $t['label']=!$t['counted']?($t['status']!=='aktif'?'tidak_aktif':'dikecualikan'):($t['index']===null?'belum':($t['index']>$s['high']?'terbeban':($t['index']<$s['low']?'kurang':'seimbang')));
+        // Melebihi kapasiti mata (had yang ditetapkan sekolah bagi guru itu) → Terbeban walaupun indeks relatif masih rendah.
+        $t['over_capacity']=$t['counted'] && (int)$t['load']>(int)$t['capacity'];
+        if($s['over_cap'] && $t['over_capacity'] && in_array($t['label'],['seimbang','kurang','belum'],true)) $t['label']='terbeban';
         $w=[]; if(in_array($t['label'],['terbeban','kurang'],true)) $w[]=$t['label'];
         if((int)$t['task_count']>$s['max_tasks']) $w[]='banyak';
         if($t['status']!=='aktif' && (int)$t['task_count']>0) $w[]='tidak_aktif';

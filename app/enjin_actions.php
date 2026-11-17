@@ -138,7 +138,7 @@ function handle_engine_action(string $action): never {
             case 'agih_lepas': $a=unassign($id); audit('unassign','assignments',$id,(string)$a['position_name']); $msg='Lantikan dilepaskan. Jawatan kini kosong.';
                 if(($g=(int)input('guru'))>0) $anchor='&guru='.$g.'#beban-guru'; break;
             case 'indeks_tetapan':
-                index_settings_save(['teach_share'=>input('teach_share'),'high'=>input('high'),'low'=>input('low'),'exam_factor'=>input('exam_factor'),'max_tasks'=>input('max_tasks')]);
+                index_settings_save(['teach_share'=>input('teach_share'),'high'=>input('high'),'low'=>input('low'),'exam_factor'=>input('exam_factor'),'max_tasks'=>input('max_tasks'),'over_cap'=>input('over_cap')==='1']);
                 audit('load_index_settings','settings'); $msg='Tetapan indeks beban disimpan. Indeks dikira semula.'; break;
             case 'syarat_umum':
                 $limits=[]; foreach(CATEGORIES as $i=>$cat) $limits[$cat]=post_int('category_'.$i,0,50,'Had bidang '.$cat);

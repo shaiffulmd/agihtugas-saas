@@ -361,9 +361,10 @@ function analisis_page(array $user): void {
 <label class="field">Had bilangan jawatan<input name="max_tasks" type="number" min="1" max="50" value="<?= (int)$S['max_tasks'] ?>" required><small class="muted">Melebihi had = amaran Banyak jawatan.</small></label>
 <label class="field">Ambang tinggi (Terbeban)<input name="high" type="number" min="1" max="3" step="0.05" value="<?= number_format($S['high'],2,'.','') ?>" required></label>
 <label class="field">Ambang rendah (Kurang beban)<input name="low" type="number" min="0.1" max="1" step="0.05" value="<?= number_format($S['low'],2,'.','') ?>" required></label>
+<label class="check full"><input type="checkbox" name="over_cap" value="1"<?= $S['over_cap']?' checked':'' ?>> <span><strong>Guru melebihi kapasiti mata dikira Terbeban</strong> — walaupun indeks di bawah ambang tinggi (cth. ramai guru lain turut berat). Kapasiti ialah had mata setiap guru di Pengurusan Guru.</span></label>
 <label class="field full">Faktor kelas peperiksaan<input name="exam_factor" type="number" min="1" max="2" step="0.05" value="<?= number_format($S['exam_factor'],2,'.','') ?>" required><small class="muted">1.00 = tiada kesan. Contohnya 1.20 menambah 20% masa mengajar guru kelas peperiksaan.</small></label>
 <div class="full form-actions"><button class="btn primary" type="submit">Simpan &amp; kira semula</button></div></form>
-<?php else: ?><p class="muted">Bahagian mengajar <?= (int)round($S['teach_share']*100) ?>% · ambang <?= number_format($S['low'],2) ?> – <?= number_format($S['high'],2) ?> · faktor peperiksaan <?= number_format($S['exam_factor'],2) ?> · had <?= (int)$S['max_tasks'] ?> jawatan. Tetapan diurus oleh Pentadbir / PK.</p><?php endif; ?></section></div><?php
+<?php else: ?><p class="muted">Bahagian mengajar <?= (int)round($S['teach_share']*100) ?>% · ambang <?= number_format($S['low'],2) ?> – <?= number_format($S['high'],2) ?> · faktor peperiksaan <?= number_format($S['exam_factor'],2) ?> · had <?= (int)$S['max_tasks'] ?> jawatan<?= $S['over_cap']?' · melebihi kapasiti = Terbeban':'' ?>. Tetapan diurus oleh Pentadbir / PK.</p><?php endif; ?></section></div><?php
 }
 
 /** Panel beban seorang guru di Agihan Tugas: jawatan dipegang (pindah / lepas) dan jawatan kosong untuk ditambah. Anggaran indeks "sekarang → selepas". */
