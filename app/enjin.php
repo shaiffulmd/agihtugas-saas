@@ -701,34 +701,48 @@ function position_committee(string $name): array {
     elseif(preg_match('/^(.+?)\s+((?:JK|Jawatankuasa|Panitia|Unit|Kelab|Persatuan|Sekretariat|Pasukan|Badan|Majlis|Rumah)\b.*)$/u',$rest,$m) && mb_strlen($m[1])<=40){ $role.=' '.$m[1]; $rest=$m[2]; }
     return [$role,$rest!==''?$rest:$n,BOOK_ROLES[$best]];
 }
-/** Senarai tugas: [bidang => [jawatankuasa => [{role,name,teacher,unit,rank}]]] tersusun; $cat/$unit = penapis (null = semua). */
+/** Senarai tugas mengikut bahagian: setiap bidang (jawatan unit Sekolah, di bawah PK bidang itu), kemudian Tingkatan 6 (PPU) di bawah
+ *  PK Tingkatan 6 dan PPKI di bawah PK PPKI. Pulangkan [{title, pk_label, pk, unit, cats => [bidang => [jawatankuasa => [{role,name,teacher,rank}]]]}].
+ *  $cat / $unit = penapis (null = semua; unit 'sekolah' = bidang sahaja). */
 function task_book(?string $cat=null,?string $unit=null): array {
-    $out=array_fill_keys($cat?[$cat]:CATEGORIES,[]); $names=[];
+    require_once __DIR__.'/organisasi.php'; $lead=leadership()['posts']; $labels=leader_posts();
+    $tn=array_column(query('SELECT id,name FROM teachers WHERE school_id='.sid())->fetchAll(),'name','id');
+    $pkFor=function(string $k)use($lead,$labels,$tn): array { return [$labels[$k]??'',isset($lead[$k])&&$lead[$k]?($tn[$lead[$k]]??null):null]; };
+    $catPk=[]; foreach(LEADER_POSTS as $k=>[,$cats]) foreach($cats as $c) $catPk[$c]??=$k;
+    $sec=[]; foreach(CATEGORIES as $c){ [$l,$n]=$pkFor($catPk[$c]??''); $sec['sekolah|'.$c]=['title'=>'BIDANG '.mb_strtoupper($c),'pk_label'=>$l,'pk'=>$n,'unit'=>'sekolah','cats'=>[]]; }
+    foreach(['t6'=>['pk_t6','TINGKATAN 6 (PPU)'],'ppki'=>['pk_ppki','PENDIDIKAN KHAS (PPKI)']] as $u=>[$k,$t]){ [$l,$n]=$pkFor($k); $sec[$u]=['title'=>$t,'pk_label'=>$l,'pk'=>$n,'unit'=>$u,'cats'=>[]]; }
+    $names=[];
     foreach(positions_with_holder() as $p){
-        if($cat && $p['category']!==$cat) continue; if($unit && ($p['unit']??'sekolah')!==$unit) continue;
-        [$role,$com,$rank]=position_committee($p['name']); $u=$p['unit']??'sekolah';
-        $label=$com.($u!=='sekolah' && !preg_match('/\b(PPU|PPKI|T6|Tingkatan 6)\b/iu',$com)?' ('.POSITION_UNITS[$u].')':'');
-        $k=mb_strtolower(trim((string)preg_replace(['/\s*&\s*/u','/\s+/u'],[' dan ',' '],$label))); $names[$k]??=$label; $key=$names[$k]; // "&" = "dan", huruf besar/kecil diabaikan
-        $out[$p['category']][$key][]=['role'=>$role,'name'=>$p['name'],'teacher'=>$p['teacher_name'],'rank'=>$rank];
+        $u=$p['unit']??'sekolah'; if($cat && $p['category']!==$cat) continue; if($unit && $u!==$unit) continue;
+        [$role,$com,$rank]=position_committee($p['name']);
+        if($u!=='sekolah'){ $c2=trim((string)preg_replace('/\s+(PPU|PPKI|T6|Tingkatan 6)$/iu','',$com)); if($c2!=='') $com=$c2; } // bahagian unit: akhiran unit tidak perlu
+        $k=$u.'|'.mb_strtolower(trim((string)preg_replace(['/\s*&\s*/u','/\s+/u'],[' dan ',' '],$com))); $names[$k]??=$com; // "&" = "dan", huruf besar/kecil diabaikan
+        $sec[$u==='sekolah'?'sekolah|'.$p['category']:$u]['cats'][$p['category']][$names[$k]][]=['role'=>$role,'name'=>$p['name'],'teacher'=>$p['teacher_name'],'rank'=>$rank];
     }
-    foreach($out as $c=>&$coms){ ksort($coms,SORT_NATURAL|SORT_FLAG_CASE); foreach($coms as &$rows) usort($rows,fn($a,$b)=>$a['rank']<=>$b['rank'] ?: strnatcasecmp($a['name'],$b['name'])); unset($rows); }
-    unset($coms);
-    return array_filter($out);
+    $out=[];
+    foreach($sec as $x){ if(!$x['cats']) continue; $cats=[];
+        foreach(CATEGORIES as $c) if(!empty($x['cats'][$c])){ $coms=$x['cats'][$c]; ksort($coms,SORT_NATURAL|SORT_FLAG_CASE);
+            foreach($coms as &$rows) usort($rows,fn($a,$b)=>$a['rank']<=>$b['rank'] ?: strnatcasecmp($a['name'],$b['name'])); unset($rows); $cats[$c]=$coms; }
+        $x['cats']=$cats; $out[]=$x; }
+    return $out;
 }
 /** HTML senarai tugas (pratonton & PDF berkongsi markup). */
 function task_book_html(array $book): string {
     $h=''; $bil=0;
-    foreach($book as $cat=>$coms){
-        $h.='<h2 class="book-cat">BIDANG '.e(mb_strtoupper($cat)).'</h2>';
-        foreach($coms as $com=>$rows){ $bil++;
-            $h.='<table class="book-table"><thead><tr><th colspan="3" class="book-com">'.$bil.'. '.e(mb_strtoupper($com)).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th></tr></thead><tbody>';
-            foreach($rows as $i=>$r) $h.='<tr><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($r['role']).'</td><td>'.($r['teacher']!==null?e(mb_strtoupper($r['teacher'])):'<em class="vacant">— belum diisi —</em>').'</td></tr>';
-            $h.='</tbody></table>';
+    foreach($book as $x){
+        $h.='<h2 class="book-cat">'.e($x['title']).($x['pk_label']!==''?'<span class="book-pk"> · '.e($x['pk_label']).': '.($x['pk']!==null?e(mb_strtoupper($x['pk'])):'—').'</span>':'').'</h2>';
+        foreach($x['cats'] as $cat=>$coms){
+            if($x['unit']!=='sekolah') $h.='<h3 class="book-sub">'.e($cat).'</h3>';
+            foreach($coms as $com=>$rows){ $bil++;
+                $h.='<table class="book-table"><thead><tr><th colspan="3" class="book-com">'.$bil.'. '.e(mb_strtoupper($com)).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th></tr></thead><tbody>';
+                foreach($rows as $i=>$r) $h.='<tr><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($r['role']).'</td><td>'.($r['teacher']!==null?e(mb_strtoupper($r['teacher'])):'<em class="vacant">— belum diisi —</em>').'</td></tr>';
+                $h.='</tbody></table>';
+            }
         }
     }
     return $h!==''?$h:'<p>Tiada jawatan.</p>';
 }
-const TASK_BOOK_CSS='.book-cat{font-size:12pt;margin:18px 0 6px;padding:5px 8px;background:#edf3e9;border-left:4px solid #588767}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
+const TASK_BOOK_CSS='.book-pk{font-weight:normal;font-size:9.5pt}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-cat{font-size:12pt;margin:18px 0 6px;padding:5px 8px;background:#edf3e9;border-left:4px solid #588767}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
 /** Senarai muktamad = agihan berstatus Muktamad; selain itu draf (tera air). */
 function task_book_final(): bool { return workflow_state()['status']==='finalized'; }
 /** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */

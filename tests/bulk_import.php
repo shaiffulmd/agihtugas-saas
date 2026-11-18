@@ -138,8 +138,9 @@ with_school($S,function()use(&$tmp){
     check(($rw[$pk]??'')==='Ketua Panitia Kimia (1/2)' && positions_fix_repeated_words()>=1 && position_find($pk)['name']==='Ketua Panitia Kimia (1/2)','perkataan berulang dalam nama jawatan dikemaskan');
     echo "Senarai tugas (buku panduan)\n";
     check(position_committee('Setiausaha JK Disiplin (1/2)')===['Setiausaha','JK Disiplin',8] && position_committee('Ketua Panitia Kimia')[1]==='Panitia Kimia' && position_committee('AJK (BOSS) JK Prasarana')===['AJK (BOSS)','JK Prasarana',30],'nama jawatan dipecah kepada peranan & jawatankuasa');
-    $bk=task_book('HEM'); $com=$bk['HEM']['Kebersihan (PPKI)']??null;
-    check(array_keys($bk)===['HEM'] && $com && count($com)===2 && task_book_final()===false && str_contains(task_book_html($bk),'BIDANG HEM'),'senarai mengikut bidang & jawatankuasa; draf apabila belum muktamad');
+    $bk=task_book('HEM'); $secs=array_column($bk,null,'unit'); $com=$secs['ppki']['cats']['HEM']['Kebersihan']??null;
+    check(isset($secs['sekolah'],$secs['ppki']) && $secs['sekolah']['title']==='BIDANG HEM' && $com && count($com)===2 && !isset($secs['sekolah']['cats']['HEM']['Kebersihan']),'jawatan PPKI di bahagian PPKI sendiri (bukan bawah bidang); akhiran unit dibuang');
+    check(task_book_final()===false && str_contains(task_book_html($bk),'PENDIDIKAN KHAS (PPKI)') && array_column(task_book(null,'sekolah'),'unit')===array_fill(0,count(task_book(null,'sekolah')),'sekolah'),'penapis unit Sekolah: bidang sahaja; draf apabila belum muktamad');
     echo "Kemas kini maklumat guru pukal\n";
     $r=bulk_guru_update_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['set']===['teaching_periods'=>28,'exam_class'=>1] && $r[1]['set']===[],'tajuk dikenali; sel kosong = kekal');
