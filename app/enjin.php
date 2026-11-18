@@ -730,7 +730,7 @@ function task_book(?string $cat=null,?string $unit=null): array {
 function task_book_html(array $book): string {
     $h=''; $bil=0;
     foreach($book as $x){
-        $h.='<h2 class="book-cat">'.e($x['title']).($x['pk_label']!==''?'<span class="book-pk"> · '.e($x['pk_label']).': '.($x['pk']!==null?e(mb_strtoupper($x['pk'])):'—').'</span>':'').'</h2>';
+        $h.='<div class="book-cat"><div class="book-cat-title">'.e($x['title']).'</div>'.($x['pk_label']!==''?'<div class="book-pk">'.($x['pk']!==null?'<strong>'.e(mb_strtoupper($x['pk'])).'</strong><br>':'').e($x['pk_label']).'</div>':'').'</div>';
         foreach($x['cats'] as $cat=>$coms){
             if($x['unit']!=='sekolah') $h.='<h3 class="book-sub">'.e($cat).'</h3>';
             foreach($coms as $com=>$rows){ $bil++;
@@ -742,7 +742,7 @@ function task_book_html(array $book): string {
     }
     return $h!==''?$h:'<p>Tiada jawatan.</p>';
 }
-const TASK_BOOK_CSS='.book-pk{font-weight:normal;font-size:9.5pt}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-cat{font-size:12pt;margin:18px 0 6px;padding:5px 8px;background:#edf3e9;border-left:4px solid #588767}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
+const TASK_BOOK_CSS='.book-cat{margin:18px 0 8px;padding:7px 10px;background:#edf3e9;border-left:4px solid #588767;page-break-after:avoid}.book-cat-title{font-size:12.5pt;font-weight:bold;letter-spacing:.02em}.book-pk{font-size:9.5pt;margin-top:3px;line-height:1.35}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
 /** Senarai muktamad = agihan berstatus Muktamad; selain itu draf (tera air). */
 function task_book_final(): bool { return workflow_state()['status']==='finalized'; }
 /** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */

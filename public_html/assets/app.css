@@ -1845,3 +1845,8 @@ fieldset.field{border:0;padding:0;margin:0;min-width:0}fieldset.field legend{fon
 .book-watermark{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(90px,16vw,200px);font-weight:800;color:rgba(180,35,24,.07);transform:rotate(-30deg);z-index:0}
 .book-doc>*:not(.book-watermark){position:relative;z-index:1}
 @media print{.book-doc{border:0;padding:0}.book-watermark{position:fixed;color:rgba(180,35,24,.08)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.book-table{page-break-inside:avoid}}
+.book-doc .book-cat{margin:22px 0 10px;padding:10px 14px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));border-left:4px solid var(--primary);border-radius:6px;break-after:avoid}
+.book-doc .book-cat-title{font-size:16px;font-weight:800;letter-spacing:.02em}.book-doc .book-pk{font-size:13px;margin-top:4px;line-height:1.4}.book-doc .book-sub{font-size:14px;margin:14px 0 6px;color:var(--primary)}
+.book-doc .book-table{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:13px}.book-doc .book-table th,.book-doc .book-table td{border:1px solid var(--line);padding:6px 9px;text-align:left;text-transform:none;letter-spacing:normal}
+.book-doc .book-table thead th{background:color-mix(in srgb,var(--primary) 4%,var(--surface));font-size:12px;color:var(--ink)}.book-doc .book-com{font-size:13px!important;font-weight:700;background:color-mix(in srgb,var(--primary) 12%,var(--surface))!important}
+.book-doc .c-bil{width:44px;text-align:center}.book-doc .c-role{width:34%}.book-doc .vacant{color:#999}

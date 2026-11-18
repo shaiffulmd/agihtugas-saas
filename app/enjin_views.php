@@ -628,7 +628,7 @@ function buku_page(): void {
     <article class="document-page book-doc spaced<?= $final?'':' is-draft' ?>"><?php if(!$final): ?><div class="book-watermark" aria-hidden="true">DRAF</div><?php endif; ?>
     <div class="book-head"><div class="book-school"><?= e(school_name()) ?></div><h2 class="book-title">SENARAI TUGAS &amp; JAWATANKUASA <?= e($year) ?><?= $cat?'<br><small>BIDANG '.e(mb_strtoupper($cat)).'</small>':'' ?><?= $u?'<br><small>'.e(mb_strtoupper(POSITION_UNITS[$u])).'</small>':'' ?></h2><?php if(!$final): ?><p class="book-draft-note">DRAF — BELUM MUKTAMAD · <?= date('d/m/Y H:i') ?></p><?php endif; ?></div>
     <?= task_book_html($book) ?></article>
-    <style><?= TASK_BOOK_CSS ?></style><?php
+    <?php
 }
 function organisasi_page(): void {
     $plan=can_plan(); $draft=workflow_state()['status']==='draft'; $l=leadership(); $labels=leader_posts(true); $c=org_chart_data(); // borang: label pendek (PK …)
