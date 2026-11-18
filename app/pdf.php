@@ -13,7 +13,7 @@ function pdf_content(string $page): array {
     if($page==='buku'){
         $cat=in_array(input('bidang','get'),CATEGORIES,true)?input('bidang','get'):null; $u=isset(POSITION_UNITS[input('unit','get')])?input('unit','get'):null; $final=task_book_final();
         $title='Senarai Tugas & Jawatankuasa '.(setting('session_year')?:date('Y')).($cat?' — Bidang '.$cat:'').($u?' — '.POSITION_UNITS[$u]:'');
-        return [$title,($final?'':'<p class="center" style="color:#b42318;font-size:9pt">DRAF — BELUM MUKTAMAD · dijana '.date('d/m/Y H:i').'</p>').task_book_html(task_book($cat,$u)),[],TASK_BOOK_CSS,false,'A4',
+        return [$title,($final?'':'<p class="center" style="color:#b42318;font-size:9pt">DRAF — BELUM MUKTAMAD · dijana '.date('d/m/Y H:i').'</p>').task_book_html(task_book($cat,$u),true),[],TASK_BOOK_CSS,false,'A4',
             'senarai-tugas-'.($final?'muktamad':'draf').'-'.date('Ymd').'.pdf',$final?'':'DRAF'];
     }
     error_page(404,'Dokumen PDF tidak disokong.');

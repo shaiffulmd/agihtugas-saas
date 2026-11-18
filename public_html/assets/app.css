@@ -1850,3 +1850,6 @@ fieldset.field{border:0;padding:0;margin:0;min-width:0}fieldset.field legend{fon
 .book-doc .book-table{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:13px}.book-doc .book-table th,.book-doc .book-table td{border:1px solid var(--line);padding:6px 9px;text-align:left;text-transform:none;letter-spacing:normal}
 .book-doc .book-table thead th{background:color-mix(in srgb,var(--primary) 4%,var(--surface));font-size:12px;color:var(--ink)}.book-doc .book-com{font-size:13px!important;font-weight:700;background:color-mix(in srgb,var(--primary) 12%,var(--surface))!important}
 .book-doc .c-bil{width:44px;text-align:center}.book-doc .c-role{width:34%}.book-doc .vacant{color:#999}
+.book-toc{margin:6px 0 26px;padding:14px 18px;border:1px solid var(--line);border-radius:8px}.book-toc .toc-title{text-align:center;margin:0 0 10px;font-size:15px}.book-toc a{color:inherit;text-decoration:none}.book-toc a:hover{text-decoration:underline}
+.toc-sec{font-weight:700;margin:12px 0 4px}.toc-sub{font-style:italic;margin:6px 0 2px 18px}.toc-item{margin:2px 0 2px 34px;font-size:14px}.toc-no{display:inline-block;min-width:44px;color:color-mix(in srgb,var(--ink) 60%,var(--surface))}
+@media print{.book-toc{border:0;padding:0;break-after:page}.book-doc .book-cat{break-before:page}.book-doc .book-cat:first-of-type{break-before:auto}}

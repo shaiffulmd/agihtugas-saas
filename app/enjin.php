@@ -726,23 +726,49 @@ function task_book(?string $cat=null,?string $unit=null): array {
         $x['cats']=$cats; $out[]=$x; }
     return $out;
 }
-/** HTML senarai tugas (pratonton & PDF berkongsi markup). */
-function task_book_html(array $book): string {
-    $h=''; $bil=0;
-    foreach($book as $x){
-        $h.='<div class="book-cat"><div class="book-cat-title">'.e($x['title']).'</div>'.($x['pk_label']!==''?'<div class="book-pk">'.($x['pk']!==null?'<strong>'.e(mb_strtoupper($x['pk'])).'</strong><br>':'').e($x['pk_label']).'</div>':'').'</div>';
+/** Nombor & susunan buku: bahagian A, B, … (1, 2, …); jawatankuasa 1.1, 1.2 …; panitia mata pelajaran dikumpul di hujung bidang.
+ *  Pulangkan [{letter,no,title,pk_label,pk,groups => [{sub (tajuk kecil|null), items => [{no,name,rows}]}]}]. */
+function task_book_outline(array $book): array {
+    $out=[]; $L=range('A','Z');
+    foreach(array_values($book) as $si=>$x){ $n=0; $groups=[];
         foreach($x['cats'] as $cat=>$coms){
-            if($x['unit']!=='sekolah') $h.='<h3 class="book-sub">'.e($cat).'</h3>';
-            foreach($coms as $com=>$rows){ $bil++;
-                $h.='<table class="book-table"><thead><tr><th colspan="3" class="book-com">'.$bil.'. '.e(mb_strtoupper($com)).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th></tr></thead><tbody>';
-                foreach($rows as $i=>$r) $h.='<tr><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($r['role']).'</td><td>'.($r['teacher']!==null?e(mb_strtoupper($r['teacher'])):'<em class="vacant">— belum diisi —</em>').'</td></tr>';
+            $main=[]; $pan=[]; foreach($coms as $name=>$rows) if(preg_match('/^Panitia\b/iu',$name)) $pan[$name]=$rows; else $main[$name]=$rows;
+            $mk=function(array $list)use(&$n,$si): array { $r=[]; foreach($list as $name=>$rows){ $n++; $r[]=['no'=>($si+1).'.'.$n,'name'=>$name,'rows'=>$rows]; } return $r; };
+            if($main) $groups[]=['sub'=>$x['unit']!=='sekolah'?$cat:null,'items'=>$mk($main)];
+            if($pan) $groups[]=['sub'=>($x['unit']!=='sekolah'?$cat.' — ':'').'Panitia Mata Pelajaran','items'=>$mk($pan)];
+        }
+        $title=preg_replace('/^BIDANG\s+/u','',$x['title']);
+        $out[]=['letter'=>$L[$si]??(string)($si+1),'no'=>$si+1,'title'=>$title,'pk_label'=>$x['pk_label'],'pk'=>$x['pk'],'groups'=>$groups];
+    }
+    return $out;
+}
+/** HTML senarai tugas: kandungan (senarai jawatankuasa) diikuti ahli setiap jawatankuasa. $pdf: kandungan mPDF dengan nombor halaman. */
+function task_book_html(array $book,bool $pdf=false): string {
+    $o=task_book_outline($book); if(!$o) return '<p>Tiada jawatan.</p>';
+    $h='';
+    if($pdf) $h.='<tocpagebreak toc-preHTML="'.e('<h2 class="toc-title">KANDUNGAN</h2>').'" links="on" toc-margin-top="16mm" toc-margin-bottom="18mm" />';
+    else {
+        $h.='<nav class="book-toc" aria-label="Kandungan"><h3 class="toc-title">KANDUNGAN</h3>';
+        foreach($o as $s){ $h.='<div class="toc-sec"><a href="#bhg-'.$s['no'].'">BAHAGIAN '.$s['letter'].': '.e($s['title']).'</a></div>';
+            foreach($s['groups'] as $g){ if($g['sub']) $h.='<div class="toc-sub">'.e($g['sub']).'</div>';
+                foreach($g['items'] as $it) $h.='<div class="toc-item"><a href="#jk-'.str_replace('.','-',$it['no']).'"><span class="toc-no">'.$it['no'].'</span>'.e($it['name']).'</a></div>'; } }
+        $h.='</nav>';
+    }
+    foreach($o as $si=>$s){
+        $head='BAHAGIAN '.$s['letter'].': '.$s['title'];
+        $h.=($pdf && $si?'<pagebreak />':'').($pdf?'<tocentry content="'.e($head).'" level="0" />':'').'<div class="book-cat" id="bhg-'.$s['no'].'"><div class="book-cat-title">'.e($head).'</div>'.($s['pk_label']!==''?'<div class="book-pk">'.($s['pk']!==null?'<strong>'.e(mb_strtoupper($s['pk'])).'</strong><br>':'').e($s['pk_label']).'</div>':'').'</div>';
+        foreach($s['groups'] as $g){
+            if($g['sub']){ $h.=($pdf?'<tocentry content="'.e($g['sub']).'" level="1" />':'').'<h3 class="book-sub">'.e($g['sub']).'</h3>'; }
+            foreach($g['items'] as $it){
+                $h.=($pdf?'<tocentry content="'.e($it['no'].'  '.$it['name']).'" level="2" />':'').'<table class="book-table" id="jk-'.str_replace('.','-',$it['no']).'"><thead><tr><th colspan="3" class="book-com">'.$it['no'].'&nbsp;&nbsp;'.e($it['name']).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th></tr></thead><tbody>';
+                foreach($it['rows'] as $i=>$r) $h.='<tr><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($r['role']).'</td><td>'.($r['teacher']!==null?e(mb_strtoupper($r['teacher'])):'<em class="vacant">— belum diisi —</em>').'</td></tr>';
                 $h.='</tbody></table>';
             }
         }
     }
-    return $h!==''?$h:'<p>Tiada jawatan.</p>';
+    return $h;
 }
-const TASK_BOOK_CSS='.book-cat{margin:18px 0 8px;padding:7px 10px;background:#edf3e9;border-left:4px solid #588767;page-break-after:avoid}.book-cat-title{font-size:12.5pt;font-weight:bold;letter-spacing:.02em}.book-pk{font-size:9.5pt;margin-top:3px;line-height:1.35}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
+const TASK_BOOK_CSS='.toc-title{font-size:13pt;text-align:center;margin:0 0 10px}div.mpdf_toc_level_0{margin-top:8px}a.mpdf_toc_a_level_0,span.mpdf_toc_p_level_0{font-weight:bold;font-size:10pt}a.mpdf_toc_a_level_1,span.mpdf_toc_p_level_1{font-size:9.5pt;font-weight:normal;font-style:italic}a.mpdf_toc_a_level_2,span.mpdf_toc_p_level_2{font-size:9.5pt;font-weight:normal;font-style:normal}div.mpdf_toc_level_1{padding-left:6mm;margin-top:3px}div.mpdf_toc_level_2{padding-left:10mm}.book-cat{margin:18px 0 8px;padding:7px 10px;background:#edf3e9;border-left:4px solid #588767;page-break-after:avoid}.book-cat-title{font-size:12.5pt;font-weight:bold;letter-spacing:.02em}.book-pk{font-size:9.5pt;margin-top:3px;line-height:1.35}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important;text-transform:none}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
 /** Senarai muktamad = agihan berstatus Muktamad; selain itu draf (tera air). */
 function task_book_final(): bool { return workflow_state()['status']==='finalized'; }
 /** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */
