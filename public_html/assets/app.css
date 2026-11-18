@@ -1840,3 +1840,8 @@ body:has(.hb-modal){overflow:hidden}
 .masa-input{width:96px;max-width:100%}
 .unit-badge{background:color-mix(in srgb,var(--primary,#c2410c) 12%,var(--surface,#fff));color:var(--primary,#c2410c)}
 fieldset.field{border:0;padding:0;margin:0;min-width:0}fieldset.field legend{font-weight:600;font-size:.88rem;margin-bottom:.35rem;padding:0}fieldset.field .check{display:inline-flex;margin-right:1.2rem}.unit-filter{flex-wrap:wrap}
+/* Senarai tugas (Buku Panduan) — pratonton & cetak; tera air DRAF jika belum muktamad. */
+.book-doc{position:relative;overflow:hidden}.book-head{text-align:center;margin-bottom:14px}.book-school{font-weight:700;letter-spacing:.04em}.book-title{font-size:16px;margin:6px 0}.book-title small{font-size:12px}.book-draft-note{color:#b42318;font-size:11px;margin:4px 0 0}
+.book-watermark{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(90px,16vw,200px);font-weight:800;color:rgba(180,35,24,.07);transform:rotate(-30deg);z-index:0}
+.book-doc>*:not(.book-watermark){position:relative;z-index:1}
+@media print{.book-doc{border:0;padding:0}.book-watermark{position:fixed;color:rgba(180,35,24,.08)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.book-table{page-break-inside:avoid}}

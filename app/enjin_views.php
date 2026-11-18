@@ -615,6 +615,21 @@ function session_panel(): string {
 
 /* ---------- Carta organisasi ---------- */
 /** Jawatan utama sekolah (tanda segera, Pentadbir / PK semasa Draf) dan carta organisasi ikut bidang. */
+/** Senarai tugas mengikut bidang & jawatankuasa — pratonton cetak / PDF (tera air DRAF jika agihan belum muktamad). */
+function buku_page(): void {
+    $cat=in_array(input('bidang','get'),CATEGORIES,true)?input('bidang','get'):null; $u=isset(POSITION_UNITS[input('unit','get')])&&units_on()?input('unit','get'):null;
+    $final=task_book_final(); $book=task_book($cat,$u); $q=($cat?'&bidang='.rawurlencode($cat):'').($u?'&unit='.$u:''); $year=setting('session_year')?:date('Y');
+    $nCom=array_sum(array_map('count',$book)); $nPos=array_sum(array_map(fn($c)=>array_sum(array_map('count',$c)),$book));
+    ?><div class="page-heading no-print"><div><span class="eyebrow teal">BUKU PANDUAN PENGURUSAN</span><h1>Senarai Tugas &amp; Jawatankuasa</h1><p class="muted">Senarai tugas mengikut bidang dan jawatankuasa untuk dicetak dalam buku panduan pengurusan sekolah. <?= $final?'Agihan sudah <strong>muktamad</strong>.':'Agihan belum muktamad — dokumen bertera air <strong>DRAF</strong>.' ?></p></div>
+    <div class="button-group"><button class="btn outline print-btn" type="button"><?= icon('file') ?>Cetak</button><a class="btn primary" href="/?page=buku&amp;pdf=1<?= e($q) ?>"><?= icon('download') ?>Simpan PDF<?= $final?'':' (draf)' ?></a></div></div>
+    <section class="panel padded no-print"><form method="get" class="form-grid"><input type="hidden" name="page" value="buku"><label class="field">Bidang<select name="bidang" class="auto-submit"><option value="">Semua bidang</option><?php foreach(CATEGORIES as $c): ?><option<?= $cat===$c?' selected':'' ?>><?= e($c) ?></option><?php endforeach; ?></select></label>
+    <?php if(units_on()): ?><label class="field">Unit<select name="unit" class="auto-submit"><option value="">Semua unit</option><?php foreach(school_units() as $x): ?><option value="<?= $x ?>"<?= $u===$x?' selected':'' ?>><?= e(POSITION_UNITS[$x]) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+    <p class="full muted small-note"><?= $nCom ?> jawatankuasa · <?= $nPos ?> jawatan. Jawatankuasa dikenal pasti daripada nama jawatan (cth. "Setiausaha JK Disiplin" → JK Disiplin); peranan disusun Pengerusi → Setiausaha → AJK.</p><noscript><button class="btn outline">Tapis</button></noscript></form></section>
+    <article class="document-page book-doc spaced<?= $final?'':' is-draft' ?>"><?php if(!$final): ?><div class="book-watermark" aria-hidden="true">DRAF</div><?php endif; ?>
+    <div class="book-head"><div class="book-school"><?= e(school_name()) ?></div><h2 class="book-title">SENARAI TUGAS &amp; JAWATANKUASA <?= e($year) ?><?= $cat?'<br><small>BIDANG '.e(mb_strtoupper($cat)).'</small>':'' ?><?= $u?'<br><small>'.e(mb_strtoupper(POSITION_UNITS[$u])).'</small>':'' ?></h2><?php if(!$final): ?><p class="book-draft-note">DRAF — BELUM MUKTAMAD · <?= date('d/m/Y H:i') ?></p><?php endif; ?></div>
+    <?= task_book_html($book) ?></article>
+    <style><?= TASK_BOOK_CSS ?></style><?php
+}
 function organisasi_page(): void {
     $plan=can_plan(); $draft=workflow_state()['status']==='draft'; $l=leadership(); $labels=leader_posts(true); $c=org_chart_data(); // borang: label pendek (PK …)
     $teachers=$plan?query('SELECT id,name,specialty FROM teachers WHERE school_id='.sid().' ORDER BY name')->fetchAll():[];

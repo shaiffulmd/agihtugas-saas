@@ -136,6 +136,10 @@ with_school($S,function()use(&$tmp){
     check(subject_set_teachers($sk,[$g2])===[0,1] && !str_contains(teacher_find($g1)['specialty'],'Kimia Ujian'),'guru dinyahtanda: MP dibuang daripada kepakaran');
     $pk=position_save(0,['name'=>'Ketua Panitia Panitia Kimia (1/2)','category'=>'Kurikulum','weight'=>5]); $rw=array_column(positions_repeated_words(),'new','id');
     check(($rw[$pk]??'')==='Ketua Panitia Kimia (1/2)' && positions_fix_repeated_words()>=1 && position_find($pk)['name']==='Ketua Panitia Kimia (1/2)','perkataan berulang dalam nama jawatan dikemaskan');
+    echo "Senarai tugas (buku panduan)\n";
+    check(position_committee('Setiausaha JK Disiplin (1/2)')===['Setiausaha','JK Disiplin',8] && position_committee('Ketua Panitia Kimia')[1]==='Panitia Kimia' && position_committee('AJK (BOSS) JK Prasarana')===['AJK (BOSS)','JK Prasarana',30],'nama jawatan dipecah kepada peranan & jawatankuasa');
+    $bk=task_book('HEM'); $com=$bk['HEM']['Kebersihan (PPKI)']??null;
+    check(array_keys($bk)===['HEM'] && $com && count($com)===2 && task_book_final()===false && str_contains(task_book_html($bk),'BIDANG HEM'),'senarai mengikut bidang & jawatankuasa; draf apabila belum muktamad');
     echo "Kemas kini maklumat guru pukal\n";
     $r=bulk_guru_update_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['set']===['teaching_periods'=>28,'exam_class'=>1] && $r[1]['set']===[],'tajuk dikenali; sel kosong = kekal');

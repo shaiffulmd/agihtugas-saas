@@ -51,13 +51,13 @@ final class WorkflowError extends EngineError {
 
 /* ---------- Peranan & halaman ---------- */
 const ENGINE_PAGES=['guru'=>'Pengurusan Guru','subjek'=>'Mata Pelajaran','jawatan'=>'Jawatan & Pemberat','agihan'=>'Agihan Tugas','analisis'=>'Analisis Beban','auto'=>'Agihan Automatik','syarat'=>'Pusat Syarat','pukal'=>'Tambah Jawatan Pukal',
-    'organisasi'=>'Carta Organisasi','kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
+    'organisasi'=>'Carta Organisasi','buku'=>'Senarai Tugas','kelulusan'=>'Semakan & Kelulusan','surat'=>'Surat Lantikan','tugas_saya'=>'Tugas Saya','sekolah'=>'Profil Sekolah & Surat','api'=>'API & Integrasi'];
 /** Halaman enjin yang dibenarkan bagi peranan. */
 function engine_pages(string $role): array {
     return match($role){
-        'admin'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','kelulusan','surat','sekolah','api'],
-        'pk'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','kelulusan','surat'],
-        'head'=>['analisis','organisasi','kelulusan','surat'],
+        'admin'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','buku','kelulusan','surat','sekolah','api'],
+        'pk'=>['guru','subjek','jawatan','agihan','analisis','auto','syarat','pukal','organisasi','buku','kelulusan','surat'],
+        'head'=>['analisis','organisasi','buku','kelulusan','surat'],
         'teacher'=>['tugas_saya'],
         default=>[]};
 }
@@ -685,6 +685,52 @@ function subject_save(int $id,array $d): array {
     }
     return [$id,$n];
 }
+/* ---------- Senarai tugas mengikut bidang & jawatankuasa (Buku Panduan Pengurusan) ----------
+ * Nama jawatan dipecah kepada peranan + jawatankuasa: "Setiausaha JK Disiplin (1/2)" → [Setiausaha, JK Disiplin]. */
+const BOOK_ROLES=['Pengerusi'=>1,'Timbalan Pengerusi'=>2,'Naib Pengerusi'=>3,'Ketua Panitia'=>4,'Ketua Unit'=>4,'Ketua Bidang'=>4,'Ketua Warden'=>4,'Ketua Guru Penasihat'=>4,'Ketua'=>4,
+    'Timbalan Ketua'=>5,'Naib Ketua'=>5,'Penyelaras'=>6,'Penolong Ketua'=>7,'Setiausaha'=>8,'Penolong Setiausaha'=>9,'Bendahari'=>10,'Penolong Bendahari'=>11,'Juruaudit'=>12,
+    'Penolong Ketua Guru Penasihat'=>13,'Guru Penasihat'=>14,'Penasihat'=>14,'Jurulatih'=>15,'Warden'=>15,'Pegawai'=>16,'Guru Kelas'=>17,'AJK'=>30,'Ahli'=>30];
+/** [peranan, jawatankuasa, kedudukan] bagi nama jawatan. Jawatan tanpa peranan dikenali → jawatankuasa = nama jawatan. */
+function position_committee(string $name): array {
+    $n=trim((string)preg_replace('/\s*\(\d+\/\d+\)$/u','',$name)); $best=null;
+    foreach(BOOK_ROLES as $r=>$rank) if((mb_strtolower($n)===mb_strtolower($r) || str_starts_with(mb_strtolower($n),mb_strtolower($r).' ')) && (!$best || mb_strlen($r)>mb_strlen($best))) $best=$r;
+    if(!$best) return preg_match('/^(.+?)\s+((?:JK|Jawatankuasa|Panitia|Unit|Kelab|Persatuan|Sekretariat|Pasukan|Badan|Majlis)\b.*)$/u',$n,$m) && mb_strlen($m[1])<=40?[$m[1],$m[2],20]:[$n,$n,20];
+    $role=$best; $rest=trim(mb_substr($n,mb_strlen($best)));
+    if($best==='Ketua Panitia') $rest='Panitia '.$rest; elseif($best==='Guru Kelas') { $role='Guru Kelas '.$rest; $rest='Guru Kelas'; }
+    // "AJK (BOSS) JK Penyelenggaraan …" → peranan "AJK (BOSS)", jawatankuasa "JK Penyelenggaraan …".
+    elseif(preg_match('/^(.+?)\s+((?:JK|Jawatankuasa|Panitia|Unit|Kelab|Persatuan|Sekretariat|Pasukan|Badan|Majlis|Rumah)\b.*)$/u',$rest,$m) && mb_strlen($m[1])<=40){ $role.=' '.$m[1]; $rest=$m[2]; }
+    return [$role,$rest!==''?$rest:$n,BOOK_ROLES[$best]];
+}
+/** Senarai tugas: [bidang => [jawatankuasa => [{role,name,teacher,unit,rank}]]] tersusun; $cat/$unit = penapis (null = semua). */
+function task_book(?string $cat=null,?string $unit=null): array {
+    $out=array_fill_keys($cat?[$cat]:CATEGORIES,[]); $names=[];
+    foreach(positions_with_holder() as $p){
+        if($cat && $p['category']!==$cat) continue; if($unit && ($p['unit']??'sekolah')!==$unit) continue;
+        [$role,$com,$rank]=position_committee($p['name']); $u=$p['unit']??'sekolah';
+        $label=$com.($u!=='sekolah' && !preg_match('/\b(PPU|PPKI|T6|Tingkatan 6)\b/iu',$com)?' ('.POSITION_UNITS[$u].')':'');
+        $k=mb_strtolower(trim((string)preg_replace(['/\s*&\s*/u','/\s+/u'],[' dan ',' '],$label))); $names[$k]??=$label; $key=$names[$k]; // "&" = "dan", huruf besar/kecil diabaikan
+        $out[$p['category']][$key][]=['role'=>$role,'name'=>$p['name'],'teacher'=>$p['teacher_name'],'rank'=>$rank];
+    }
+    foreach($out as $c=>&$coms){ ksort($coms,SORT_NATURAL|SORT_FLAG_CASE); foreach($coms as &$rows) usort($rows,fn($a,$b)=>$a['rank']<=>$b['rank'] ?: strnatcasecmp($a['name'],$b['name'])); unset($rows); }
+    unset($coms);
+    return array_filter($out);
+}
+/** HTML senarai tugas (pratonton & PDF berkongsi markup). */
+function task_book_html(array $book): string {
+    $h=''; $bil=0;
+    foreach($book as $cat=>$coms){
+        $h.='<h2 class="book-cat">BIDANG '.e(mb_strtoupper($cat)).'</h2>';
+        foreach($coms as $com=>$rows){ $bil++;
+            $h.='<table class="book-table"><thead><tr><th colspan="3" class="book-com">'.$bil.'. '.e(mb_strtoupper($com)).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th></tr></thead><tbody>';
+            foreach($rows as $i=>$r) $h.='<tr><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($r['role']).'</td><td>'.($r['teacher']!==null?e(mb_strtoupper($r['teacher'])):'<em class="vacant">— belum diisi —</em>').'</td></tr>';
+            $h.='</tbody></table>';
+        }
+    }
+    return $h!==''?$h:'<p>Tiada jawatan.</p>';
+}
+const TASK_BOOK_CSS='.book-cat{font-size:12pt;margin:18px 0 6px;padding:5px 8px;background:#edf3e9;border-left:4px solid #588767}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important}.c-bil{width:30px;text-align:center!important}.c-role{width:34%}.vacant{color:#999}';
+/** Senarai muktamad = agihan berstatus Muktamad; selain itu draf (tera air). */
+function task_book_final(): bool { return workflow_state()['status']==='finalized'; }
 /** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */
 function subject_set_teachers(int $subjectId,array $ids): array {
     $s=subject_find($subjectId); if(!$s) throw new EngineError('Mata pelajaran tidak ditemui.',404,'not_found');
