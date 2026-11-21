@@ -149,7 +149,7 @@ with_school($S,function()use(&$tmp){
     check(book_note('AJK (SU Disiplin)')===['AJK','SU Disiplin'] && book_note('Juruaudit Dalaman (Asrama)')===['Juruaudit Dalaman','Asrama'] && book_note('Bengkel KVS (Asas Roti)')===['Bengkel KVS (Asas Roti)',''],'catatan dalam kurungan dipisah ke lajur Catatan');
     $bk=task_book('HEM'); $secs=array_column($bk,null,'unit'); $com=$secs['ppki']['cats']['HEM']['Kebersihan']??null;
     check(isset($secs['sekolah'],$secs['ppki']) && $secs['sekolah']['title']==='BIDANG HEM' && $com && count($com)===2 && !isset($secs['sekolah']['cats']['HEM']['Kebersihan']),'jawatan PPKI di bahagian PPKI sendiri (bukan bawah bidang); akhiran unit dibuang');
-    check(task_book_final()===false && str_contains(task_book_html($bk),'PENDIDIKAN KHAS (PPKI)') && array_column(task_book(null,'sekolah'),'unit')===array_fill(0,count(task_book(null,'sekolah')),'sekolah'),'penapis unit Sekolah: bidang sahaja; draf apabila belum muktamad');
+    check(task_book_final()===false && str_contains(task_book_html($bk),'PENDIDIKAN KHAS INTEGRASI (PPKI)') && array_column(task_book(null,'sekolah'),'unit')===array_fill(0,count(task_book(null,'sekolah')),'sekolah'),'penapis unit Sekolah: bidang sahaja; draf apabila belum muktamad');
     echo "Kemas kini maklumat guru pukal\n";
     $r=bulk_guru_update_parse("Nama Guru,Masa mengajar,Kelas peperiksaan\nnur aisyah  abdullah,28,Ya\nSiti Hajar Saad,,\nTiada Orang,10,\n");
     check(count($r)===3 && $r[0]['set']===['teaching_periods'=>28,'exam_class'=>1] && $r[1]['set']===[],'tajuk dikenali; sel kosong = kekal');

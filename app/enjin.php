@@ -823,9 +823,10 @@ function task_book(?string $cat=null,?string $unit=null): array {
     // Pimpinan jawatankuasa (jadual seperti fail JK sekolah): Pengerusi = Pengetua, Timbalan = PK bidang / unit, Naib Pengerusi = PK lain (bidang sahaja).
     $leadRows=function(string $tk,bool $naib)use($lead,$labels,$tn): array {
         $who=fn(string $k)=>isset($lead[$k])&&$lead[$k]&&isset($tn[$lead[$k]])?$tn[$lead[$k]]:null; $r=[];
-        if($n=$who('pengetua')) $r[]=['Pengerusi',$n,$labels['pengetua']];
-        if($tk!=='' && ($n=$who($tk))) $r[]=['Timbalan Pengerusi',$n,$labels[$tk]];
-        if($naib){ $o=[]; foreach($labels as $k=>$l) if($k!=='pengetua' && $k!==$tk && ($n=$who($k))) $o[]=[$n,$l];
+        $short=leader_posts(true);   // catatan seperti fail JK: "PK Pentadbiran", "PK HEM"
+        if($n=$who('pengetua')) $r[]=['Pengerusi',$n,$short['pengetua']];
+        if($tk!=='' && ($n=$who($tk))) $r[]=['Timbalan Pengerusi',$n,$short[$tk]];
+        if($naib){ $o=[]; foreach($short as $k=>$l) if($k!=='pengetua' && $k!==$tk && ($n=$who($k))) $o[]=[$n,$l];
             $rn=['I','II','III','IV','V','VI','VII']; foreach($o as $i=>[$n,$l]) $r[]=['Naib Pengerusi'.(count($o)>1?' '.($rn[$i]??$i+1):''),$n,$l]; }
         return $r;
     };
@@ -846,22 +847,6 @@ function task_book(?string $cat=null,?string $unit=null): array {
         $x['cats']=$cats; $out[]=$x; }
     return $out;
 }
-/** Nombor & susunan buku: bahagian A, B, … (1, 2, …); jawatankuasa 1.1, 1.2 …; panitia mata pelajaran dikumpul di hujung bidang.
- *  Pulangkan [{letter,no,title,pk_label,pk,groups => [{sub (tajuk kecil|null), items => [{no,name,rows}]}]}]. */
-function task_book_outline(array $book): array {
-    $out=[]; $L=range('A','Z');
-    foreach(array_values($book) as $si=>$x){ $n=0; $groups=[];
-        foreach($x['cats'] as $cat=>$coms){
-            $main=[]; $pan=[]; foreach($coms as $name=>$rows) if(preg_match('/^Panitia\b/iu',$name)) $pan[$name]=$rows; else $main[$name]=$rows;
-            $mk=function(array $list)use(&$n,$si): array { $r=[]; foreach($list as $name=>$rows){ $n++; $r[]=['no'=>($si+1).'.'.$n,'name'=>$name,'rows'=>$rows]; } return $r; };
-            if($main) $groups[]=['sub'=>$x['unit']!=='sekolah'?$cat:null,'items'=>$mk($main)];
-            if($pan) $groups[]=['sub'=>($x['unit']!=='sekolah'?$cat.' — ':'').'Panitia Mata Pelajaran','items'=>$mk($pan)];
-        }
-        $title=preg_replace('/^BIDANG\s+/u','',$x['title']);
-        $out[]=['letter'=>$L[$si]??(string)($si+1),'no'=>$si+1,'title'=>$title,'pk_label'=>$x['pk_label'],'pk'=>$x['pk'],'lead'=>$x['lead']??[],'groups'=>$groups];
-    }
-    return $out;
-}
 /** Peranan "AJK (SU Disiplin)" → ["AJK", "SU Disiplin"] untuk lajur Catatan. Hanya apabila bahagian sebelum kurungan ialah peranan dikenali
  *  (label seperti "Bengkel KVS (Asas Roti)" kekal utuh). */
 function book_note(string $role): array {
@@ -869,40 +854,9 @@ function book_note(string $role): array {
         if(mb_strtolower($m[1])===mb_strtolower($k) || str_starts_with(mb_strtolower($m[1]),mb_strtolower($k).' ')) return [$m[1],$m[2]];
     return [$role,''];
 }
-/** HTML senarai tugas: kandungan (senarai jawatankuasa) diikuti ahli setiap jawatankuasa. $pdf: kandungan mPDF dengan nombor halaman.
- *  $lead: setiap JK dimulakan dengan Pengerusi (Pengetua), Timbalan (PK bidang / unit) & Naib Pengerusi (PK lain) daripada Carta Organisasi. */
-function task_book_html(array $book,bool $pdf=false,bool $lead=true): string {
-    $o=task_book_outline($book); if(!$o) return '<p>Tiada jawatan.</p>';
-    $h='';
-    if($pdf) $h.='<tocpagebreak toc-preHTML="'.e('<h2 class="toc-title">KANDUNGAN</h2>').'" links="on" toc-margin-top="16mm" toc-margin-bottom="18mm" />';
-    else {
-        $h.='<nav class="book-toc" aria-label="Kandungan"><h3 class="toc-title">KANDUNGAN</h3>';
-        foreach($o as $s){ $h.='<div class="toc-sec"><a href="#bhg-'.$s['no'].'">BAHAGIAN '.$s['letter'].': '.e($s['title']).'</a></div>';
-            foreach($s['groups'] as $g){ if($g['sub']) $h.='<div class="toc-sub">'.e($g['sub']).'</div>';
-                foreach($g['items'] as $it) $h.='<div class="toc-item"><a href="#jk-'.str_replace('.','-',$it['no']).'"><span class="toc-no">'.$it['no'].'</span>'.e($it['name']).'</a></div>'; } }
-        $h.='</nav>';
-    }
-    foreach($o as $si=>$s){
-        $head='BAHAGIAN '.$s['letter'].': '.$s['title'];
-        $h.=($pdf && $si?'<pagebreak />':'').($pdf?'<tocentry content="'.e($head).'" level="0" />':'').'<div class="book-cat" id="bhg-'.$s['no'].'"><div class="book-cat-title">'.e($head).'</div>'.($s['pk_label']!==''?'<div class="book-pk">'.($s['pk']!==null?'<strong>'.e(mb_strtoupper($s['pk'])).'</strong><br>':'').e($s['pk_label']).'</div>':'').'</div>';
-        foreach($s['groups'] as $g){
-            if($g['sub']){ $h.=($pdf?'<tocentry content="'.e($g['sub']).'" level="1" />':'').'<h3 class="book-sub">'.e($g['sub']).'</h3>'; }
-            foreach($g['items'] as $it){
-                $rows=[];
-                // Pimpinan hanya untuk jawatankuasa (JK …) yang belum ada Pengerusi / Timbalan / Naib Pengerusi sendiri.
-                if($lead && preg_match('/^(JK|Jawatankuasa)\b/iu',$it['name']) && !array_filter($it['rows'],fn($r)=>$r['rank']<=3))
-                    foreach($s['lead'] as [$role,$name,$label]) $rows[]=[$role,$name,$label,true];
-                foreach($it['rows'] as $r){ [$role,$note]=book_note($r['role']); $rows[]=[$role,$r['teacher'],$note,false]; }
-                $note=(bool)array_filter($rows,fn($r)=>$r[2]!==''); $cols=$note?4:3;
-                $h.=($pdf?'<tocentry content="'.e($it['no'].'  '.$it['name']).'" level="2" />':'').'<table class="book-table" id="jk-'.str_replace('.','-',$it['no']).'"><thead><tr><th colspan="'.$cols.'" class="book-com">'.$it['no'].'&nbsp;&nbsp;'.e($it['name']).'</th></tr><tr><th class="c-bil">Bil.</th><th class="c-role">Jawatan</th><th>Nama guru</th>'.($note?'<th class="c-note">Catatan</th>':'').'</tr></thead><tbody>';
-                foreach($rows as $i=>[$role,$t,$n,$isLead]) $h.='<tr'.($isLead?' class="book-lead"':'').'><td class="c-bil">'.($i+1).'</td><td class="c-role">'.e($role).'</td><td>'.($t!==null?e(mb_strtoupper($t)):'<em class="vacant">— belum diisi —</em>').'</td>'.($note?'<td class="c-note">'.e($n).'</td>':'').'</tr>';
-                $h.='</tbody></table>';
-            }
-        }
-    }
-    return $h;
-}
-const TASK_BOOK_CSS='.toc-title{font-size:13pt;text-align:center;margin:0 0 10px}div.mpdf_toc_level_0{margin-top:8px}a.mpdf_toc_a_level_0,span.mpdf_toc_p_level_0{font-weight:bold;font-size:10pt}a.mpdf_toc_a_level_1,span.mpdf_toc_p_level_1{font-size:9.5pt;font-weight:normal;font-style:italic}a.mpdf_toc_a_level_2,span.mpdf_toc_p_level_2{font-size:9.5pt;font-weight:normal;font-style:normal}div.mpdf_toc_level_1{padding-left:6mm;margin-top:3px}div.mpdf_toc_level_2{padding-left:10mm}.book-cat{margin:18px 0 8px;padding:7px 10px;background:#edf3e9;border-left:4px solid #588767;page-break-after:avoid}.book-cat-title{font-size:12.5pt;font-weight:bold;letter-spacing:.02em}.book-pk{font-size:9.5pt;margin-top:3px;line-height:1.35}.book-sub{font-size:10.5pt;margin:10px 0 4px;color:#557e5e}.book-table{width:100%;border-collapse:collapse;margin:0 0 12px;page-break-inside:avoid;font-size:9.5pt}.book-table th,.book-table td{border:1px solid #bfceba;padding:4px 6px;text-align:left;vertical-align:top}.book-table thead th{background:#f8faf5}.book-com{font-size:10pt;background:#dfe7dc!important;text-transform:none}.c-bil{width:30px;text-align:center!important}.c-role{width:30%}.c-note{width:26%;color:#555}.book-lead td{background:#fafbf8}.vacant{color:#999}';
+/** Tajuk jadual seperti fail JK sekolah: "JK Disiplin" → "JAWATANKUASA DISIPLIN"; nama lain (Panitia, Kelab, Guru Kelas) → huruf besar. */
+function book_title(string $name): string { return mb_strtoupper((string)preg_replace('/^JK\b/u','Jawatankuasa',trim($name))); }
+require_once __DIR__.'/buku.php';   // Buku Pengurusan Sekolah (kulit, kandungan, pendahuluan, carta, jadual JK)
 /** Senarai muktamad = agihan berstatus Muktamad; selain itu draf (tera air). */
 function task_book_final(): bool { return workflow_state()['status']==='finalized'; }
 /** Tetapkan guru yang mengajar MP: guru dalam $ids ditambah MP pada kepakaran, guru lain yang memegang MP itu dibuang. Pulangkan [ditambah, dibuang]. */

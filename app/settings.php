@@ -38,6 +38,7 @@ function setting_defaults(): array {
          'letter_reference' => 'SEK.100-1/5/1', 'letter_header' => 'dual',
         'index_ketua_bidang' => '1', // Ketua Bidang dikira dalam indeks beban (Carta Organisasi)
         'unit_ppki' => '0', 'unit_t6' => '0', // unit jawatan PPKI / Tingkatan 6 (label pada jawatan, app/enjin.php POSITION_UNITS)
+        'book_intro' => '', // pendahuluan Buku Pengurusan Sekolah (teks bertanda, app/buku.php)
         'school_address' => '', 'school_tel' => '', 'school_fax' => '', 'letter_mode' => 'satu', 'letter_effective' => '',
         'letter_para' => 'Kerjasama dan komitmen tuan/puan dalam melaksanakan tanggungjawab ini amat dihargai. Sebarang perubahan tugas akan dimaklumkan oleh pihak pentadbiran sekolah.', 'letter_slogan' => "\"MALAYSIA MADANI\"\n\"BERKHIDMAT UNTUK NEGARA\"", 'school_logo_id' => '', 'national_crest_id' => '',
         'reg_mode' => 'off', 'reg_domains' => '', 'login_captcha' => 'failures', 'ip_admin' => '', 'site_url' => '', 'mail_method' => 'platform', 'smtp_preset' => 'custom', 'mail_from' => '', 'mail_from_name' => '',

@@ -6,6 +6,11 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.21'=>['2026-11-21',[
+        'Buku Pengurusan Sekolah (menu Senarai Tugas): buku penuh ikut format buku pengurusan sekolah — kulit (logo, nama sekolah, sesi), Senarai Kandungan bernombor halaman, 1.0 Perkara Am, kemudian 2.0 Pentadbiran, 3.0 Kurikulum, 4.0 HEM, 5.0 Kokurikulum, 6.0 PPU dan 7.0 PPKI. Setiap bahagian ada halaman pemisah, Carta Organisasi (Pengetua, PK & senarai jawatankuasa), jadual jawatankuasa berkepala biru tua (Jawatan | Nama | Catatan, jawatan sama digabung), Senarai Ketua Panitia ikut bidang & GKMP dan Senarai Guru Kelas. Kepala & kaki halaman "BUKU PENGURUSAN SEKOLAH" dengan nombor halaman.',
+        'Pendahuluan buku (1.0 Perkara Am) boleh disunting dan disimpan untuk diguna semula setiap tahun: Dari Meja Pengetua, Profil, Sejarah, Lencana, Lagu, Falsafah, Visi Misi KPM, Piagam Pelanggan, Panduan Am dan lain-lain dalam format teks ringkas (# bahagian, ## halaman, ### subtajuk, senarai, baris tengah, jadual profil). Templat asas disediakan. Senarai Guru (kepimpinan, GKMP, semua guru) dijana automatik.',
+        'Jawatan & Pemberat (Pentadbir, semasa Draf): pilih & padam jawatan secara pukal dalam katalog — kotak pilih setiap jawatan, kotak tajuk memilih semua yang dipaparkan (ikut carian / tapisan unit / bertindan), Shift + klik untuk julat. Lantikan dan syarat jawatan dipadam bersama dan dilog dalam Audit. Pautan terus ke "Padam semua jawatan" di panel Reset.',
+    ]],
     '1.20'=>['2026-11-21',[
         'Jawatan & Pemberat: semakan jawatan bertindan — jawatan yang sebenarnya sama tetapi nama penuhnya berbeza sedikit (cth. "AJK JK Kewangan dan audit" dan "AJK JK Kewangan dan Audit (JPKA)", "&" dan "dan", singkatan dalam kurungan), atau guru yang sama memegang tempat jawatan yang sama dua kali, ditanda "Bertindan" dalam katalog dan disenaraikan ikut kumpulan. Katalog boleh ditapis kepada jawatan bertindan sahaja.',
         'Padam jawatan bertindan yang dipilih bersama lantikannya. Butang "Tanda semua cadangan" menanda tempat dalam nama lama yang kosong atau gurunya sudah ada dalam nama terkini; nama daripada import terkini dikekalkan.',
