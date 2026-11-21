@@ -3,7 +3,7 @@ declare(strict_types=1);
 /* Tindakan POST enjin agihan tugas (dipanggil oleh handle_action()). Setiap tindakan:
  *  peranan disemak → transaksi → (data perancangan: mesti Draf) → perubahan ditapis sid() → audit → PRG. */
 
-const ENGINE_ACTIONS=['peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','subjek_guru','jawatan_kemas_nama','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
+const ENGINE_ACTIONS=['jawatan_reset','peranan_save','peranan_delete','peranan_standard','peranan_padan','jawatan_standard','jawatan_panduan','kapasiti_panduan','organisasi_save','sesi_baharu','tanda_selesai','subjek_save','subjek_delete','subjek_import','subjek_guru','jawatan_kemas_nama','guru_save','guru_delete','guru_bulk_preview','guru_bulk_apply','jawatan_save','jawatan_delete','jawatan_bulk_preview','jawatan_bulk_apply','agihan_bulk_preview','agihan_bulk_apply','guru_masa_save','guru_masa_preview','guru_masa_apply',
     'agih','agih_lepas','syarat_umum','syarat_jawatan','syarat_padam','auto_preview','auto_apply','kelulusan','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal','indeks_tetapan'];
 
 function post_int(string $key,int $min,int $max,string $label): int {
@@ -13,7 +13,7 @@ function post_ids(string $key): array { $v=$_POST[$key]??[]; if(!is_array($v)) t
 
 function handle_engine_action(string $action): never {
     $me=current_user();
-    $adminOnly=in_array($action,['sesi_baharu','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal'],true);
+    $adminOnly=in_array($action,['jawatan_reset','sesi_baharu','sekolah_profil','sekolah_logo','sekolah_logo_buang','sekolah_kepala','sekolah_surat','api_cipta','api_batal'],true);
     if($action==='kelulusan'){ if(!in_array($me['role'],['admin','pk','head'],true)) error_page(403); }
     elseif($adminOnly) require_admin();
     else require_planner();
@@ -21,7 +21,7 @@ function handle_engine_action(string $action): never {
     $feature=['auto_preview'=>'auto','auto_apply'=>'auto','syarat_umum'=>'auto','syarat_jawatan'=>'auto','syarat_padam'=>'auto','jawatan_panduan'=>'auto','api_cipta'=>'api',
         'guru_bulk_preview'=>'pukal','guru_bulk_apply'=>'pukal','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'pukal','guru_masa_preview'=>'pukal','guru_masa_apply'=>'pukal'][$action]??null;
     if($feature!==null) require_feature($feature);
-    $back=['peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','subjek_guru'=>'subjek','jawatan_kemas_nama'=>'jawatan','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
+    $back=['jawatan_reset'=>'jawatan','peranan_save'=>'jawatan','peranan_delete'=>'jawatan','peranan_standard'=>'jawatan','peranan_padan'=>'jawatan','jawatan_standard'=>'jawatan','jawatan_panduan'=>'jawatan','kapasiti_panduan'=>'jawatan','organisasi_save'=>'organisasi','sesi_baharu'=>'sekolah','tanda_selesai'=>'agihan','subjek_save'=>'subjek','subjek_delete'=>'subjek','subjek_import'=>'subjek','subjek_guru'=>'subjek','jawatan_kemas_nama'=>'jawatan','guru_save'=>'guru','guru_delete'=>'guru','guru_bulk_preview'=>'guru','guru_bulk_apply'=>'guru','jawatan_save'=>'jawatan','jawatan_delete'=>'jawatan','jawatan_bulk_preview'=>'pukal','jawatan_bulk_apply'=>'pukal','agihan_bulk_preview'=>'pukal','agihan_bulk_apply'=>'agihan','guru_masa_save'=>'guru','guru_masa_preview'=>'guru','guru_masa_apply'=>'guru',
         'agih'=>'agihan','agih_lepas'=>'agihan','indeks_tetapan'=>'analisis','syarat_umum'=>'syarat','syarat_jawatan'=>'syarat','syarat_padam'=>'syarat','auto_preview'=>'auto','auto_apply'=>'auto','kelulusan'=>'kelulusan','api_cipta'=>'api','api_batal'=>'api','sekolah_surat'=>'surat'][$action]??'sekolah';
     db()->beginTransaction();
     try {
@@ -93,6 +93,13 @@ function handle_engine_action(string $action): never {
                 $rid=input('role_id')===''?null:post_int('role_id',1,PHP_INT_MAX,'Peranan');
                 $pid=position_save($id,['name'=>input('name'),'category'=>input('category'),'weight'=>$rid?1:post_int('weight',1,10,'Pemberat'),'level'=>input('level')?:'sokongan','term'=>input('term')?:'tahunan','role_id'=>$rid]+(isset($_POST['unit'])?['unit'=>input('unit')]:[]));
                 audit($id?'position_update':'position_create','positions',$pid,mb_substr(input('name'),0,120)); $msg='Jawatan dan pemberat disimpan.'; break;
+            case 'jawatan_reset':
+                $scope=(string)input('scope'); $leaders=input('leaders')==='1';
+                if(strtoupper(trim((string)input('confirm')))!=='RESET') throw new EngineError('Taip RESET untuk mengesahkan.');
+                $r=positions_reset($scope,$leaders);
+                $parts=[]; if($r['positions']) $parts[]=$r['positions'].' jawatan dipadam'; $parts[]=$r['assignments'].' lantikan dikosongkan'; if($leaders) $parts[]=$r['leaders'].' pemegang jawatan utama dikosongkan';
+                audit('position_reset','positions',null,($scope==='semua'?'Semua jawatan':'Pemegang jawatan').' · '.implode(' · ',$parts));
+                $msg='Reset selesai: '.implode(', ',$parts).'.'; $anchor='#reset'; break;
             case 'jawatan_delete': $p=position_find($id); position_delete($id); audit('position_delete','positions',$id,(string)($p['name']??'')); $msg='Rekod jawatan dipadam.'; break;
             case 'jawatan_bulk_preview':
                 $rows=bulk_positions_parse(bulk_source()); $_SESSION['jawatan_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'sid'=>sid()];

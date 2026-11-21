@@ -159,7 +159,21 @@ function jawatan_page(string $error): void {
 <?= school_type()==='SMK' && (isset($_GET['standard']) || !$positions)?position_template_panel('smk',$positions):'' ?>
 <?php $rep=positions_repeated_words(); if($rep): ?><section class="panel spaced padded"><div class="notice info"><span><strong><?= count($rep) ?> nama jawatan mempunyai perkataan berulang</strong>, cth. <?= e($rep[0]['old']) ?> → <strong><?= e($rep[0]['new']) ?></strong>.</span></div><details class="spaced"><summary class="muted">Lihat semua</summary><ul class="muted"><?php foreach($rep as $r): ?><li><?= e($r['old']) ?> → <strong><?= e($r['new']) ?></strong></li><?php endforeach; ?></ul></details><form method="post" class="form-actions"><?= csrf_field() ?><input type="hidden" name="action" value="jawatan_kemas_nama"><button class="btn primary" type="submit">Kemaskan <?= count($rep) ?> nama jawatan</button></form></section><?php endif; ?>
 <?php $uf=unit_filter(); $allPos=$positions; if($uf) $positions=array_values(array_filter($positions,fn($p)=>$p['unit']===$uf)); ?><section class="panel spaced"><div class="panel-heading"><div><h3>Katalog jawatan <span class="count"><?= count($positions) ?></span></h3><p class="muted">Setiap rekod mewakili satu tempat lantikan.</p></div><?= unit_filter_links('/?page=jawatan',$allPos) ?></div><?= search_box('jadual-jawatan','Cari jawatan atau bidang…') ?>
-<div class="table-wrap"><table id="jadual-jawatan"><thead><tr><th>Jawatan</th><th>Bidang</th><th>Pemberat</th><th>Skor tugas</th><th>Penyandang</th><th><span class="sr-only">Tindakan</span></th></tr></thead><tbody><?php foreach($positions as $p): ?><tr><td><strong><?= e($p['name']) ?></strong><?= unit_badge($p['unit']??null) ?><?= $p['role_name']!==null?'<small class="cell-sub">Peranan: '.e($p['role_name']).'</small>':'' ?></td><td><span class="badge"><?= e($p['category']) ?></span></td><td><strong><?= (int)$p['weight'] ?></strong> / 10<?= $p['role_name']!==null?'<small class="cell-sub">ikut peranan</small>':'' ?></td><td><strong><?= rtrim(rtrim(number_format(position_score($p),2),'0'),'.') ?></strong><small class="cell-sub"><?= e(POSITION_LEVELS[$p['level']][0].' · '.POSITION_TERMS[$p['term']][0]) ?></small></td><td><?= e($p['teacher_name']??'Belum diisi') ?></td><td><div class="row-actions"><a class="text-link" href="/?page=jawatan&amp;edit=<?= (int)$p['id'] ?>#editor">Sunting</a><?php if(feature_on('auto')): ?><a class="text-link" href="/?page=syarat&amp;jawatan=<?= (int)$p['id'] ?>#syarat-jawatan">Syarat</a><?php endif; ?><?= engine_delete_button('jawatan_delete',(int)$p['id']) ?></div></td></tr><?php endforeach; ?></tbody></table><?php if(!$positions): ?><p class="empty">Belum ada jawatan.</p><?php endif; ?><p class="search-empty muted" hidden>Tiada jawatan sepadan.</p></div></section><?= roles_panel($roles) ?><?php
+<div class="table-wrap"><table id="jadual-jawatan"><thead><tr><th>Jawatan</th><th>Bidang</th><th>Pemberat</th><th>Skor tugas</th><th>Penyandang</th><th><span class="sr-only">Tindakan</span></th></tr></thead><tbody><?php foreach($positions as $p): ?><tr><td><strong><?= e($p['name']) ?></strong><?= unit_badge($p['unit']??null) ?><?= $p['role_name']!==null?'<small class="cell-sub">Peranan: '.e($p['role_name']).'</small>':'' ?></td><td><span class="badge"><?= e($p['category']) ?></span></td><td><strong><?= (int)$p['weight'] ?></strong> / 10<?= $p['role_name']!==null?'<small class="cell-sub">ikut peranan</small>':'' ?></td><td><strong><?= rtrim(rtrim(number_format(position_score($p),2),'0'),'.') ?></strong><small class="cell-sub"><?= e(POSITION_LEVELS[$p['level']][0].' · '.POSITION_TERMS[$p['term']][0]) ?></small></td><td><?= e($p['teacher_name']??'Belum diisi') ?></td><td><div class="row-actions"><a class="text-link" href="/?page=jawatan&amp;edit=<?= (int)$p['id'] ?>#editor">Sunting</a><?php if(feature_on('auto')): ?><a class="text-link" href="/?page=syarat&amp;jawatan=<?= (int)$p['id'] ?>#syarat-jawatan">Syarat</a><?php endif; ?><?= engine_delete_button('jawatan_delete',(int)$p['id']) ?></div></td></tr><?php endforeach; ?></tbody></table><?php if(!$positions): ?><p class="empty">Belum ada jawatan.</p><?php endif; ?><p class="search-empty muted" hidden>Tiada jawatan sepadan.</p></div></section><?= roles_panel($roles) ?><?= current_user()['role']==='admin'?position_reset_panel():'' ?><?php
+}
+/** Zon reset (Pentadbir): kosongkan pemegang jawatan, atau padam semua jawatan; pilihan kosongkan jawatan utama. */
+function position_reset_panel(): string {
+    $c=engine_counts(); $l=leadership(); $nl=count(array_filter($l['posts']))+count(array_filter(array_column($l['bidang'],1)));
+    $h='<section class="panel padded spaced danger-zone" id="reset"><h3>Reset jawatan &amp; pemegang jawatan</h3>'
+        .'<p class="muted">Untuk memulakan agihan semula dari awal. Semasa: <strong>'.$c['positions'].'</strong> jawatan · <strong>'.$c['assigned'].'</strong> berpenyandang · <strong>'.$nl.'</strong> pemegang jawatan utama. Tindakan ini tidak boleh dibatalkan — muat turun sandaran dahulu jika perlu. Surat &amp; Tugas Saya versi muktamad terdahulu tidak terjejas.</p>';
+    if(workflow_state()['status']!=='draft') return $h.'<div class="notice info" role="status">Agihan sedang dikunci untuk semakan / kelulusan. Kembalikan kepada draf dahulu untuk membuat reset.</div></section>';
+    return $h.'<form method="post" class="form-grid" data-confirm="Teruskan reset? Data yang dipilih akan dipadam dan tidak boleh dipulihkan.">'.csrf_field().'<input type="hidden" name="action" value="jawatan_reset">'
+        .'<fieldset class="field full"><legend>Apa yang hendak direset</legend>'
+        .'<label class="check"><input type="radio" name="scope" value="pemegang" checked> Kosongkan pemegang jawatan sahaja — semua '.$c['assigned'].' lantikan dilepaskan, katalog jawatan, pemberat &amp; syarat dikekalkan</label>'
+        .'<label class="check"><input type="radio" name="scope" value="semua"> Padam semua jawatan — '.$c['positions'].' jawatan berserta lantikan dan syarat jawatan dipadam (katalog bermula kosong)</label></fieldset>'
+        .'<label class="check full"><input type="checkbox" name="leaders" value="1"> Turut kosongkan pemegang jawatan utama di Carta Organisasi ('.e(head_title()).', PK, Ketua Bidang)'.($nl?' — '.$nl.' orang':'').'. Nama bidang dikekalkan; tanda Pentadbir pada profil guru tidak diubah.</label>'
+        .'<label class="field">Taip <strong>RESET</strong> untuk mengesahkan<input name="confirm" required autocomplete="off" maxlength="10" pattern="[Rr][Ee][Ss][Ee][Tt]"></label>'
+        .'<div class="full form-actions"><button class="btn danger" type="submit">'.icon('alert').'Reset sekarang</button></div></form></section>';
 }
 /** Senarai jawatan standard (pilih & tambah) bersama panduan julat mata sasaran. */
 function position_template_panel(string $key,array $positions): string {
@@ -228,6 +242,120 @@ function pukal_page(): void { $d=$_SESSION['jawatan_pukal']??null; if($d && $d['
 <form method="post" class="form-actions padded"><?= csrf_field() ?><input type="hidden" name="action" value="jawatan_bulk_apply"><input type="hidden" name="token" value="<?= e($d['token']) ?>"><button class="btn primary" type="submit">Tambah <?= count($d['rows']) ?> jawatan</button></form></section><?php endif;
     agihan_pukal_section();
 }
+/* ---------- Prompt AI: tukar fail JK sekolah kepada fail import agihan ----------
+ * Dipaparkan di Import agihan supaya sekolah boleh menyalin prompt ke Claude / ChatGPT bersama fail mereka.
+ * 'jk' = fail berformat jawatankuasa (tajuk JK, peranan, nama); 'analisis' = satu fail berformat guru (satu blok setiap guru, lajur JK + jawatan setiap bidang). */
+function ai_import_prompt(string $type): string {
+    $app=function_exists('platform_name')?platform_name():'UrusTugas'; $max=number_format(BULK_AGIHAN_MAX);
+    $head=$type==='analisis'
+?<<<TXT
+Tugas: Tukarkan SATU fail analisis agihan tugas guru yang saya lampirkan kepada fail import agihan tugas $app (.xlsx).
+
+FAIL YANG SAYA LAMPIRKAN
+- Fail analisis: setiap guru ada satu baris atau satu blok baris. Baris tanpa nama guru adalah sambungan guru di atasnya.
+  Lajur disusun berpasangan mengikut bidang, iaitu "Unit/Jawatankuasa" dan "Jawatan", di bawah tajuk bidang
+  (cth. PENTADBIRAN, KURIKULUM, HEM, KOKURIKULUM, PPU / TINGKATAN 6, PPKI).
+- Senarai nama guru dari $app (ditampal di bawah prompt ini). Ejaan dalam senarai ini ialah ejaan rasmi.
+
+CARA MEMBACA FAIL ANALISIS
+- Setiap pasangan sel yang berisi (Jawatankuasa + Jawatan) = satu baris import untuk guru itu. Bidang ikut tajuk lajur.
+- Lajur PPU / Tingkatan 6 → Unit "Tingkatan 6". Lajur PPKI → Unit "PPKI". Bagi kedua-dua unit ini, pilih bidang
+  yang paling sesuai dengan jawatankuasa (panitia / peperiksaan / mata pelajaran → Kurikulum, disiplin / kebajikan /
+  SPBT / kesihatan → HEM, kelab / sukan / beruniform → Kokurikulum, pengurusan / data / aset → Pentadbiran).
+- Abaikan lajur skor, jumlah, gred dan ringkasan (cth. SKOR, S1–S4, PE, HEM, KU, KO).
+- Jika ada helaian guru kelas, import sebagai "Guru Kelas <nama kelas>", bidang HEM.
+- Satukan ejaan jawatankuasa yang berbeza-beza tetapi sama maksud (cth. "JK Dewan SB & Siar raya" dan
+  "JK Dewan SB & Siar Raya", "KADET JPJ" dan "Kadet JPJ") kepada satu nama yang konsisten.
+- Kembangkan singkatan peranan: SU → Setiausaha, PSU / Pen. SU → Penolong Setiausaha, Pen. Ketua → Penolong Ketua,
+  Pen. Bendahari → Penolong Bendahari, Peg. → Pegawai.
+- Jawatan yang bukan peranan biasa (cth. "Makmal Kimia", "Coaching & Mentoring") dijadikan peranan:
+  "Makmal Kimia JK Penyelenggaraan Prasarana Sekolah & Bilik Khas".
+TXT
+:<<<TXT
+Tugas: Tukarkan fail jawatankuasa (JK) sekolah yang saya lampirkan kepada SATU fail import agihan tugas $app (.xlsx).
+
+FAIL YANG SAYA LAMPIRKAN
+- Fail JK sekolah (Excel / PDF / Word) mengikut bidang: Pentadbiran, Kurikulum, HEM, Kokurikulum,
+  dan jika ada, Tingkatan 6 (PPU) dan PPKI. Setiap JK ada tajuk, diikuti peranan, nama guru dan catatan.
+- Senarai nama guru dari $app (ditampal di bawah prompt ini). Ejaan dalam senarai ini ialah ejaan rasmi.
+- Jika ada lebih daripada satu sumber (cth. fail tahun lepas dan fail analisis tahun ini), sumber tahun TERKINI
+  diutamakan apabila pemegang jawatan berbeza. Kekalkan susunan dan nama JK daripada fail JK.
+
+CARA MEMBACA FAIL JK
+- Peranan dalam lajur pertama berlaku untuk baris-baris di bawahnya sehingga ada peranan baharu.
+- Sub-tajuk dalam satu JK (cth. "LEMBAGA DISIPLIN") dijadikan JK tersendiri: "Setiausaha JK Lembaga Disiplin".
+- Label tugas dalam lajur peranan (cth. Landskap, Mural, Makmal Sains 1, Tingkatan 1) dijadikan peranan:
+  "Landskap Sekolah JK Kebersihan, Kesihatan dan Keselamatan (3K)".
+- Jadual panitia: "Ketua Panitia <Mata Pelajaran>", bidang Kurikulum. GKMP / Ketua Bidang dimasukkan ke Carta Organisasi sahaja.
+TXT;
+    return $head.<<<TXT
+
+
+FORMAT OUTPUT — helaian pertama bernama "Agihan", tajuk lajur TEPAT:
+Nama Guru | Jawatan | Bidang | Pemberat | Unit
+Satu baris = satu guru bagi satu jawatan.
+
+1. Nama Guru
+   - Guna ejaan senarai guru $app. Padankan nama ringkas, nama tanpa bin/binti dan nama tersalah eja kepada nama penuh.
+   - Satu sel berisi beberapa nama → pecahkan kepada beberapa baris. Nama orang dalam lajur catatan → baris tersendiri.
+   - Tiada nama, atau nama tiada dalam senarai guru → kosongkan sel ini (jawatan diimport sebagai tempat kosong).
+
+2. Jawatan = "<Peranan> <Nama Jawatankuasa>". Contoh: Setiausaha JK Disiplin · Penolong Setiausaha JK Bantuan ·
+   AJK JK Pengurusan Pengawas · Ketua Panitia Kimia · Guru Kelas Intan 1 · Ketua Kelab STEM · AJK Bola Jaring ·
+   Penasihat Rumah Biru
+   - Catatan diletakkan dalam kurungan selepas peranan: "AJK (SU Disiplin) JK Induk Pengurusan HEM".
+   - Jika peranan atau catatan mengandungi perkataan JK, Jawatankuasa, Unit, Kelab, Persatuan, Panitia, Badan atau Rumah,
+     perkataan itu MESTI berada dalam kurungan: "AJK (Ketua Unit Bantuan) JK Pengurusan PPU",
+     "Penyelaras (Badan Beruniform) JK Induk Pengurusan Kokurikulum".
+   - "JAWATANKUASA ..." ditulis "JK ..." dengan huruf besar di awal setiap perkataan; singkatan dikekalkan (SPBT, PBS, MMI).
+   - Beberapa guru dengan peranan sama dalam JK sama → nama jawatan yang SAMA pada setiap baris.
+   - Maksimum 145 aksara.
+
+3. Bidang: tepat salah satu daripada Pentadbiran, Kurikulum, HEM, Kokurikulum.
+
+4. Pemberat 1–10 (mesti sama bagi jawatan yang sama dalam bidang yang sama):
+   5 Ketua Panitia · 4 Guru Kelas · 3 Ketua, Ketua Unit, Setiausaha, Penyelaras, Bendahari, Ketua Warden,
+   Timbalan / Naib Pengerusi bukan PK · 2 Penolong Ketua, Penolong Setiausaha, Penolong Bendahari, Juruaudit,
+   Pegawai / Pemeriksa, Warden · 1 AJK, Penasihat dan peranan lain.
+
+5. Unit: kosong untuk jawatan sekolah; "Tingkatan 6" atau "PPKI" untuk jawatan unit itu — dan tambah " PPU" atau
+   " PPKI" di hujung nama JK (cth. "Setiausaha JK Pengurusan Kurikulum PPU") supaya tidak bercampur dengan JK sekolah
+   yang sama nama. (Guru Kelas tidak perlu akhiran.)
+
+JANGAN IMPORT
+- Pengerusi / Timbalan Pengerusi / Naib Pengerusi yang dipegang Pengetua / Guru Besar atau PK — sistem memaparkannya
+  automatik daripada Carta Organisasi. (Jika dipegang guru biasa, import.)
+- Entri kumpulan tanpa nama individu (cth. "Semua Guru Kelas", "Semua GKMP", "Guru Bahasa Melayu", "Kaunselor").
+- Kakitangan bukan guru (Pembantu Tadbir, PPM, pembantu makmal, CC).
+- Bahagian bukan jawatankuasa (jadual pencerapan, lokasi, takwim program).
+
+HELAIAN TAMBAHAN (selepas "Agihan")
+- "Semakan": setiap baris yang tidak diimport beserta sebab, nama yang tidak dijumpai dalam senarai guru, dan
+  perubahan pemegang jawatan jika ada beberapa sumber (lama → baharu, beserta sumber).
+- "Carta Organisasi": Pengetua / Guru Besar, setiap PK dan Ketua Bidang / GKMP (jika dapat dikenal pasti).
+
+SEMAK SEBELUM MENGHANTAR
+- Tajuk lajur tepat; tiada Jawatan / Bidang kosong; Pemberat & Unit seragam bagi setiap Jawatan + Bidang.
+- Tidak melebihi $max baris; format .xlsx (bukan .xls).
+- Beri ringkasan: bilangan baris, guru, tempat kosong dan perkara yang perlu saya semak.
+
+SENARAI GURU $app:
+(tampal senarai nama guru di sini)
+TXT;
+}
+/** Panel boleh-buka di Import agihan: prompt AI (dua jenis fail) + senarai nama guru untuk disalin. */
+function ai_prompt_panel(): string {
+    $names=array_column(query('SELECT name FROM teachers WHERE school_id='.sid().' ORDER BY name')->fetchAll(),'name');
+    $h='<details class="spaced ai-prompt" id="prompt-ai"><summary><strong>Tukar fail JK sekolah dengan bantuan AI</strong> (Claude, ChatGPT dan lain-lain)</summary>'
+      .'<ol class="small-note muted"><li>Pilih prompt ikut jenis fail anda, tekan <strong>Salin prompt</strong> dan tampal dalam AI.</li><li>Salin <strong>senarai nama guru</strong> di bawah dan tampal di hujung prompt (ganti baris "tampal senarai nama guru di sini").</li>'
+      .'<li>Lampirkan fail JK / analisis sekolah, hantar, kemudian muat turun fail .xlsx yang dihasilkan.</li><li>Isi Carta Organisasi ikut helaian "Carta Organisasi", kemudian muat naik fail di borang di bawah dan semak pratonton sebelum import.</li></ol>'
+      .'<p class="small-note muted">AI boleh tersilap — semak helaian "Semakan" dan pratonton import. Jangan lampirkan maklumat peribadi murid.</p>';
+    foreach(['jk'=>['A. Fail jawatankuasa (JK)','Fail ikut JK: tajuk jawatankuasa, peranan (Pengerusi, Setiausaha, AJK…), nama guru. Boleh lebih daripada satu fail (cth. HEM, Pentadbiran, Kurikulum), termasuk gabungan dengan fail analisis.'],
+             'analisis'=>['B. Satu fail analisis sahaja','Fail ikut guru: setiap guru satu blok baris, dengan lajur Unit/Jawatankuasa + Jawatan bagi setiap bidang (Pentadbiran, Kurikulum, HEM, Kokurikulum, PPU, PPKI).']] as $k=>[$t,$d])
+        $h.='<div class="ai-prompt-opt"><h4>'.e($t).'</h4><p class="small-note muted">'.e($d).'</p><textarea id="prompt-'.$k.'" rows="9" readonly spellcheck="false">'.e(ai_import_prompt($k)).'</textarea><div class="form-actions"><button type="button" class="btn outline" data-copy-target="#prompt-'.$k.'">'.icon('file').'Salin prompt</button></div></div>';
+    $h.='<div class="ai-prompt-opt"><h4>Senarai nama guru ('.count($names).')</h4>'.($names?'<textarea id="prompt-guru" rows="5" readonly spellcheck="false">'.e(implode("\n",$names)).'</textarea><div class="form-actions"><button type="button" class="btn outline" data-copy-target="#prompt-guru">'.icon('users').'Salin senarai guru</button></div>':'<p class="small-note muted">Belum ada guru — AI akan menggunakan nama dalam fail; semak ejaan dalam pratonton supaya guru yang sama tidak dicipta dua kali.</p>').'</div></details>';
+    return $h;
+}
 /** Import agihan: guru + jawatan + lantikan daripada satu fail (pratonton dikira semula daripada baris yang disimpan dalam sesi). */
 function agihan_pukal_section(): void {
     $d=$_SESSION['agihan_pukal']??null; if($d && $d['sid']!==sid()) $d=null;
@@ -235,6 +363,7 @@ function agihan_pukal_section(): void {
     if($d){ try { $plan=bulk_agihan_plan($d['rows']); } catch(EngineError $ex){ $err=$ex->getMessage(); } }
     ?><section class="panel spaced padded" id="agihan"><h3>Import agihan tugas (guru + jawatan + lantikan)</h3>
 <p class="muted">Satu baris = satu lantikan. Guru dan jawatan yang belum ada dicipta automatik, kemudian guru terus dilantik. Sesuai untuk memindahkan senarai jawatankuasa sedia ada (cth. analisis agihan tugas dalam Excel). <a class="text-link" href="/assets/templat/agihan.xlsx" download>Templat Excel ↓</a> · <a class="text-link" href="/assets/templat/agihan.csv" download>Templat CSV ↓</a></p>
+<?= ai_prompt_panel() ?>
 <form method="post" enctype="multipart/form-data" class="form-grid"><?= csrf_field() ?><input type="hidden" name="action" value="agihan_bulk_preview">
 <label class="field full">Muat naik fail Excel / CSV<input name="csv" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"><small class="muted">Helaian pertama fail Excel dibaca. Maksimum 2 MB (.xlsx) atau 256 KB (.csv), <?= number_format(BULK_AGIHAN_MAX) ?> baris.</small></label>
 <label class="field full">Atau tampal senarai (daripada Excel atau CSV)<textarea name="bulk_text" rows="6" placeholder="Nama Guru,Jawatan,Bidang,Pemberat&#10;Nur Aisyah Abdullah,Setiausaha JK Disiplin,HEM,3&#10;Ahmad Faiz Rahman,AJK JK Disiplin,HEM,1&#10;Siti Hajar Saad,AJK JK Disiplin,HEM,1"></textarea></label>
@@ -618,16 +747,18 @@ function session_panel(): string {
 /** Senarai tugas mengikut bidang & jawatankuasa — pratonton cetak / PDF (tera air DRAF jika agihan belum muktamad). */
 function buku_page(): void {
     $cat=in_array(input('bidang','get'),CATEGORIES,true)?input('bidang','get'):null; $u=isset(POSITION_UNITS[input('unit','get')])&&units_on()?input('unit','get'):null;
-    $final=task_book_final(); $book=task_book($cat,$u); $q=($cat?'&bidang='.rawurlencode($cat):'').($u?'&unit='.$u:''); $year=setting('session_year')?:date('Y');
+    $lead=input('pimpinan','get')!=='0';
+    $final=task_book_final(); $book=task_book($cat,$u); $q=($cat?'&bidang='.rawurlencode($cat):'').($u?'&unit='.$u:'').($lead?'':'&pimpinan=0'); $year=setting('session_year')?:date('Y');
     $nCom=0; $nPos=0; foreach($book as $x) foreach($x['cats'] as $coms){ $nCom+=count($coms); foreach($coms as $r) $nPos+=count($r); }
     ?><div class="page-heading no-print"><div><span class="eyebrow teal">BUKU PANDUAN PENGURUSAN</span><h1>Senarai Tugas &amp; Jawatankuasa</h1><p class="muted">Senarai tugas mengikut bidang dan jawatankuasa untuk dicetak dalam buku panduan pengurusan sekolah. <?= $final?'Agihan sudah <strong>muktamad</strong>.':'Agihan belum muktamad — dokumen bertera air <strong>DRAF</strong>.' ?></p></div>
     <div class="button-group"><button class="btn outline print-btn" type="button"><?= icon('file') ?>Cetak</button><a class="btn primary" href="/?page=buku&amp;pdf=1<?= e($q) ?>"><?= icon('download') ?>Simpan PDF<?= $final?'':' (draf)' ?></a></div></div>
     <section class="panel padded no-print"><form method="get" class="form-grid"><input type="hidden" name="page" value="buku"><label class="field">Bidang<select name="bidang" class="auto-submit"><option value="">Semua bidang</option><?php foreach(CATEGORIES as $c): ?><option<?= $cat===$c?' selected':'' ?>><?= e($c) ?></option><?php endforeach; ?></select></label>
     <?php if(units_on()): ?><label class="field">Unit<select name="unit" class="auto-submit"><option value="">Semua (bidang + unit)</option><?php foreach(school_units() as $x): ?><option value="<?= $x ?>"<?= $u===$x?' selected':'' ?>><?= e(POSITION_UNITS[$x]) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+    <label class="field">Pengerusi &amp; Naib Pengerusi<select name="pimpinan" class="auto-submit"><option value="1">Papar (Pengetua &amp; PK dari Carta Organisasi)</option><option value="0"<?= $lead?'':' selected' ?>>Sembunyi</option></select></label>
     <p class="full muted small-note"><?= $nCom ?> jawatankuasa · <?= $nPos ?> jawatan. Jawatankuasa dikenal pasti daripada nama jawatan (cth. "Setiausaha JK Disiplin" → JK Disiplin); peranan disusun Pengerusi → Setiausaha → AJK.</p><noscript><button class="btn outline">Tapis</button></noscript></form></section>
     <article class="document-page book-doc spaced<?= $final?'':' is-draft' ?>"><?php if(!$final): ?><div class="book-watermark" aria-hidden="true">DRAF</div><?php endif; ?>
     <div class="book-head"><div class="book-school"><?= e(school_name()) ?></div><h2 class="book-title">SENARAI TUGAS &amp; JAWATANKUASA <?= e($year) ?><?= $cat?'<br><small>BIDANG '.e(mb_strtoupper($cat)).'</small>':'' ?><?= $u?'<br><small>'.e(mb_strtoupper(POSITION_UNITS[$u])).'</small>':'' ?></h2><?php if(!$final): ?><p class="book-draft-note">DRAF — BELUM MUKTAMAD · <?= date('d/m/Y H:i') ?></p><?php endif; ?></div>
-    <?= task_book_html($book) ?></article>
+    <?= task_book_html($book,false,$lead) ?></article>
     <?php
 }
 function organisasi_page(): void {
