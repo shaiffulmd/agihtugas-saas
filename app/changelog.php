@@ -6,6 +6,20 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.18'=>['2026-11-21',[
+        'Import agihan tugas (Tambah pukal → Import agihan): guru, jawatan dan lantikan daripada satu fail Excel / CSV (Nama Guru, Jawatan, Bidang, Pemberat, Unit). Guru dan jawatan yang belum ada dicipta automatik; nama guru kosong = tempat lantikan kosong. Templat Excel / CSV disediakan.',
+        'Tukar fail JK sekolah dengan bantuan AI: di Import agihan, salin prompt untuk Claude / ChatGPT — sama ada fail jawatankuasa (satu atau beberapa fail) atau satu fail analisis agihan ikut guru — bersama senarai nama guru sekolah, untuk menghasilkan fail import yang terus boleh dimuat naik.',
+        'Reset jawatan & pemegang jawatan (Jawatan & Pemberat, Pentadbir, semasa Draf): kosongkan semua lantikan, atau padam semua jawatan bersama lantikan dan syarat; pilihan kosongkan jawatan utama di Carta Organisasi. Pengesahan dengan menaip RESET dan dilog dalam Audit. Surat & Tugas Saya versi muktamad terdahulu tidak terjejas.',
+        'Senarai Tugas & Jawatankuasa (Buku Panduan Pengurusan): ikut bidang dan jawatankuasa, bahagian Tingkatan 6 (PPU) & PPKI di bawah PK unit, kandungan bernombor (Bahagian A, B … ; JK 1.1, 1.2 …), cetak / PDF dengan nombor halaman dan tera air DRAF sebelum muktamad.',
+        'Senarai Tugas ikut format jadual JK sekolah: setiap JK bermula dengan Pengerusi (Pengetua), Timbalan Pengerusi (PK bidang) dan Naib Pengerusi (PK lain) daripada Carta Organisasi (boleh disembunyikan), dan lajur Catatan (cth. "SU Disiplin", "PPKI") daripada kurungan peranan. Nama jawatan seperti "AJK (Ketua Unit Bantuan) JK Pengurusan PPU" kini dikumpulkan di bawah JK yang betul.',
+        'Unit jawatan Sekolah / PPKI / Tingkatan 6: jawatan berunit hanya untuk guru unit itu, dipaparkan di bawah PK unit dalam Carta Organisasi, dan boleh ditapis di Jawatan, Agihan dan Analisis.',
+        'Pengurusan Guru: kemas kini maklumat guru pukal (e-mel, kepakaran, kapasiti, masa mengajar, kelas peperiksaan), grid masa mengajar, dan penapis "Belum ada tugas".',
+        'Cipta akaun guru pukal di Pengguna & Audit (pilih / nyahpilih semua, Shift-klik julat). Pengguna boleh mengemas kini nama dan e-mel sendiri; pentadbir boleh menukar e-mel akaun.',
+        'Indeks beban: guru melebihi kapasiti mata dikira Terbeban (boleh dimatikan); masa mengajar yang belum diisi tidak lagi memesongkan indeks; Ketua Bidang dikira dalam indeks (boleh dipilih); amaran "Banyak jawatan" memaparkan bilangan.',
+        'Pusat Syarat: semakan pematuhan agihan semasa dan padam syarat khusus. Mata Pelajaran: tetapkan guru terus dari senarai MP; kemaskan nama jawatan dengan perkataan berulang.',
+        'Carian lebih longgar (perkataan dalam apa-apa susunan, tersilap satu huruf dibenarkan); tampal senarai pukal tidak lagi disekat 403 oleh firewall hosting.',
+        'Log masuk tunggal melalui Portal Akaun (pilihan) dan senarai ahli untuk Import Ahli Portal Akaun. Halaman Tema berasingan dalam ruang sekolah.',
+    ]],
     '1.17'=>['2026-11-09',[
         'Pembaikan: butang "Saya telah membaca" pada pop up hebahan tidak lagi disekat 403 oleh firewall hosting (ModSecurity CRS 932190). Halaman asal kini dihantar sebagai page=... tanpa awalan "/?".',
         'Panduan Penggunaan dalam aplikasi (menu Akaun → Panduan Penggunaan): langkah demi langkah dari data asas hingga surat lantikan, maksud lajur import guru (termasuk Kapasiti), pemberat jawatan, Pusat Syarat, indeks beban, aliran kelulusan dan soalan lazim. Kandungan ditapis mengikut peranan dan boleh dicetak.',
