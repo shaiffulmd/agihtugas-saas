@@ -739,6 +739,79 @@ function position_committee(string $name): array {
     elseif($x=book_split($rest)){ $role.=' '.$x[0]; $rest=$x[1]; }
     return [$role,$rest!==''?$rest:$n,BOOK_ROLES[$best]];
 }
+/* ---------- Jawatan bertindan ----------
+ * Jawatan yang sebenarnya sama tetapi wujud sebagai rekod berasingan, cth. baki import lama "AJK JK Kewangan dan audit" bersama
+ * "AJK JK Kewangan dan Audit (JPKA)", atau guru yang sama memegang dua tempat bagi jawatan yang sama ("AJK JK Disiplin (2/11)" & "(5/11)").
+ * Kunci = peranan (termasuk catatan dalam kurungan) + jawatankuasa (tanpa singkatan dalam kurungan di hujung, tanpa JK/Jawatankuasa/
+ * Pengurusan/Unit) + unit; jawatankuasa yang hampir sama (token subset ≥ 2 perkataan, atau ≥ 90% serupa) bagi peranan yang sama digabung. */
+function overlap_norm(string $s): string {
+    $s=mb_strtolower(trim((string)preg_replace('/\s*\(\d+\/\d+\)$/u','',$s)));
+    $s=str_replace(['&','@'],[' dan ',' '],$s);
+    return trim((string)preg_replace(['/[^\p{L}\p{N}]+/u','/\s+/u'],' ',$s));
+}
+function overlap_role(string $role): string {
+    $r=' '.overlap_norm($role).' ';
+    foreach([' pen ketua '=>' penolong ketua ',' pen setiausaha '=>' penolong setiausaha ',' pen su '=>' penolong setiausaha ',' psu '=>' penolong setiausaha ',' su '=>' setiausaha ',' pen bendahari '=>' penolong bendahari ',' peg '=>' pegawai '] as $a=>$b) $r=str_replace($a,$b,$r);
+    return trim($r);
+}
+function overlap_committee(string $com): string {
+    $c=trim((string)preg_replace('/\s+(PPU|PPKI|T6|Tingkatan 6)$/iu','',$com));          // unit sudah dalam kunci
+    $c=trim((string)preg_replace('/\s*\([^()]*\)\s*$/u','',$c)); if($c==='') $c=$com;    // "(JPKA)", "(SPBT)" di hujung
+    $w=array_filter(explode(' ',overlap_norm($c)),fn($x)=>!in_array($x,['jk','jawatankuasa','pengurusan','unit','dan','program','panitia','kelab','persatuan'],true));
+    // Jenis (JK / kelab & persatuan / panitia / lain) dibandingkan dahulu: "JK Bahasa Melayu Komunikasi" ≠ "Persatuan Bahasa Melayu".
+    $kind=preg_match('/^(JK|Jawatankuasa)\b/iu',$c)?'jk':(preg_match('/^(Kelab|Persatuan)\b/iu',$c)?'kelab':(preg_match('/^Panitia\b/iu',$c)?'panitia':'lain'));
+    return $kind.':'.implode(' ',$w);
+}
+function overlap_similar(string $a,string $b): bool {
+    if($a===$b) return true;
+    [$ka,$a]=explode(':',$a,2)+[1=>'']; [$kb,$b]=explode(':',$b,2)+[1=>'']; if($ka!==$kb || $a==='' || $b==='') return $ka===$kb && $a===$b;
+    $ta=array_unique(explode(' ',$a)); $tb=array_unique(explode(' ',$b)); [$s,$l]=count($ta)<=count($tb)?[$ta,$tb]:[$tb,$ta];
+    if(count($s)>=2 && !array_diff($s,$l) && preg_replace('/\D+/','',$a)===preg_replace('/\D+/','',$b)) return true;
+    if(preg_replace('/\D+/','',$a)!==preg_replace('/\D+/','',$b)) return false;   // "Ting 2" ≠ "Ting 3", "Makmal Sains 1" ≠ "2"
+    similar_text($a,$b,$pct); return $pct>=90;
+}
+/** Kumpulan jawatan bertindan: [{reason, positions => [baris positions_with_holder()]}]. */
+function positions_overlap(?array $positions=null): array {
+    $positions??=positions_with_holder(); $by=[];
+    foreach($positions as $p){ [$role,$com]=position_committee((string)$p['name']); $by[overlap_role($role).'|'.($p['unit']??'sekolah')][overlap_committee($com)][]=$p; }
+    $out=[];
+    foreach($by as $rk=>$coms){
+        // gabung jawatankuasa yang hampir sama (union-find ringkas)
+        $keys=array_keys($coms); $root=array_combine($keys,$keys); $find=function($k)use(&$root,&$find){ return $root[$k]===$k?$k:($root[$k]=$find($root[$k])); };
+        foreach($keys as $i=>$a) foreach(array_slice($keys,$i+1) as $b) if(overlap_similar((string)$a,(string)$b)) $root[$find($b)]=$find($a);
+        $cl=[]; foreach($keys as $k) $cl[$find($k)]=array_merge($cl[$find($k)]??[],$coms[$k]);
+        foreach($cl as $ps){
+            if(count($ps)<2) continue;
+            $names=array_unique(array_map(fn($p)=>overlap_norm((string)$p['name']),$ps));
+            $held=array_count_values(array_filter(array_map(fn($p)=>$p['teacher_id']!==null?(int)$p['teacher_id']:null,$ps),fn($x)=>$x!==null));
+            $twice=array_keys(array_filter($held,fn($n)=>$n>1));
+            // Cadangan padam: nama dengan jawatan paling baharu (ID terbesar, biasanya import terkini) dikekalkan; tempat dalam nama lain
+            // dicadangkan hanya jika kosong atau gurunya sudah ada dalam nama yang dikekalkan. Guru sama dua kali: tempat pertama dikekalkan.
+            $suggest=[]; $keepName=null;
+            if(count($names)>1){
+                $byName=[]; foreach($ps as $p) $byName[overlap_norm((string)$p['name'])][]=$p;
+                uasort($byName,fn($x,$y)=>max(array_column($y,'id'))<=>max(array_column($x,'id'))); $keepName=array_key_first($byName);
+                $kept=array_flip(array_filter(array_map(fn($p)=>$p['teacher_id'],$byName[$keepName]),fn($x)=>$x!==null));
+                foreach($byName as $k=>$list) if($k!==$keepName) foreach($list as $p) if($p['teacher_id']===null || isset($kept[$p['teacher_id']])) $suggest[]=(int)$p['id'];
+            }
+            $seen=[]; usort($ps,fn($x,$y)=>[$keepName!==null && overlap_norm((string)$y['name'])===$keepName,-(int)$y['id']]<=>[$keepName!==null && overlap_norm((string)$x['name'])===$keepName,-(int)$x['id']]);
+            foreach($ps as $p) if($p['teacher_id']!==null && in_array((int)$p['teacher_id'],$twice,true)){ if(isset($seen[$p['teacher_id']])) $suggest[]=(int)$p['id']; $seen[$p['teacher_id']]=true; }
+            $suggest=array_values(array_unique($suggest));
+            if(count($names)>1) $out[]=['reason'=>'Nama hampir sama ('.count($names).' variasi)','dup_teachers'=>$twice,'positions'=>$ps,'suggest'=>$suggest];
+            elseif($twice) $out[]=['reason'=>'Guru yang sama memegang lebih daripada satu tempat','dup_teachers'=>$twice,'suggest'=>$suggest,'positions'=>array_values(array_filter($ps,fn($p)=>$p['teacher_id']!==null && in_array((int)$p['teacher_id'],$twice,true)))];
+        }
+    }
+    return $out;
+}
+/** Padam jawatan dipilih bersama lantikannya (syarat jawatan dipadam bersama — CASCADE). Pulangkan [jawatan, lantikan]. Pemanggil memiliki transaksi. */
+function positions_delete_many(array $ids): array {
+    $ids=array_values(array_unique(array_filter(array_map('intval',$ids)))); if(!$ids) throw new EngineError('Pilih sekurang-kurangnya satu jawatan.');
+    $in=implode(',',array_fill(0,count($ids),'?'));
+    $a=query('DELETE FROM assignments WHERE school_id='.sid().' AND position_id IN ('.$in.')',$ids)->rowCount();
+    $p=query('DELETE FROM positions WHERE school_id='.sid().' AND id IN ('.$in.')',$ids)->rowCount();
+    if($p!==count($ids)) throw new EngineError('Sebahagian jawatan tidak ditemui. Muat semula halaman.',404,'not_found');
+    return [$p,$a];
+}
 /** Senarai tugas mengikut bahagian: setiap bidang (jawatan unit Sekolah, di bawah PK bidang itu), kemudian Tingkatan 6 (PPU) di bawah
  *  PK Tingkatan 6 dan PPKI di bawah PK PPKI. Pulangkan [{title, pk_label, pk, unit, cats => [bidang => [jawatankuasa => [{role,name,teacher,rank}]]]}].
  *  $cat / $unit = penapis (null = semua; unit 'sekolah' = bidang sahaja). */

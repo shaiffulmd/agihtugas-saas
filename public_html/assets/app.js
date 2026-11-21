@@ -561,3 +561,9 @@ document.querySelectorAll('[data-select-all]').forEach(all => {
   }));
   sync();
 });
+
+// Jawatan bertindan: tanda semua cadangan padam.
+document.querySelectorAll('[data-check-suggested]').forEach(btn => btn.addEventListener('click', () => {
+  const form = document.querySelector(btn.dataset.checkSuggested); if (!form) return;
+  form.querySelectorAll('input[data-suggested]').forEach(i => { if (!i.disabled) i.checked = true; });
+}));

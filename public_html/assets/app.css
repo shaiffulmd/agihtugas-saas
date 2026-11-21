@@ -1856,3 +1856,5 @@ fieldset.field{border:0;padding:0;margin:0;min-width:0}fieldset.field legend{fon
 
 .danger-zone{border-color:color-mix(in srgb,var(--danger) 35%,var(--line))}.danger-zone h3{color:var(--danger)}
 .ai-prompt{border:1px solid var(--line);border-radius:8px;padding:10px 14px}.ai-prompt summary{cursor:pointer}.ai-prompt-opt{margin-top:14px}.ai-prompt-opt h4{margin:0 0 4px}.ai-prompt textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;background:var(--surface-alt)}
+.overlap-table caption{text-align:left;font-weight:600;padding:0 0 6px}.overlap-table .c-pick{width:36px;text-align:center}
+.overlap-table tr.row-suggest td{background:color-mix(in srgb,#b42318 4%,var(--surface))}

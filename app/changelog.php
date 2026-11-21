@@ -6,6 +6,10 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.20'=>['2026-11-21',[
+        'Jawatan & Pemberat: semakan jawatan bertindan — jawatan yang sebenarnya sama tetapi nama penuhnya berbeza sedikit (cth. "AJK JK Kewangan dan audit" dan "AJK JK Kewangan dan Audit (JPKA)", "&" dan "dan", singkatan dalam kurungan), atau guru yang sama memegang tempat jawatan yang sama dua kali, ditanda "Bertindan" dalam katalog dan disenaraikan ikut kumpulan. Katalog boleh ditapis kepada jawatan bertindan sahaja.',
+        'Padam jawatan bertindan yang dipilih bersama lantikannya. Butang "Tanda semua cadangan" menanda tempat dalam nama lama yang kosong atau gurunya sudah ada dalam nama terkini; nama daripada import terkini dikekalkan.',
+    ]],
     '1.19'=>['2026-11-21',[
         'Import agihan: pilihan "Ganti jawatan sedia ada" — jawatan dalam fail yang sama nama & bidang dengan jawatan dalam katalog dipadam (bersama lantikan dan syaratnya) dan dicipta semula ikut fail, jadi bilangan tempat ikut fail terkini. Pratonton memaparkan bilangan jawatan yang diganti dan lantikan lama yang dilepaskan. Jawatan yang tiada dalam fail tidak disentuh.',
     ]],

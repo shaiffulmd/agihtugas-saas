@@ -34,6 +34,7 @@ demo)
   run php tests/letter_format.php
   run php tests/subjects.php
   run php tests/position_templates.php
+  run php tests/position_overlap.php
   run php tests/organisasi.php
   run php tests/sesi_baharu.php
   run php tests/workflow_flags.php
