@@ -109,15 +109,16 @@ function handle_engine_action(string $action): never {
                 $ids=bulk_positions_insert(bulk_positions_validate(array_map(fn($r)=>$r+['count'=>1],$d['rows']))); unset($_SESSION['jawatan_pukal']);
                 audit('position_bulk','positions',null,count($ids).' jawatan'); $msg=count($ids).' jawatan ditambah secara pukal.'; break;
             case 'agihan_bulk_preview':
-                $rows=bulk_agihan_parse(bulk_source('csv','bulk_text',BULK_AGIHAN_MAX,262144)); $plan=bulk_agihan_plan($rows);
-                $_SESSION['agihan_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'hash'=>hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)),'sid'=>sid()];
+                $rows=bulk_agihan_parse(bulk_source('csv','bulk_text',BULK_AGIHAN_MAX,262144)); $replace=input('replace')==='1'; $plan=bulk_agihan_plan($rows,$replace);
+                $_SESSION['agihan_pukal']=['token'=>bin2hex(random_bytes(24)),'rows'=>$rows,'replace'=>$replace,'hash'=>hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)),'sid'=>sid()];
                 db()->commit(); redirect('/?page=pukal#agihan-hasil');
             case 'agihan_bulk_apply':
                 $d=$_SESSION['agihan_pukal']??null; if(!$d || $d['sid']!==sid() || !hash_equals($d['token'],input('token'))) throw new EngineError('Pratonton import agihan tidak sah. Jana semula.',409);
-                $plan=bulk_agihan_plan($d['rows']); // dikira semula: guru / jawatan mungkin berubah sejak pratonton
+                $plan=bulk_agihan_plan($d['rows'],!empty($d['replace'])); // dikira semula: guru / jawatan mungkin berubah sejak pratonton
                 if(!hash_equals($d['hash'],hash('sha256',json_encode($plan,JSON_THROW_ON_ERROR)))) throw new EngineError('Data guru atau jawatan telah berubah sejak pratonton. Semak semula senarai sebelum mengimport.',409);
-                [$nt,$np,$na,$nu]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
-                audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan".($nu?", $nu unit":'')); $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan".($nu?", $nu jawatan ditanda unit":'').'.'; break;
+                $nr=count($plan['replace_ids']); [$nt,$np,$na,$nu]=bulk_agihan_apply($plan); unset($_SESSION['agihan_pukal']);
+                audit('agihan_bulk','assignments',null,"$nt guru, $np jawatan, $na lantikan".($nu?", $nu unit":'').($nr?", $nr jawatan lama diganti":''));
+                $msg="Import agihan selesai: $nt guru baharu, $np jawatan baharu, $na lantikan".($nu?", $nu jawatan ditanda unit":'').($nr?", $nr jawatan lama diganti":'').'.'; break;
             case 'guru_masa_save':
                 $m=$_POST['masa']??null; $x=$_POST['exam']??[]; if(!is_array($m) || !is_array($x)) throw new EngineError('Borang masa mengajar tidak sah.');
                 $ids=array_flip(array_map('intval',query('SELECT id FROM teachers WHERE school_id='.sid())->fetchAll(PDO::FETCH_COLUMN))); $set=[];

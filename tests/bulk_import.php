@@ -78,6 +78,12 @@ with_school($S,function()use(&$tmp){
     $again=bulk_agihan_plan(bulk_agihan_parse("nur  aisyah ABDULLAH,Setiausaha JK Disiplin,hem,3\n".implode("\n",array_map(fn($r)=>$r['teacher'].','.$r['position'].','.$r['category'],array_slice($rows,1)))));
     check(!$again['teachers_new'] && !$again['positions_new'] && !array_filter($again['items'],fn($i)=>$i['status']==='baharu'),'import semula: nama dipadan tanpa beza huruf/ruang, lantikan sedia ada dilangkau');
     rejects(fn()=>bulk_agihan_plan(bulk_agihan_parse("Guru D,AJK JK Disiplin,HEM\n")),'jawatan sedia ada tanpa tempat kosong ditolak','kosong');
+    $rp=bulk_agihan_plan(bulk_agihan_parse("Siti Hajar Saad,AJK JK Disiplin,HEM\nNur Aisyah Abdullah,AJK JK Disiplin,HEM\n"),true);
+    $oldIds=$rp['replace_ids']; $held=(int)query('SELECT COUNT(*) FROM assignments a JOIN positions p ON p.id=a.position_id WHERE p.school_id='.sid().' AND p.name LIKE "AJK JK Disiplin%"')->fetchColumn();
+    check($oldIds && $rp['released']===$held && count($rp['positions_new'])===2,'tanda Ganti: jawatan sedia ada sama nama dirancang untuk dicipta semula ikut fail');
+    bulk_agihan_apply($rp);
+    $now=query('SELECT p.name,t.name AS t FROM positions p LEFT JOIN assignments a ON a.position_id=p.id LEFT JOIN teachers t ON t.id=a.teacher_id WHERE p.school_id='.sid().' AND p.name LIKE "AJK JK Disiplin%" ORDER BY p.name')->fetchAll();
+    check(count($now)===2 && array_column($now,'t')===['Siti Hajar Saad','Nur Aisyah Abdullah'] && !$rp['teachers_new'] && engine_counts()['assigned']===5 && !query('SELECT 1 FROM positions WHERE school_id='.sid().' AND id IN ('.implode(',',$oldIds).')')->fetchColumn(),'Ganti: jawatan lama & lantikannya dipadam, jawatan baharu diisi ikut fail');
     bulk_positions_insert(bulk_positions_validate([['name'=>'AJK Kebersihan','category'=>'HEM','weight'=>2,'count'=>2]]));
     $p2=bulk_agihan_plan(bulk_agihan_parse("Guru D,AJK Kebersihan,HEM\nSiti Hajar Saad,AJK Kebersihan,HEM\nGuru D,AJK Kebersihan,HEM\n"));
     check(!$p2['positions_new'] && $p2['reused']===2 && $p2['duplicates']===1 && $p2['items'][0]['position']==='AJK Kebersihan (1/2)' && count($p2['teachers_new'])===1,'tempat kosong jawatan sedia ada diisi; baris berulang dilangkau');

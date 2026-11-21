@@ -240,7 +240,7 @@ function bulk_agihan_parse(string $text): array {
 /** Rancang import agihan tanpa mengubah data. Pulangkan:
  *  items: [teacher, tkey, tid|null, position (nama akhir), category, weight, pid|null (tempat sedia ada), pnew|null (indeks positions_new), status baharu|sedia|kosong]
  *  teachers_new: [tkey=>nama], positions_new: [[name,category,weight,role_id]], reused (tempat sedia ada diisi), duplicates (baris berulang dilangkau). */
-function bulk_agihan_plan(array $rows): array {
+function bulk_agihan_plan(array $rows,bool $replace=false): array {
     $T=[]; foreach(query('SELECT id,name FROM teachers WHERE school_id='.sid())->fetchAll() as $t) $T[bulk_name_key($t['name'])]=(int)$t['id'];
     $groups=[]; $dup=0;
     foreach($rows as $r){
@@ -262,10 +262,16 @@ function bulk_agihan_plan(array $rows): array {
     foreach(query('SELECT p.id,p.name,p.category,p.weight,p.unit,a.teacher_id FROM positions p LEFT JOIN assignments a ON a.position_id=p.id AND a.school_id=p.school_id WHERE p.school_id='.sid().' ORDER BY p.id')->fetchAll() as $p)
         $P[bulk_name_key((string)preg_replace('/\s*\(\d+\/\d+\)$/u','',$p['name'])).'|'.$p['category']][]=$p;
     $roles=roles_all(); $match=$roles?:array_map(fn($x)=>['id'=>null,'name'=>$x[0],'score'=>$x[1]],ROLE_STANDARD);
-    $items=[]; $newT=[]; $newP=[]; $reused=0; $unitSet=[];
+    $items=[]; $newT=[]; $newP=[]; $reused=0; $unitSet=[]; $replaceIds=[]; $released=0;
     $tref=function(string $k,string $name)use(&$T,&$newT): ?int { if(isset($T[$k])) return $T[$k]; $newT[$k]??=$name; return null; };
     foreach($groups as $grp){
         $existing=$P[bulk_name_key($grp['name']).'|'.$grp['category']]??[];
+        // Ganti: jawatan sedia ada yang sama nama + bidang dipadam (bersama lantikan & syaratnya) dan dicipta semula ikut fail.
+        if($existing && $replace){
+            $grp['weight']??=(int)$existing[0]['weight']; $grp['unit']??=$existing[0]['unit'];
+            foreach($existing as $p){ $replaceIds[]=(int)$p['id']; if($p['teacher_id']!==null) $released++; }
+            $existing=[];
+        }
         if($existing){
             if($grp['unit']!==null) foreach($existing as $p) if($p['unit']!==$grp['unit']) $unitSet[(int)$p['id']]=$grp['unit'];
             $held=[]; $vacant=[];
@@ -276,7 +282,7 @@ function bulk_agihan_plan(array $rows): array {
                 if($tid!==null && isset($held[$tid])){ $p=$held[$tid]; $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$tid,'position'=>$p['name'],'category'=>$grp['category'],'unit'=>$grp['unit']??$p['unit'],'weight'=>(int)$p['weight'],'pid'=>(int)$p['id'],'pnew'=>null,'status'=>'sedia']; }
                 else $need[]=[$k,$name,$tid];
             }
-            if(count($need)>count($vacant)) throw new EngineError('Jawatan "'.$grp['name'].'" ('.$grp['category'].') sudah ada dalam katalog dengan '.count($existing).' tempat, '.count($vacant).' kosong — fail memerlukan '.count($need).' lagi. Tambah tempat lantikan di Jawatan & Pemberat atau buang baris berkenaan.');
+            if(count($need)>count($vacant)) throw new EngineError('Jawatan "'.$grp['name'].'" ('.$grp['category'].') sudah ada dalam katalog dengan '.count($existing).' tempat, '.count($vacant).' kosong — fail memerlukan '.count($need).' lagi. Tanda "Ganti jawatan sedia ada" untuk mencipta semula jawatan ikut fail, tambah tempat lantikan di Jawatan & Pemberat, atau buang baris berkenaan.');
             foreach($need as $i=>[$k,$name,$tid]){ $p=$vacant[$i]; $reused++; $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$tid,'position'=>$p['name'],'category'=>$grp['category'],'unit'=>$grp['unit']??$p['unit'],'weight'=>(int)$p['weight'],'pid'=>(int)$p['id'],'pnew'=>null,'status'=>'baharu']; }
             continue;
         }
@@ -288,11 +294,16 @@ function bulk_agihan_plan(array $rows): array {
             $items[]=['teacher'=>$name,'tkey'=>$k,'tid'=>$name===''?null:$tref($k,$name),'position'=>$title,'category'=>$grp['category'],'unit'=>$grp['unit']??'sekolah','weight'=>$weight,'pid'=>null,'pnew'=>count($newP)-1,'status'=>$name===''?'kosong':'baharu'];
         }
     }
-    return ['items'=>$items,'teachers_new'=>$newT,'positions_new'=>$newP,'reused'=>$reused,'duplicates'=>$dup,'unit_updates'=>$unitSet];
+    return ['items'=>$items,'teachers_new'=>$newT,'positions_new'=>$newP,'reused'=>$reused,'duplicates'=>$dup,'unit_updates'=>$unitSet,'replace_ids'=>$replaceIds,'released'=>$released];
 }
 /** Laksana rancangan bulk_agihan_plan() (dalam transaksi pemanggil). Pulangkan [guru baharu, jawatan baharu, lantikan baharu, jawatan ditanda unit]. */
 function bulk_agihan_apply(array $plan): array {
-    free_guard('guru',count($plan['teachers_new'])); free_guard('jawatan',count($plan['positions_new']));
+    if($ids=$plan['replace_ids']??[]){ // ganti: buang lantikan & jawatan lama dahulu (syarat jawatan dipadam bersama — CASCADE)
+        $in=implode(',',array_fill(0,count($ids),'?'));
+        query('DELETE FROM assignments WHERE school_id='.sid().' AND position_id IN ('.$in.')',$ids);
+        query('DELETE FROM positions WHERE school_id='.sid().' AND id IN ('.$in.')',$ids);
+    }
+    free_guard('guru',count($plan['teachers_new'])); free_guard('jawatan',count($plan['positions_new'])); // jawatan lama sudah dipadam, jadi kiraan semasa tepat
     $tid=[]; foreach($plan['teachers_new'] as $k=>$name){ query('INSERT INTO teachers (school_id,name,email,specialty,capacity) VALUES ('.sid().',?,"","",25)',[$name]); $tid[$k]=(int)db()->lastInsertId(); }
     $pid=[]; foreach($plan['positions_new'] as $i=>$p){ query('INSERT INTO positions (school_id,name,category,weight,role_id,unit) VALUES ('.sid().',?,?,?,?,?)',[$p['name'],$p['category'],$p['weight'],$p['role_id'],$p['unit']??'sekolah']); $pid[$i]=(int)db()->lastInsertId(); }
     foreach($plan['unit_updates']??[] as $id=>$u) query('UPDATE positions SET unit=? WHERE id=? AND school_id='.sid(),[$u,(int)$id]);

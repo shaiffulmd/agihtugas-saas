@@ -6,6 +6,9 @@ declare(strict_types=1);
  * tidak memerlukan langkah naik taraf (fail kunci dikemas kini secara automatik). */
 
 const APP_CHANGELOG=[
+    '1.19'=>['2026-11-21',[
+        'Import agihan: pilihan "Ganti jawatan sedia ada" — jawatan dalam fail yang sama nama & bidang dengan jawatan dalam katalog dipadam (bersama lantikan dan syaratnya) dan dicipta semula ikut fail, jadi bilangan tempat ikut fail terkini. Pratonton memaparkan bilangan jawatan yang diganti dan lantikan lama yang dilepaskan. Jawatan yang tiada dalam fail tidak disentuh.',
+    ]],
     '1.18'=>['2026-11-21',[
         'Import agihan tugas (Tambah pukal → Import agihan): guru, jawatan dan lantikan daripada satu fail Excel / CSV (Nama Guru, Jawatan, Bidang, Pemberat, Unit). Guru dan jawatan yang belum ada dicipta automatik; nama guru kosong = tempat lantikan kosong. Templat Excel / CSV disediakan.',
         'Tukar fail JK sekolah dengan bantuan AI: di Import agihan, salin prompt untuk Claude / ChatGPT — sama ada fail jawatankuasa (satu atau beberapa fail) atau satu fail analisis agihan ikut guru — bersama senarai nama guru sekolah, untuk menghasilkan fail import yang terus boleh dimuat naik.',
